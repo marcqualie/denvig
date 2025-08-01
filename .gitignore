@@ -1,0 +1,9 @@
+# compiled output
+dist
+*.tgz
+
+# node
+node_modules
+
+# testing
+coverage

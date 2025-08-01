@@ -1,0 +1,36 @@
+{
+  "name": "denvig",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "A CLI tool to consistently manage cross-discipline projects",
+  "bin": {
+    "denvig": "./dist/denvig"
+  },
+  "files": [
+    "dist/denvig",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "deno task build",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "zod": "^4.0.14"
+  },
+  "engines": {
+    "deno": ">=2.4",
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcqualie/denvig.git"
+  },
+  "keywords": [
+    "cli",
+    "deno",
+    "developer-tools",
+    "productivity",
+    "typescript"
+  ]
+}
