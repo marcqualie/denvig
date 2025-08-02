@@ -41,8 +41,8 @@ export const runCommand = new Command({
     }
 
     console.log(`$ ${action}`)
-    const command = new Deno.Command('sh', {
-      args: ['-c', action],
+    const command = new Deno.Command('script', {
+      args: ['-q', '/dev/null', 'sh', '-c', action],
       cwd: project.path,
       env: {
         ...Deno.env.toObject(),
