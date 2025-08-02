@@ -11,6 +11,7 @@ import type { GenericCommand } from './lib/command.ts'
  */
 const rootRunAliases = [
   'build',
+  'check-types',
   'dev',
   'install',
   'lint',

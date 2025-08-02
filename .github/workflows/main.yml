@@ -34,6 +34,8 @@ jobs:
 
       - run: deno task lint
 
+      - run: deno check
+
       - name: Run build
         run: |
           deno task build
