@@ -28,6 +28,9 @@ jobs:
 
       - run: deno task lint
 
-      - run: deno task build
+      - name: build
+        run: |
+          deno task build
+          ls -lh dist/
 
       - run: deno task cli version
