@@ -3,7 +3,15 @@ import { describe, it } from 'jsr:@std/testing/bdd'
 import { stub } from 'jsr:@std/testing/mock'
 import { stringify } from 'jsr:@std/yaml'
 
-import { GLOBAL_CONFIG_PATH, getGlobalConfig } from './config.ts'
+import {
+  GLOBAL_CONFIG_PATH,
+  getGlobalConfig,
+  getProjectConfig,
+} from './config.ts'
+
+const mockGlobalConfig = {
+  codeRootDir: '/mock/code/root',
+}
 
 describe('getGlobalConfig()', () => {
   describe('root config file does not exist', () => {
@@ -15,14 +23,11 @@ describe('getGlobalConfig()', () => {
 
   describe('valid root config file exists', () => {
     it('should return the config from the file', () => {
-      const mockConfig = {
-        codeRootDir: '/mock/code/root',
-      }
       using _stubbedReadFile = stub(
         Deno,
         'readTextFileSync',
         (path: string | URL) => {
-          if (path === GLOBAL_CONFIG_PATH) return stringify(mockConfig)
+          if (path === GLOBAL_CONFIG_PATH) return stringify(mockGlobalConfig)
           throw new Deno.errors.NotFound()
         },
       )
@@ -30,5 +35,40 @@ describe('getGlobalConfig()', () => {
       const config = getGlobalConfig()
       expect(config.codeRootDir).toBe('/mock/code/root')
     })
+  })
+})
+
+describe('getProjectConfig()', () => {
+  it('should return a default project config if no config file exists', () => {
+    const projectSlug = 'test-project'
+    const config = getProjectConfig(projectSlug)
+    expect(config.name).toBe(projectSlug)
+    expect(config.actions).toEqual({})
+  })
+
+  it('should return the project config from the file if it exists', () => {
+    const mockConfig = {
+      name: 'test project',
+      actions: {
+        build: {
+          command: 'deno task build',
+        },
+      },
+    }
+    using _stubbedReadFile = stub(Deno, 'readTextFileSync', (path) => {
+      if (path === GLOBAL_CONFIG_PATH) return stringify(mockGlobalConfig)
+      if (
+        path ===
+        `${getGlobalConfig().codeRootDir}/${mockConfig.name}/.denvig.yml`
+      ) {
+        return stringify(mockConfig)
+      }
+      throw new Deno.errors.NotFound()
+    })
+
+    const projectSlug = mockConfig.name
+    const config = getProjectConfig(projectSlug)
+    expect(config.name).toBe('test project')
+    expect(config.actions?.build).toEqual({ command: 'deno task build' })
   })
 })

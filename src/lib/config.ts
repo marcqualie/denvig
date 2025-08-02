@@ -40,19 +40,28 @@ export const getGlobalConfig = (): GlobalConfigSchema => {
  */
 export const getProjectConfig = (projectSlug: string): ProjectConfigSchema => {
   const globalConfig = getGlobalConfig()
-  try {
-    const configPath = `${globalConfig.codeRootDir}/${projectSlug}/.denvig.yml`
-
-    if (Deno.statSync(configPath).isFile) {
-      const configFile = Deno.readTextFileSync(configPath)
-      return ProjectConfigSchema.parse(JSON.parse(configFile))
-    }
-  } catch (_e: unknown) {
-    // Write to a log file?
-  }
-
-  return {
+  const defaultConfig = {
     name: projectSlug,
     actions: {},
   }
+  const configPath = `${globalConfig.codeRootDir}/${projectSlug}/.denvig.yml`
+  const configRaw = safeReadTextFileSync(configPath)
+  if (configRaw) {
+    try {
+      return {
+        ...defaultConfig,
+        ...ProjectConfigSchema.parse(parse(configRaw)),
+      }
+    } catch (e: unknown) {
+      console.warn(
+        `Error parsing project config for ${projectSlug} at ${configPath}.`,
+      )
+      if (e instanceof Error) {
+        console.warn(e.message)
+      } else {
+        console.warn('Unknown error:', e)
+      }
+    }
+  }
+  return defaultConfig
 }
