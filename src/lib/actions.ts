@@ -37,10 +37,10 @@ export const detectActions = (
       packageManager = 'yarn'
     }
     return {
-      build: packageJson.scripts?.build || 'npm run build',
-      test: packageJson.scripts?.test || 'npm run test',
-      lint: packageJson.scripts?.lint || 'npm run lint',
-      dev: packageJson.scripts?.dev || 'npm run dev',
+      build: `${packageManager} ${packageJson.scripts?.build || 'run build'}`,
+      test: `${packageManager} ${packageJson.scripts?.test || 'run test'}`,
+      lint: `${packageManager} ${packageJson.scripts?.lint || 'run lint'}`,
+      dev: `${packageManager} ${packageJson.scripts?.dev || 'run dev'}`,
       install: `${packageManager} install`,
       outdated: `${packageManager} outdated`,
     }
