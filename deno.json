@@ -3,9 +3,8 @@
     "cli": "deno run --allow-env --allow-read --allow-run src/cli.ts",
     "lint": "biome check",
     "lint:fix": "biome check --fix",
-    "build": "deno compile --allow-env --allow-read --allow-run --output dist/denvig src/cli.ts"
-  },
-  "imports": {
-    "@std/assert": "jsr:@std/assert@1"
+    "build": "deno compile --allow-env --allow-read --allow-run --output dist/denvig src/cli.ts",
+    "test": "deno test --allow-env --allow-read --allow-run --reporter dot",
+    "test:ci": "deno test --allow-env --allow-read --allow-run --reporter pretty --coverage"
   }
 }

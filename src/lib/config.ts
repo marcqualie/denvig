@@ -1,12 +1,37 @@
+import { parse } from 'jsr:@std/yaml'
+
 import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
+import { safeReadTextFileSync } from './safeReadFile.ts'
+
+export const GLOBAL_CONFIG_PATH =
+  Deno.env.get('DENIG_GLOBAL_CONFIG_PATH') ||
+  `${Deno.env.get('HOME')}/.denvig/config.yml`
+
+const DEFAULT_GLOBAL_CONFIG = {
+  codeRootDir: `${Deno.env.get('HOME')}/src`,
+} satisfies GlobalConfigSchema
 
 /**
- * TODO: Load this from ~/.denvig.yml
+ * Load global config from the the root file path.
+ *
+ * Default is ~/.denvig/config.yml but it can be overridden
+ * by the DENIG_GLOBAL_CONFIG_PATH environment variable.
  */
 export const getGlobalConfig = (): GlobalConfigSchema => {
-  return GlobalConfigSchema.parse({
-    codeRootDir: `${Deno.env.get('HOME')}/src`,
-  })
+  const configRaw = safeReadTextFileSync(GLOBAL_CONFIG_PATH)
+  if (configRaw) {
+    try {
+      return {
+        ...DEFAULT_GLOBAL_CONFIG,
+        ...GlobalConfigSchema.parse(parse(configRaw)),
+      }
+    } catch (e) {
+      console.error(`Error parsing global config at ${GLOBAL_CONFIG_PATH}:`, e)
+      Deno.exit(1)
+    }
+  }
+
+  return GlobalConfigSchema.parse(DEFAULT_GLOBAL_CONFIG)
 }
 
 /**
