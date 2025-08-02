@@ -9,7 +9,7 @@ export const runCommand = new Command({
     {
       name: 'action',
       description: 'The action to run (e.g. build, test, deploy)',
-      required: true,
+      required: false,
       type: 'string',
     },
   ],
@@ -23,6 +23,15 @@ export const runCommand = new Command({
     },
   ],
   handler: async (project, args) => {
+    if (!args.action) {
+      console.log(`Available actions:`)
+      for (const action in project.actions) {
+        if (!project.actions[action]) continue
+        console.log(`  ${action}: ${project.actions[action]}`)
+      }
+      return { success: true, message: 'No action specified.' }
+    }
+
     const action = project.actions[args.action]
     if (!action) {
       console.error(
