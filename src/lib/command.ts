@@ -6,6 +6,7 @@ type CommandOptions<
 > = {
   name: string
   description?: string
+  usage: string
   example: string
   args: ArgDefinitions
   flags: FlagDefinitions
@@ -60,6 +61,7 @@ export class Command<
 > {
   name: string
   description: string
+  usage: string
   example: string
   args: ArgDefinitions
   flags: FlagDefinitions
@@ -68,6 +70,7 @@ export class Command<
   constructor(options: CommandOptions<ArgDefinitions, FlagDefinitions>) {
     this.name = options.name
     this.description = options.description || ''
+    this.usage = options.usage
     this.example = options.example
     this.args = options.args
     this.flags = options.flags
