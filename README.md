@@ -50,6 +50,16 @@ denvig run test
 denvig run dev
 ```
 
+Some commands are common to many frameworks so they have root aliases for convenience:
+
+```shell
+denvig build
+denvig test
+denvig install
+denvig lint
+denvig outdated
+```
+
 
 
 ## Languages / Frameworks

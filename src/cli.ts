@@ -5,14 +5,33 @@ import { DenvigProject } from './lib/project.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
+/**
+ * Root aliases are convenient helpers to avoid typing `run` all the time.
+ */
+const rootRunAliases = [
+  'build',
+  'dev',
+  'install',
+  'lint',
+  'outdated',
+  'test',
+] as const
+
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
-  const commandName = Deno.args[0]
-  const flags = parse(Deno.args)
+  let commandName = Deno.args[0]
+  let args = Deno.args
+
+  // QUick access aliases
+  if (rootRunAliases.includes(commandName as (typeof rootRunAliases)[number])) {
+    args = ['run', ...Deno.args]
+    commandName = 'run'
+  }
 
   // TODO: Make this dynamic based on the package.json
   console.log('Denvig v0.1.0')
 
+  const flags = parse(args)
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
   } as Record<string, GenericCommand>
