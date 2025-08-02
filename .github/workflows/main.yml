@@ -30,6 +30,7 @@ jobs:
         run: |
           curl -L https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.1.3/biome-linux-x64 -o biome
           chmod +x biome
+          mv biome /usr/local/bin/biome
 
       - run: deno task lint
 
