@@ -19,6 +19,18 @@ const rootRunAliases = [
   'test',
 ] as const
 
+// Global flags that are available for all commands
+const globalFlags = [
+  {
+    name: 'project',
+    description:
+      'The project slug to run against. Defaults to current directory.',
+    required: false,
+    type: 'string',
+    defaultValue: undefined,
+  },
+]
+
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
   let commandName = Deno.args[0]
@@ -48,6 +60,11 @@ if (import.meta.main) {
         `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
       )
     })
+    console.log('')
+    console.log('Global flags:')
+    globalFlags.forEach((flag) => {
+      console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
+    })
     Deno.exit(1)
   }
 
@@ -71,7 +88,8 @@ if (import.meta.main) {
     {} as Record<string, string | number>,
   )
 
-  const parsedFlags = command.flags.reduce(
+  const allFlags = [...globalFlags, ...command.flags]
+  const parsedFlags = allFlags.reduce(
     (acc, flag) => {
       if (flags[flag.name] !== undefined) {
         acc[flag.name] = flags[flag.name]
