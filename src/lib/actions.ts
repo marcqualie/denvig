@@ -20,6 +20,7 @@ export const detectActions = (
     return {
       test: tasks?.test ? `deno task test` : 'deno test',
       lint: tasks?.lint ? `deno task lint` : 'deno lint',
+      'check-types': tasks?.checkTypes ? `deno task check-types` : 'deno check',
       ...Object.entries(tasks).reduce(
         (acc, [key, value]) => {
           acc[key] = value.startsWith('deno') ? value : `deno task ${key}`
