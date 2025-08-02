@@ -15,15 +15,7 @@ export const runCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [
-    {
-      name: 'project',
-      description:
-        'The project slug to run the action against. Defaults to current directory.',
-      required: false,
-      type: 'string',
-    },
-  ],
+  flags: [],
   handler: async (project, args) => {
     if (!args.action) {
       console.log(`Denvig v${getDenvigVersion()}`)
