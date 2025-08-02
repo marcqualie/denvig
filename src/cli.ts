@@ -29,8 +29,6 @@ if (import.meta.main) {
     commandName = 'run'
   }
 
-  console.log(`Denvig v${getDenvigVersion()}`)
-
   const flags = parse(args)
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
@@ -38,10 +36,15 @@ if (import.meta.main) {
   } as Record<string, GenericCommand>
 
   if (!commandName) {
-    console.log('No command provided. Usage: denvig <command> [options]')
+    console.log(`Denvig v${getDenvigVersion()}`)
+    console.log('')
+    console.log('Usage: denvig <command> [args] [flags]')
+    console.log('')
     console.log('Available commands:')
     Object.keys(commands).forEach((cmd) => {
-      console.log(`  - ${cmd} - ${commands[cmd].description}`)
+      console.log(
+        `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
+      )
     })
     Deno.exit(1)
   }

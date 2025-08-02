@@ -1,10 +1,12 @@
 import { Command } from '../lib/command.ts'
+import { getDenvigVersion } from '../lib/version.ts'
 
 export const runCommand = new Command({
   name: 'run',
   description:
-    'Run an action against the project. Common defaults are auto detected.',
-  example: 'denvig run build',
+    'Run an action from the project. If no action is specified, lists available actions.',
+  usage: 'run [action]',
+  example: 'run build',
   args: [
     {
       name: 'action',
@@ -24,6 +26,10 @@ export const runCommand = new Command({
   ],
   handler: async (project, args) => {
     if (!args.action) {
+      console.log(`Denvig v${getDenvigVersion()}`)
+      console.log('')
+      console.log('Usage: denvig run [action] [...actionArgs]')
+      console.log('')
       console.log(`Available actions:`)
       for (const action in project.actions) {
         if (!project.actions[action]) continue
