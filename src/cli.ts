@@ -2,6 +2,7 @@ import { parse } from 'https://deno.land/std@0.203.0/flags/mod.ts'
 
 import { getGlobalConfig } from './lib/config.ts'
 import { DenvigProject } from './lib/project.ts'
+import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
@@ -22,18 +23,18 @@ if (import.meta.main) {
   let commandName = Deno.args[0]
   let args = Deno.args
 
-  // QUick access aliases
+  // Quick access aliases
   if (rootRunAliases.includes(commandName as (typeof rootRunAliases)[number])) {
     args = ['run', ...Deno.args]
     commandName = 'run'
   }
 
-  // TODO: Make this dynamic based on the package.json
-  console.log('Denvig v0.1.0')
+  console.log(`Denvig v${getDenvigVersion()}`)
 
   const flags = parse(args)
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
+    version: (await import('./commands/version.ts')).versionCommand,
   } as Record<string, GenericCommand>
 
   if (!commandName) {
