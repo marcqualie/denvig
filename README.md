@@ -5,15 +5,6 @@ set of consistent wrappers to avoid muscle memory and configuration headaches.
 
 
 
-## Goals
-
-- [ ] CLI tool to simplify environment setup
-- [ ] YAML configuration at ~/.denvig.yml
-- [ ] Per project configuration via ./denvig.yml
-- [ ] Consistent API for all languages/frameworks
-
-
-
 ## Installation
 
 
@@ -71,6 +62,15 @@ can be supported by using the per project configs.
 - [ ] Node.js / NextJS / Vite
 - [ ] Ruby / Rails
 - [ ] Python / Pip
+
+
+
+## Goals
+
+- [x] CLI tool to simplify environment setup
+- [x] YAML configuration at ~/.denvig.yml
+- [x] Per project configuration via ./.denvig.yml
+- [x] Consistent API for all languages/frameworks
 
 
 
