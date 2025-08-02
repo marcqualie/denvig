@@ -1,4 +1,4 @@
-# Denvig - Developer Environment Invigorator.
+# Denvig - Developer Environment Invigorator
 
 Denvig is a concept of simplifying development environments across multiple languages and frameworks by creating a small
 set of consistent wrappers to avoid muscle memory and configuration headaches.
@@ -16,10 +16,6 @@ set of consistent wrappers to avoid muscle memory and configuration headaches.
 
 ## Installation
 
-### Binary
-
-Prebuilt binaries can be downloaded from the [releases page](https://github.com/marcqualie/denvig/releases).
-
 
 ### NPM
 
@@ -28,6 +24,12 @@ You can install the CLI tool globally using npm:
 ```shell
 npm install -g denvig
 ```
+
+
+### Binary
+
+Prebuilt binaries can be downloaded from the [releases page](https://github.com/marcqualie/denvig/releases).
+
 
 After installation, the `denvig` command will be available in your terminal.
 

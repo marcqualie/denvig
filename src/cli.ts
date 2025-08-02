@@ -11,7 +11,7 @@ if (import.meta.main) {
   const flags = parse(Deno.args)
 
   // TODO: Make this dynamic based on the package.json
-  console.log('Denvig version v0.1.0')
+  console.log('Denvig v0.1.0')
 
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
