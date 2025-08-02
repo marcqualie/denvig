@@ -11,34 +11,48 @@ const DEFAULT_GLOBAL_CONFIG = {
   codeRootDir: `${Deno.env.get('HOME')}/src`,
 } satisfies GlobalConfigSchema
 
+export type ConfigWithSourcePaths<C> = C & {
+  $sources: string[]
+}
+
 /**
  * Load global config from the the root file path.
  *
  * Default is ~/.denvig/config.yml but it can be overridden
  * by the DENIG_GLOBAL_CONFIG_PATH environment variable.
  */
-export const getGlobalConfig = (): GlobalConfigSchema => {
-  const configRaw = safeReadTextFileSync(GLOBAL_CONFIG_PATH)
-  if (configRaw) {
-    try {
-      return {
-        ...DEFAULT_GLOBAL_CONFIG,
-        ...GlobalConfigSchema.parse(parse(configRaw)),
+export const getGlobalConfig =
+  (): ConfigWithSourcePaths<GlobalConfigSchema> => {
+    const configRaw = safeReadTextFileSync(GLOBAL_CONFIG_PATH)
+    if (configRaw) {
+      try {
+        return {
+          ...DEFAULT_GLOBAL_CONFIG,
+          ...GlobalConfigSchema.parse(parse(configRaw)),
+          $sources: [GLOBAL_CONFIG_PATH],
+        }
+      } catch (e) {
+        console.error(
+          `Error parsing global config at ${GLOBAL_CONFIG_PATH}:`,
+          e,
+        )
+        Deno.exit(1)
       }
-    } catch (e) {
-      console.error(`Error parsing global config at ${GLOBAL_CONFIG_PATH}:`, e)
-      Deno.exit(1)
+    }
+
+    return {
+      ...GlobalConfigSchema.parse(DEFAULT_GLOBAL_CONFIG),
+      $sources: [],
     }
   }
-
-  return GlobalConfigSchema.parse(DEFAULT_GLOBAL_CONFIG)
-}
 
 /**
  * Load the project configuration for the given project slug.
  * This is usually loaded from ~/.denvig.yml or ~/.denvig/config.yml
  */
-export const getProjectConfig = (projectSlug: string): ProjectConfigSchema => {
+export const getProjectConfig = (
+  projectSlug: string,
+): ConfigWithSourcePaths<ProjectConfigSchema> => {
   const globalConfig = getGlobalConfig()
   const defaultConfig = {
     name: projectSlug,
@@ -51,6 +65,7 @@ export const getProjectConfig = (projectSlug: string): ProjectConfigSchema => {
       return {
         ...defaultConfig,
         ...ProjectConfigSchema.parse(parse(configRaw)),
+        $sources: [configPath],
       }
     } catch (e: unknown) {
       console.warn(
@@ -63,5 +78,8 @@ export const getProjectConfig = (projectSlug: string): ProjectConfigSchema => {
       }
     }
   }
-  return defaultConfig
+  return {
+    ...defaultConfig,
+    $sources: [],
+  }
 }

@@ -1,11 +1,17 @@
 import { stringify } from 'jsr:@std/yaml/stringify'
 
 import { Command } from '../lib/command.ts'
-import { GLOBAL_CONFIG_PATH, getGlobalConfig } from '../lib/config.ts'
+import { getGlobalConfig } from '../lib/config.ts'
 import { prettyPath } from '../lib/path.ts'
 
 const printConfig = (config: Record<string, unknown>) => {
-  stringify(config, {
+  const configWithoutUndefined = Object.fromEntries(
+    Object.entries({ ...config, $sources: undefined }).filter(
+      ([_, value]) => value !== undefined,
+    ),
+  )
+
+  stringify(configWithoutUndefined, {
     indent: 2,
     lineWidth: 80,
   })
@@ -28,11 +34,15 @@ export const configCommand = new Command({
     console.log('Denvig Config')
     console.log('')
 
-    console.log(`Global: (${prettyPath(GLOBAL_CONFIG_PATH)})`)
+    console.log(
+      `Global: ${globalConfig.$sources.map((path) => prettyPath(path)).join(', ') || 'default'}`,
+    )
     printConfig(globalConfig)
 
     console.log('')
-    console.log('Project:')
+    console.log(
+      `Project: ${project.config.$sources.map((path) => prettyPath(path)).join(', ') || 'default'}`,
+    )
     console.log(`  slug: ${project.slug}`)
     printConfig(projectConfig)
 
