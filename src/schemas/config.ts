@@ -29,6 +29,7 @@ export const ProjectConfigSchema = z.object({
         command: z.string().describe('Shell command to run for the action'),
       }),
     )
+    .optional()
     .describe('Actions that can be run against the project'),
 })
 

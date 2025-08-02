@@ -7,6 +7,8 @@
 ### Added
 
 - List available actions
+- Load global and project config from `.denvig.yml`
+- Add `denvig config` command
 - Detect all tasks/scripts, not just the predefined list
 - Add root aliases (.e.g `denvig lint`) to speed up typing
 - Add `check-types` default action for deno projects

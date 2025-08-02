@@ -33,6 +33,7 @@ if (import.meta.main) {
   const flags = parse(args)
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
+    config: (await import('./commands/config.ts')).configCommand,
     version: (await import('./commands/version.ts')).versionCommand,
   } as Record<string, GenericCommand>
 

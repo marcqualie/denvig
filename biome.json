@@ -34,7 +34,15 @@
           "level": "on",
           "options": {
             "groups": [
-              { "type": false, "source": [":URL:", ":NODE:", ":PACKAGE:"] },
+              {
+                "type": false,
+                "source": [
+                  ":URL:",
+                  ":NODE:",
+                  ":PACKAGE:",
+                  ":PACKAGE_WITH_PROTOCOL:"
+                ]
+              },
               ":BLANK_LINE:",
               { "type": false, "source": [":PATH:", ":ALIAS:"] },
               ":BLANK_LINE:",

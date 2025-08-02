@@ -1,12 +1,16 @@
 import { detectActions } from './actions.ts'
-import { getGlobalConfig, getProjectConfig } from './config.ts'
+import {
+  type ConfigWithSourcePaths,
+  getGlobalConfig,
+  getProjectConfig,
+} from './config.ts'
 import { detectDependencies } from './dependencies.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 
 export class DenvigProject {
   slug: string
-  config: ProjectConfigSchema
+  config: ConfigWithSourcePaths<ProjectConfigSchema>
 
   constructor(slug: string) {
     this.slug = slug
