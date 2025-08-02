@@ -16,11 +16,17 @@ export const detectActions = (
       : existsSync(`${project.path}/deno.jsonc`)
         ? JSON.parse(Deno.readTextFileSync(`${project.path}/deno.jsonc`))
         : {}
+    const tasks = (denoJson.tasks || {}) as Record<string, string>
     return {
-      build: denoJson.tasks?.build,
-      test: denoJson.tasks?.test || 'deno test',
-      lint: denoJson.tasks?.lint || 'deno lint',
-      ...denoJson.tasks,
+      test: tasks?.test ? `deno task test` : 'deno test',
+      lint: tasks?.lint ? `deno task lint` : 'deno lint',
+      ...Object.entries(tasks).reduce(
+        (acc, [key, value]) => {
+          acc[key] = value.startsWith('deno') ? value : `deno task ${key}`
+          return acc
+        },
+        {} as Record<string, string>,
+      ),
       install: 'deno install',
       outdated: 'deno outdated',
     }
@@ -30,6 +36,7 @@ export const detectActions = (
     const packageJson = JSON.parse(
       Deno.readTextFileSync(`${project.path}/package.json`),
     )
+    const scripts = (packageJson.scripts || {}) as Record<string, string>
     let packageManager = 'npm'
     if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
       packageManager = 'pnpm'
@@ -37,10 +44,19 @@ export const detectActions = (
       packageManager = 'yarn'
     }
     return {
-      build: `${packageManager} ${packageJson.scripts?.build || 'run build'}`,
-      test: `${packageManager} ${packageJson.scripts?.test || 'run test'}`,
-      lint: `${packageManager} ${packageJson.scripts?.lint || 'run lint'}`,
-      dev: `${packageManager} ${packageJson.scripts?.dev || 'run dev'}`,
+      build: `${packageManager} ${scripts.build || 'run build'}`,
+      test: `${packageManager} ${scripts.test || 'run test'}`,
+      lint: `${packageManager} ${scripts.lint || 'run lint'}`,
+      dev: `${packageManager} ${scripts.dev || 'run dev'}`,
+      ...Object.entries(scripts).reduce(
+        (acc, [key, value]) => {
+          acc[key] = value.startsWith(packageManager)
+            ? value
+            : `${packageManager} run ${key}`
+          return acc
+        },
+        {} as Record<string, string>,
+      ),
       install: `${packageManager} install`,
       outdated: `${packageManager} outdated`,
     }
