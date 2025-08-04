@@ -16,7 +16,7 @@ export const runCommand = new Command({
     },
   ],
   flags: [],
-  handler: async (project, args) => {
+  handler: async (project, args, _flags, extraArgs = []) => {
     if (!args.action) {
       console.log(`Denvig v${getDenvigVersion()}`)
       console.log('')
@@ -38,9 +38,10 @@ export const runCommand = new Command({
       return { success: false, message: `Action "${args.action}" not found.` }
     }
 
-    console.log(`$ ${action}`)
+    const commandToProxy = `${action} ${extraArgs.join(' ')}`.trim()
+    console.log(`$ ${commandToProxy}`)
     const command = new Deno.Command('script', {
-      args: ['-q', '/dev/null', 'sh', '-c', action],
+      args: ['-q', '/dev/null', 'sh', '-c', commandToProxy],
       cwd: project.path,
       env: {
         ...Deno.env.toObject(),
