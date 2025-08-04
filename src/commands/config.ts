@@ -27,7 +27,7 @@ export const configCommand = new Command({
   example: 'config',
   args: [],
   flags: [],
-  handler: async (project, _args, _flags, _extraArgs) => {
+  handler: (project, _args, _flags, _extraArgs) => {
     const globalConfig = getGlobalConfig()
     const projectConfig = project.config
 
