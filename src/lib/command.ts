@@ -52,7 +52,7 @@ type CommandHandler<
   args: ParsedArgs<ArgDefinitions>,
   flags: ParsedFlags<FlagDefinitions>,
   extraArgs?: string[],
-) => Promise<CommandResponse>
+) => Promise<CommandResponse> | CommandResponse
 
 export type GenericCommand = Command<ArgDefinition[], FlagDefinition[]>
 

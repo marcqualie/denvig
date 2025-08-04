@@ -8,7 +8,7 @@ export const versionCommand = new Command({
   example: 'denvig version',
   args: [],
   flags: [],
-  handler: async (_project, _args, _flags, _extraArgs) => {
+  handler: (_project, _args, _flags, _extraArgs) => {
     console.log(`v${getDenvigVersion()}`)
     return { success: true }
   },
