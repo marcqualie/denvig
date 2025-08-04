@@ -47,12 +47,12 @@ type ParsedFlags<FlagDefinitions extends FlagDefinition[]> = Record<
 type CommandHandler<
   ArgDefinitions extends ArgDefinition[],
   FlagDefinitions extends FlagDefinition[],
-> = (
-  project: DenvigProject,
-  args: ParsedArgs<ArgDefinitions>,
-  flags: ParsedFlags<FlagDefinitions>,
-  extraArgs?: string[],
-) => Promise<CommandResponse> | CommandResponse
+> = (context: {
+  project: DenvigProject
+  args: ParsedArgs<ArgDefinitions>
+  flags: ParsedFlags<FlagDefinitions>
+  extraArgs?: string[]
+}) => Promise<CommandResponse> | CommandResponse
 
 export type GenericCommand = Command<ArgDefinition[], FlagDefinition[]>
 
@@ -85,7 +85,7 @@ export class Command<
     extraArgs?: string[],
   ): Promise<CommandResponse> {
     try {
-      return await this.handler(project, args, flags, extraArgs)
+      return await this.handler({ project, args, flags, extraArgs })
     } catch (e: unknown) {
       console.error(`Error executing command "${this.name}":`, e)
       return { success: false, message: 'fail' }
