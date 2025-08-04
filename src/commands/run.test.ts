@@ -60,7 +60,12 @@ describe('runCommand', () => {
 
     // Test with extra arguments including flags
     const extraArgs = ['--verbose', '--output', 'dist/', 'file.txt']
-    await runCommand.handler({ project: mockProject, args: { action: 'build' }, flags: {}, extraArgs })
+    await runCommand.handler({
+      project: mockProject,
+      args: { action: 'build' },
+      flags: {},
+      extraArgs,
+    })
 
     // Verify that the script command received the extra arguments as part of the command string
     expect(capturedArgs[0]).toBe('script')
@@ -94,7 +99,11 @@ describe('runCommand', () => {
     } as DenvigProject
 
     // Test without extra arguments
-    await runCommand.handler({ project: mockProject, args: { action: 'test' }, flags: {} })
+    await runCommand.handler({
+      project: mockProject,
+      args: { action: 'test' },
+      flags: {},
+    })
 
     // Verify that the script command received the basic arguments
     expect(capturedArgs[0]).toBe('script')
@@ -123,7 +132,12 @@ describe('runCommand', () => {
 
     // Test with boolean flags (like --write, --fix)
     const extraArgs = ['--write', '--fix']
-    await runCommand.handler({ project: mockProject, args: { action: 'lint' }, flags: {}, extraArgs })
+    await runCommand.handler({
+      project: mockProject,
+      args: { action: 'lint' },
+      flags: {},
+      extraArgs,
+    })
 
     // Verify that the script command received the boolean flags as part of the command string
     expect(capturedArgs[0]).toBe('script')
