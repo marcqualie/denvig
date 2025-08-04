@@ -88,7 +88,14 @@ if (import.meta.main) {
     {} as Record<string, string | number>,
   )
 
+  // Extract extra arguments that weren't consumed by the command definition
+  const extraPositionalArgs = flags._.slice(command.args.length + 1).map(
+    (arg) => String(arg),
+  )
+
   const allFlags = [...globalFlags, ...command.flags]
+  const recognizedFlagNames = new Set(allFlags.map((flag) => flag.name))
+
   const parsedFlags = allFlags.reduce(
     (acc, flag) => {
       if (flags[flag.name] !== undefined) {
@@ -103,6 +110,23 @@ if (import.meta.main) {
     },
     {} as Record<string, string | number | boolean>,
   )
+
+  // Extract unrecognized flags and convert them to command line arguments
+  const extraFlagArgs: string[] = []
+  for (const [key, value] of Object.entries(flags)) {
+    if (key !== '_' && !recognizedFlagNames.has(key)) {
+      if (value === true) {
+        extraFlagArgs.push(`--${key}`)
+      } else if (value === false) {
+        extraFlagArgs.push(`--no-${key}`)
+      } else {
+        extraFlagArgs.push(`--${key}`, String(value))
+      }
+    }
+  }
+
+  // Combine extra positional args and extra flag args
+  const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
 
   // If inside a valid folder, get the project slug from the current directory
   const globalConfig = getGlobalConfig()
@@ -121,7 +145,12 @@ if (import.meta.main) {
   const project = new DenvigProject(projectSlug)
 
   try {
-    const { success } = await command.run(project, parsedArgs, parsedFlags)
+    const { success } = await command.run(
+      project,
+      parsedArgs,
+      parsedFlags,
+      extraArgs,
+    )
     if (!success) {
       console.error(`Command "${commandName}" failed.`)
       Deno.exit(1)

@@ -51,6 +51,7 @@ type CommandHandler<
   project: DenvigProject,
   args: ParsedArgs<ArgDefinitions>,
   flags: ParsedFlags<FlagDefinitions>,
+  extraArgs?: string[],
 ) => Promise<CommandResponse>
 
 export type GenericCommand = Command<ArgDefinition[], FlagDefinition[]>
@@ -81,9 +82,10 @@ export class Command<
     project: DenvigProject,
     args: ParsedArgs<ArgDefinitions>,
     flags: ParsedFlags<FlagDefinitions>,
+    extraArgs?: string[],
   ): Promise<CommandResponse> {
     try {
-      return await this.handler(project, args, flags)
+      return await this.handler(project, args, flags, extraArgs)
     } catch (e: unknown) {
       console.error(`Error executing command "${this.name}":`, e)
       return { success: false, message: 'fail' }
