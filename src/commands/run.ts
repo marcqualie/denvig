@@ -16,7 +16,7 @@ export const runCommand = new Command({
     },
   ],
   flags: [],
-  handler: async (project, args, _flags, extraArgs = []) => {
+  handler: async ({ project, args, extraArgs = [] }) => {
     if (!args.action) {
       console.log(`Denvig v${getDenvigVersion()}`)
       console.log('')
