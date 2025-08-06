@@ -49,51 +49,27 @@ if (import.meta.main) {
     version: (await import('./commands/version.ts')).versionCommand,
   } as Record<string, GenericCommand>
 
-  if (!commandName) {
-    console.log(`Denvig v${getDenvigVersion()}`)
-    console.log('')
-    console.log('Usage: denvig <command> [args] [flags]')
-    console.log('')
-    console.log('Available commands:')
-    Object.keys(commands).forEach((cmd) => {
-      console.log(
-        `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
-      )
-    })
-    console.log('')
-    console.log('Global flags:')
-    globalFlags.forEach((flag) => {
-      console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
-    })
-    Deno.exit(1)
-  }
-
-  if (!commands[commandName]) {
-    console.error(`Command "${commandName}" not found.`)
-    Deno.exit(1)
-  }
-
   const command = commands[commandName]
-  const parsedArgs = command.args.reduce(
-    (acc, arg, index) => {
-      const value = flags._[index + 1]
-      if (value !== undefined) {
-        acc[arg.name] = value
-      } else if (arg.required) {
-        console.error(`Missing required argument: ${arg.name}`)
-        Deno.exit(1)
-      }
-      return acc
-    },
-    {} as Record<string, string | number>,
-  )
+  const parsedArgs =
+    command?.args.reduce(
+      (acc, arg, index) => {
+        const value = flags._[index + 1]
+        if (value !== undefined) {
+          acc[arg.name] = value
+        } else if (arg.required) {
+          console.error(`Missing required argument: ${arg.name}`)
+          Deno.exit(1)
+        }
+        return acc
+      },
+      {} as Record<string, string | number>,
+    ) || {}
 
   // Extract extra arguments that weren't consumed by the command definition
-  const extraPositionalArgs = flags._.slice(command.args.length + 1).map(
-    (arg) => String(arg),
-  )
+  const extraPositionalArgs =
+    flags._.slice(command?.args.length + 1).map((arg) => String(arg)) || []
 
-  const allFlags = [...globalFlags, ...command.flags]
+  const allFlags = [...globalFlags, ...(command?.flags || [])]
   const recognizedFlagNames = new Set(allFlags.map((flag) => flag.name))
 
   const parsedFlags = allFlags.reduce(
@@ -138,13 +114,45 @@ if (import.meta.main) {
       .split('/')
       .slice(0, 2)
       .join('/')
-  if (!projectSlug) {
-    console.error('No project provided or detected.')
-    Deno.exit(1)
-  }
   const project = new DenvigProject(projectSlug)
 
+  if (!commandName) {
+    console.log(`Denvig v${getDenvigVersion()}`)
+    console.log('')
+    console.log('Usage: denvig <command> [args] [flags]')
+    console.log('')
+    console.log('Available commands:')
+    Object.keys(commands).forEach((cmd) => {
+      console.log(
+        `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
+      )
+    })
+    console.log('')
+    console.log('Root Actions:')
+    rootRunAliases.forEach((alias) => {
+      const action = project?.actions?.[alias]
+      console.log(
+        `  - ${alias.padEnd(19, ' ')} ${action ? `$ ${action}` : 'not defined'}`,
+      )
+    })
+    console.log('')
+    console.log('Global flags:')
+    globalFlags.forEach((flag) => {
+      console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
+    })
+    Deno.exit(1)
+  }
+
+  if (!commands[commandName]) {
+    console.error(`Command "${commandName}" not found.`)
+    Deno.exit(1)
+  }
+
   try {
+    if (!projectSlug) {
+      console.error('No project provided or detected.')
+    }
+
     const { success } = await command.run(
       project,
       parsedArgs,
@@ -152,7 +160,7 @@ if (import.meta.main) {
       extraArgs,
     )
     if (!success) {
-      console.error(`Command "${commandName}" failed.`)
+      // console.error(`Command "${commandName}" failed.`)
       Deno.exit(1)
     }
   } catch (e: unknown) {
