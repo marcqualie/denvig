@@ -1,9 +1,37 @@
 import { z } from 'npm:zod'
 
-export const GlobalConfigSchema = z.object({
+/**
+ * Root aliases are convenient helpers to avoid typing `run` all the time.
+ */
+const DEFAULT_ROOT_RUN_ALIASES = [
+  'build',
+  'check-types',
+  'dev',
+  'install',
+  'lint',
+  'outdated',
+  'test',
+]
+
+/**
+ * Shared config schema that is valid in a global or per project context.
+ */
+const SharedConfigSchema = z.object({})
+
+/**
+ * Global configuration for the system.
+ *
+ * This is located in ~/.denvig/config.yml but can be overridden by ENV.DENVIG_GLOBAL_CONFIG_PATH
+ */
+export const GlobalConfigSchema = SharedConfigSchema.extend({
   codeRootDir: z
     .string()
     .describe('The root directory where all code is stored'),
+  rootActionAliases: z
+    .array(z.string())
+    .default(DEFAULT_ROOT_RUN_ALIASES)
+    .optional()
+    .describe('Aliases for common run actions that trigger on the cli roo'),
 })
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
@@ -20,7 +48,7 @@ export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
  *   clean:
  *     command: rf -rf dist
  */
-export const ProjectConfigSchema = z.object({
+export const ProjectConfigSchema = SharedConfigSchema.extend({
   name: z.string().describe('Unique identifier for the project'),
   actions: z
     .record(
@@ -31,6 +59,10 @@ export const ProjectConfigSchema = z.object({
     )
     .optional()
     .describe('Actions that can be run against the project'),
+  rootActionAliases: z
+    .array(z.string())
+    .optional()
+    .describe('Aliases for common run actions that trigger on the cli roo'),
 })
 
 export type ProjectConfigSchema = z.infer<typeof ProjectConfigSchema>

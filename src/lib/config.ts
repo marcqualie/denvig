@@ -4,11 +4,12 @@ import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
 import { safeReadTextFileSync } from './safeReadFile.ts'
 
 export const GLOBAL_CONFIG_PATH =
-  Deno.env.get('DENIG_GLOBAL_CONFIG_PATH') ||
+  Deno.env.get('DENVIG_GLOBAL_CONFIG_PATH') ||
   `${Deno.env.get('HOME')}/.denvig/config.yml`
 
 const DEFAULT_GLOBAL_CONFIG = {
   codeRootDir: `${Deno.env.get('HOME')}/src`,
+  rootActionAliases: undefined,
 } satisfies GlobalConfigSchema
 
 export type ConfigWithSourcePaths<C> = C & {
@@ -19,7 +20,7 @@ export type ConfigWithSourcePaths<C> = C & {
  * Load global config from the the root file path.
  *
  * Default is ~/.denvig/config.yml but it can be overridden
- * by the DENIG_GLOBAL_CONFIG_PATH environment variable.
+ * by the DENVIG_GLOBAL_CONFIG_PATH environment variable.
  */
 export const getGlobalConfig =
   (): ConfigWithSourcePaths<GlobalConfigSchema> => {

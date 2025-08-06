@@ -6,19 +6,6 @@ import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
-/**
- * Root aliases are convenient helpers to avoid typing `run` all the time.
- */
-const rootRunAliases = [
-  'build',
-  'check-types',
-  'dev',
-  'install',
-  'lint',
-  'outdated',
-  'test',
-] as const
-
 // Global flags that are available for all commands
 const globalFlags = [
   {
@@ -36,13 +23,29 @@ if (import.meta.main) {
   let commandName = Deno.args[0]
   let args = Deno.args
 
+  // If inside a valid folder, get the project slug from the current directory
+  const globalConfig = getGlobalConfig()
+  const currentDir = Deno.cwd()
+  const projectSlug =
+    parse(Deno.args).project?.toString() ||
+    currentDir
+      .replace(`${globalConfig.codeRootDir}/`, '')
+      .split('/')
+      .slice(0, 2)
+      .join('/')
+  const project = new DenvigProject(projectSlug)
+
   // Quick access aliases
+  const rootRunAliases = [
+    ...(globalConfig.rootActionAliases || []),
+    ...(project?.config?.rootActionAliases || []),
+  ].sort()
   if (rootRunAliases.includes(commandName as (typeof rootRunAliases)[number])) {
     args = ['run', ...Deno.args]
     commandName = 'run'
+    console.log('> Proxying to denvig run', ...Deno.args)
   }
 
-  const flags = parse(args)
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
     config: (await import('./commands/config.ts')).configCommand,
@@ -50,6 +53,7 @@ if (import.meta.main) {
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]
+  const flags = parse(args)
   const parsedArgs =
     command?.args.reduce(
       (acc, arg, index) => {
@@ -103,18 +107,6 @@ if (import.meta.main) {
 
   // Combine extra positional args and extra flag args
   const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
-
-  // If inside a valid folder, get the project slug from the current directory
-  const globalConfig = getGlobalConfig()
-  const currentDir = Deno.cwd()
-  const projectSlug =
-    parsedFlags.project?.toString() ||
-    currentDir
-      .replace(`${globalConfig.codeRootDir}/`, '')
-      .split('/')
-      .slice(0, 2)
-      .join('/')
-  const project = new DenvigProject(projectSlug)
 
   if (!commandName) {
     console.log(`Denvig v${getDenvigVersion()}`)
