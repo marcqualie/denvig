@@ -1,6 +1,13 @@
 # Denvig Changelog
 
 
+## Unreleased
+
+### Added
+
+- Configurable root run actions to key strokes
+- Root actions are displayed im root help
+
 
 ## [0.1.2] - 2025-08-06
 
