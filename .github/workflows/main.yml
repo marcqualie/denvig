@@ -41,4 +41,4 @@ jobs:
         run: pnpm run test
 
       - name: Check version
-        run: bin/denvig version
+        run: bin/denvig-dev version
