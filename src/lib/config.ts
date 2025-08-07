@@ -9,8 +9,12 @@ export const GLOBAL_CONFIG_PATH = resolve(
     `${Deno.env.get('HOME')}/.denvig/config.yml`,
 )
 
+export const CODE_ROOT_DIR = resolve(
+  Deno.env.get('DENVIG_CODE_ROOT_DIR') || `${Deno.env.get('HOME')}/src`,
+)
+
 const DEFAULT_GLOBAL_CONFIG = {
-  codeRootDir: `${Deno.env.get('HOME')}/src`,
+  codeRootDir: CODE_ROOT_DIR,
   quickActions: undefined,
 } satisfies GlobalConfigSchema
 
@@ -28,7 +32,8 @@ export const getGlobalConfig =
   (): ConfigWithSourcePaths<GlobalConfigSchema> => {
     const configRaw = safeReadTextFileSync(GLOBAL_CONFIG_PATH)
     if (configRaw) {
-      const globalConfig = GlobalConfigSchema.parse(parse(configRaw))
+      const globalConfig = (parse(configRaw) ||
+        {}) as Partial<GlobalConfigSchema>
       try {
         if (globalConfig.codeRootDir?.startsWith('.')) {
           const configDir = dirname(GLOBAL_CONFIG_PATH)
@@ -37,8 +42,10 @@ export const getGlobalConfig =
           )
         }
         return {
-          ...DEFAULT_GLOBAL_CONFIG,
-          ...globalConfig,
+          ...GlobalConfigSchema.parse({
+            ...DEFAULT_GLOBAL_CONFIG,
+            ...globalConfig,
+          }),
           $sources: [GLOBAL_CONFIG_PATH],
         }
       } catch (e) {

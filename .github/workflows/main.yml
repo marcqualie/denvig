@@ -9,6 +9,9 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  DENVIG_CODE_ROOT_DIR=$: ${{ github.workspace }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
