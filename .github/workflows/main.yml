@@ -10,7 +10,7 @@ on:
     branches: [ main ]
 
 env:
-  DENVIG_CODE_ROOT_DIR=$: ${{ github.workspace }}
+  DENVIG_CODE_ROOT_DIR: ${{ github.workspace }}
 
 jobs:
   build:
