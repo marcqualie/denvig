@@ -29,10 +29,10 @@ After installation, the `denvig` command will be available in your terminal.
 ## Commands
 
 
-### Run
+### Actions
 
-Execites an action inside the project. Defaults are detected for common languages/frameworks, but you can also
-specify your own actions in the `denvig.yml` file.
+Executes an action inside the project. Defaults are detected for common languages/frameworks, but you can also
+specify your own actions in the `.denvig.yml` file.
 
 ```shell
 denvig run build
@@ -41,7 +41,7 @@ denvig run test
 denvig run dev
 ```
 
-Some commands are common to many frameworks so they have root aliases for convenience:
+Some actions are common to many frameworks so they have quick access for convenience:
 
 ```shell
 denvig build

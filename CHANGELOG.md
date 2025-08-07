@@ -1,6 +1,14 @@
 # Denvig Changelog
 
 
+## Unreleased
+
+### Added
+
+- Configurable quick actions globally and per project
+- Quick actions are displayed im root help
+- Custom per project actions in `.denvig.yml`
+
 
 ## [0.1.2] - 2025-08-06
 
@@ -18,7 +26,7 @@
 - Load global and project config from `.denvig.yml`
 - Add `denvig config` command
 - Detect all tasks/scripts, not just the predefined list
-- Add root aliases (.e.g `denvig lint`) to speed up typing
+- Add quick actions (.e.g `denvig lint`) to speed up typing
 - Add `check-types` default action for deno projects
 
 ### Changed

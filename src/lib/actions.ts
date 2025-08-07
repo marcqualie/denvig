@@ -2,14 +2,34 @@ import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts'
 
 import type { DenvigProject } from './project.ts'
 
+type Actions = Record<string, string>
+
 /**
- * TODO: Combine actions from multiple sources
+ * Return the actions from combined sources.
+ *
+ * Actions are built in order of priority, highest first:
+ * - Project defined actions
+ * - Globally defined actions (TODO)
+ * - deno.json tasks
+ * - package.json scripts
  */
-export const detectActions = (
-  project: DenvigProject,
-): Record<string, string> => {
+export const detectActions = (project: DenvigProject): Actions => {
   const dependencies = project.dependencies
 
+  let actions: Record<string, string> = {}
+
+  // Project
+  if (project.config.actions) {
+    actions = {
+      ...actions,
+      ...Object.entries(project.config.actions).reduce((acc, [key, value]) => {
+        acc[key] = value.command
+        return acc
+      }, {} as Actions),
+    }
+  }
+
+  // Deno
   if (dependencies.some((dep) => dep.name === 'deno')) {
     const denoJson = existsSync(`${project.path}/deno.json`)
       ? JSON.parse(Deno.readTextFileSync(`${project.path}/deno.json`))
@@ -17,7 +37,8 @@ export const detectActions = (
         ? JSON.parse(Deno.readTextFileSync(`${project.path}/deno.jsonc`))
         : {}
     const tasks = (denoJson.tasks || {}) as Record<string, string>
-    return {
+    actions = mergeActions(actions, {
+      ...actions,
       test: tasks?.test ? `deno task test` : 'deno test',
       lint: tasks?.lint ? `deno task lint` : 'deno lint',
       'check-types': tasks?.checkTypes ? `deno task check-types` : 'deno check',
@@ -30,9 +51,10 @@ export const detectActions = (
       ),
       install: 'deno install',
       outdated: 'deno outdated',
-    }
+    })
   }
 
+  // NPM / PNPM / Yarn
   if (dependencies.some((dep) => dep.name === 'npm')) {
     const packageJson = JSON.parse(
       Deno.readTextFileSync(`${project.path}/package.json`),
@@ -44,7 +66,7 @@ export const detectActions = (
     } else if (existsSync(`${project.path}/yarn.lock`)) {
       packageManager = 'yarn'
     }
-    return {
+    actions = mergeActions(actions, {
       build: `${packageManager} ${scripts.build || 'run build'}`,
       test: `${packageManager} ${scripts.test || 'run test'}`,
       lint: `${packageManager} ${scripts.lint || 'run lint'}`,
@@ -60,8 +82,20 @@ export const detectActions = (
       ),
       install: `${packageManager} install`,
       outdated: `${packageManager} outdated`,
-    }
+    })
   }
 
-  return {}
+  return actions
+}
+
+/**
+ * Combine two actions maps. Existing actions should not be overwritten.
+ */
+const mergeActions = (actions: Actions, newActions: Actions): Actions => {
+  for (const [key, value] of Object.entries(newActions)) {
+    if (!actions[key]) {
+      actions[key] = value
+    }
+  }
+  return actions
 }
