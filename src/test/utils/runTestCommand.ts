@@ -1,3 +1,6 @@
+import { spawn } from 'node:child_process'
+import process from 'node:process'
+
 type RunTestCommandOptions = {
   /**
    * Current working directory to cd to before running the command.
@@ -44,9 +47,57 @@ type RunTestCommandResult = {
  * })
  * ```
  */
-export const runTestCommand = async (
+export const runTestCommand = (
   command: string,
-  options: RunTestCommandOptions,
+  options: RunTestCommandOptions = {},
 ): Promise<RunTestCommandResult> => {
-  // TODO:
+  const { cwd = process.cwd(), env = {} } = options
+
+  // Parse the command to extract arguments (remove "denvig" prefix if present)
+  const args = command.split(/\s+/)
+  if (args[0] === 'denvig') {
+    args.shift()
+  }
+
+  // Execute the Denvig CLI using Deno
+  const child = spawn(
+    'deno',
+    [
+      'run',
+      '--allow-env',
+      '--allow-read',
+      '--allow-run',
+      'src/cli.ts',
+      ...args,
+    ],
+    {
+      cwd,
+      env: { ...process.env, ...env },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  )
+
+  let stdout = ''
+  let stderr = ''
+
+  // Capture stdout
+  child.stdout?.on('data', (data: Uint8Array) => {
+    stdout += new TextDecoder().decode(data)
+  })
+
+  // Capture stderr
+  child.stderr?.on('data', (data: Uint8Array) => {
+    stderr += new TextDecoder().decode(data)
+  })
+
+  // Wait for the process to complete
+  return new Promise((resolve) => {
+    child.on('close', (code: number | null) => {
+      resolve({
+        code: code ?? 0,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+      })
+    })
+  })
 }
