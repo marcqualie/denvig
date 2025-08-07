@@ -1,0 +1,10 @@
+name: Denvig
+
+quickActions:
+  - compile
+  - lint:fix
+  - test:ci
+
+actions:
+  compile:
+    command: deno task build
