@@ -1,0 +1,4 @@
+name: denvig npm example
+actions:
+  ls:
+    command: ls -a
