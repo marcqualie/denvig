@@ -7,6 +7,7 @@
 
 - Configurable root run actions to key strokes
 - Root actions are displayed im root help
+- Custom per project actions in .denvig.yml
 
 
 ## [0.1.2] - 2025-08-06
