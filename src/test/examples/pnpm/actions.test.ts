@@ -4,7 +4,7 @@ import { describe, it } from 'jsr:@std/testing/bdd'
 import { runTestCommand } from '../../utils/runTestCommand.ts'
 
 describe('examples / pnpm / actions', () => {
-  it('should run the ls command in the pnpm example project', async () => {
+  it('should run the package.json ls command', async () => {
     const result = await runTestCommand('denvig run ls', {
       cwd: 'src/test/examples/pnpm',
       env: {
@@ -18,7 +18,7 @@ describe('examples / pnpm / actions', () => {
     expect(result.code).toBe(0)
   })
 
-  it('should run the ls command in the pnpm example project', async () => {
+  it('should run the custom denvig hello command', async () => {
     const result = await runTestCommand('denvig run hello', {
       cwd: 'src/test/examples/pnpm',
       env: {
