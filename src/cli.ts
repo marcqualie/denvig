@@ -35,12 +35,12 @@ if (import.meta.main) {
       .join('/')
   const project = new DenvigProject(projectSlug)
 
-  // Quick access aliases
-  const rootRunAliases = [
-    ...(globalConfig.rootActionAliases || []),
-    ...(project?.config?.rootActionAliases || []),
+  // Quick actions
+  const quickActions = [
+    ...(globalConfig.quickActions || []),
+    ...(project?.config?.quickActions || []),
   ].sort()
-  if (rootRunAliases.includes(commandName as (typeof rootRunAliases)[number])) {
+  if (quickActions.includes(commandName as (typeof quickActions)[number])) {
     args = ['run', ...Deno.args]
     commandName = 'run'
     console.log('> Proxying to denvig run', ...Deno.args)
@@ -120,11 +120,11 @@ if (import.meta.main) {
       )
     })
     console.log('')
-    console.log('Root Actions:')
-    rootRunAliases.forEach((alias) => {
-      const action = project?.actions?.[alias]
+    console.log('Quick Actions:')
+    quickActions.forEach((actionName) => {
+      const action = project?.actions?.[actionName]
       console.log(
-        `  - ${alias.padEnd(19, ' ')} ${action ? `$ ${action}` : 'not defined'}`,
+        `  - ${actionName.padEnd(19, ' ')} ${action ? `$ ${action}` : 'not defined'}`,
       )
     })
     console.log('')

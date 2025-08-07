@@ -1,9 +1,9 @@
 import { z } from 'npm:zod'
 
 /**
- * Root aliases are convenient helpers to avoid typing `run` all the time.
+ * Actions that are available on the CLI root for quick access.
  */
-const DEFAULT_ROOT_RUN_ALIASES = [
+const DEFAULT_QUICK_ACTIONS = [
   'build',
   'check-types',
   'dev',
@@ -27,11 +27,11 @@ export const GlobalConfigSchema = SharedConfigSchema.extend({
   codeRootDir: z
     .string()
     .describe('The root directory where all code is stored'),
-  rootActionAliases: z
+  quickActions: z
     .array(z.string())
-    .default(DEFAULT_ROOT_RUN_ALIASES)
+    .default(DEFAULT_QUICK_ACTIONS)
     .optional()
-    .describe('Aliases for common run actions that trigger on the cli roo'),
+    .describe('Actions that are available on the CLI root for quick access'),
 })
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
@@ -59,10 +59,10 @@ export const ProjectConfigSchema = SharedConfigSchema.extend({
     )
     .optional()
     .describe('Actions that can be run against the project'),
-  rootActionAliases: z
+  quickActions: z
     .array(z.string())
     .optional()
-    .describe('Aliases for common run actions that trigger on the cli roo'),
+    .describe('Actions that are available on the CLI root for quick access'),
 })
 
 export type ProjectConfigSchema = z.infer<typeof ProjectConfigSchema>

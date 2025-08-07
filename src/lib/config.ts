@@ -9,7 +9,7 @@ export const GLOBAL_CONFIG_PATH =
 
 const DEFAULT_GLOBAL_CONFIG = {
   codeRootDir: `${Deno.env.get('HOME')}/src`,
-  rootActionAliases: undefined,
+  quickActions: undefined,
 } satisfies GlobalConfigSchema
 
 export type ConfigWithSourcePaths<C> = C & {
