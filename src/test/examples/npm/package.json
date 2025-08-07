@@ -1,0 +1,9 @@
+{
+  "name": "@denvig/examples-npm",
+  "version": "0.0.1",
+  "description": "Denvig example project using npm",
+  "private": true,
+  "scripts": {
+    "hello": "node -p '\"Hello from npm example!\"'"
+  }
+}

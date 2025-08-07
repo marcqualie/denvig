@@ -6,5 +6,8 @@
     "build": "deno compile --allow-env --allow-read --allow-run --output dist/denvig src/cli.ts",
     "test": "deno test --allow-env --allow-read --allow-run --reporter dot",
     "test:ci": "deno test --allow-env --allow-read --allow-run --reporter pretty --coverage"
+  },
+  "imports": {
+    "@types/node": "npm:@types/node@^22"
   }
 }
