@@ -1,7 +1,7 @@
 import { expect } from 'jsr:@std/expect'
 import { describe, it } from 'jsr:@std/testing/bdd'
 
-import { runTestCommand } from '../../utils/runTestCommand.ts'
+import { runTestCommand } from '../../utils/runTestCommand'
 
 describe('examples / npm / actions', () => {
   it('should run the package.json ls command', async () => {

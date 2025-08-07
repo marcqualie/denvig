@@ -1,8 +1,8 @@
 import { expect } from 'jsr:@std/expect'
 import { describe, it } from 'jsr:@std/testing/bdd'
 
-import { getDenvigVersion } from '../lib/version.ts'
-import { runTestCommand } from '../test/utils/runTestCommand.ts'
+import { getDenvigVersion } from '../lib/version'
+import { runTestCommand } from '../test/utils/runTestCommand'
 
 describe('commands / version', () => {
   it('should return the current CLI version with status 0', async () => {

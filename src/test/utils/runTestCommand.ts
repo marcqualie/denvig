@@ -102,7 +102,7 @@ export const runTestCommand = (
     child.on('close', (code: number | null) => {
       if (
         options.debug ||
-        (Deno.env.get('DENVIG_DEBUG')?.indexOf('runTestCommand') || -1) >= 0
+        (process.env.DENVIG_DEBUG?.indexOf('runTestCommand') || -1) >= 0
       ) {
         console.log('$ denvig run hello')
         console.log(`|- code: ${code || 0}`)

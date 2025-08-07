@@ -2,7 +2,7 @@ import { expect } from 'jsr:@std/expect'
 import { describe, it } from 'jsr:@std/testing/bdd'
 import { stub } from 'jsr:@std/testing/mock'
 
-import { safeReadTextFile } from './safeReadFile.ts'
+import { safeReadTextFile } from './safeReadFile'
 
 describe('safeReadFile()', () => {
   it('returns null for a missing file', async () => {

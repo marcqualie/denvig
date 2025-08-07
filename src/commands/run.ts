@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process'
+
 import { Command } from '../lib/command.ts'
 import { getDenvigVersion } from '../lib/version.ts'
 
@@ -43,65 +45,45 @@ export const runCommand = new Command({
 
     // Prepare environment with color forcing for better terminal output
     const env = {
-      ...Deno.env.toObject(),
+      ...process.env,
       DENVIG_PROJECT: project.slug,
     }
 
     // Check if we're in a TTY environment
-    const isInteractive = Deno.stdout.isTerminal() && Deno.stdin.isTerminal()
-    let command: Deno.Command
+    const isInteractive = process.stdout.isTTY && process.stdin.isTTY
+    let commandName: string
+    let commandArgs: string[]
 
     if (isInteractive) {
       // Use script command to preserve TTY behavior in interactive environments
-      const os = Deno.build.os
+      const os = process.platform
       if (os === 'darwin') {
         // macOS (BSD script): script [options] [file [command]]
-        command = new Deno.Command('script', {
-          args: ['-q', '/dev/null', 'sh', '-c', commandToProxy],
-          cwd: project.path,
-          env,
-          stdout: 'piped',
-          stderr: 'piped',
-        })
+        commandName = 'script'
+        commandArgs = ['-q', '/dev/null', 'sh', '-c', commandToProxy]
       } else {
         // Linux (util-linux script): script [options] [file]
-        command = new Deno.Command('script', {
-          args: ['-q', '-c', commandToProxy, '/dev/null'],
-          cwd: project.path,
-          env,
-          stdout: 'piped',
-          stderr: 'piped',
-        })
+        commandName = 'script'
+        commandArgs = ['-q', '-c', commandToProxy, '/dev/null']
       }
     } else {
       // Use direct execution in non-TTY environments (tests, CI, pipes)
-      command = new Deno.Command('sh', {
-        args: ['-c', commandToProxy],
-        cwd: project.path,
-        env,
-        stdout: 'piped',
-        stderr: 'piped',
+      commandName = 'sh'
+      commandArgs = ['-c', commandToProxy]
+    }
+
+    const child = spawn(commandName, commandArgs, {
+      cwd: project.path,
+      env,
+      stdio: 'inherit',
+    })
+
+    const status = await new Promise<{ success: boolean }>((resolve) => {
+      child.on('close', (code: number | null) => {
+        resolve({ success: code === 0 })
       })
-    }
+    })
 
-    const child = command.spawn()
-
-    const streamOutput = async (stream: ReadableStream<Uint8Array>) => {
-      const reader = stream.getReader()
-
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        Deno.stdout.writeSync(value) // Direct binary write to stdout
-      }
-    }
-
-    await Promise.all([streamOutput(child.stdout), streamOutput(child.stderr)])
-
-    const status = await child.status
-
-    return {
-      success: status.success,
-    }
+    return status as { success: boolean }
   },
 })

@@ -1,7 +1,7 @@
 import { expect } from 'jsr:@std/expect'
 import { describe, it } from 'jsr:@std/testing/bdd'
 
-import { runTestCommand } from '../test/utils/runTestCommand.ts'
+import { runTestCommand } from '../test/utils/runTestCommand'
 
 describe('commands / run', () => {
   it('should execute the lint action successfully', async () => {

@@ -4,22 +4,34 @@
   "license": "MIT",
   "description": "A CLI tool to consistently manage cross-discipline projects",
   "bin": {
-    "denvig": "./dist/denvig"
+    "denvig": "./dist/cli.js"
   },
+  "type": "module",
   "files": [
-    "dist/denvig",
+    "dist/",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
-    "build": "deno task build",
-    "prepublishOnly": "npm run build"
+    "build": "tsc",
+    "check-types": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "lint": "biome check",
+    "lint:fix": "biome check --fix",
+    "test": "node --test src/**/*.test.ts",
+    "dev": "tsc --watch"
   },
   "dependencies": {
+    "minimist": "^1.2.8",
+    "yaml": "^2.4.5",
     "zod": "^4.0.14"
   },
+  "devDependencies": {
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22",
+    "typescript": "^5.0.0"
+  },
   "engines": {
-    "deno": ">=2.4",
     "node": ">=22"
   },
   "repository": {
@@ -28,7 +40,7 @@
   },
   "keywords": [
     "cli",
-    "deno",
+    "node",
     "developer-tools",
     "productivity",
     "typescript"

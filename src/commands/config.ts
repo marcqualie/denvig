@@ -1,4 +1,4 @@
-import { stringify } from 'jsr:@std/yaml/stringify'
+import { stringify } from 'yaml'
 
 import { Command } from '../lib/command.ts'
 import { getGlobalConfig } from '../lib/config.ts'

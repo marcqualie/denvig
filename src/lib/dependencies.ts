@@ -1,4 +1,4 @@
-import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts'
+import { existsSync, readFileSync } from 'node:fs'
 
 import type { ProjectSchema } from '../schemas/project.ts'
 import type { DenvigProject } from './project.ts'
@@ -16,7 +16,7 @@ export const detectDependencies = (
       versions: [],
     })
     const packageJson = JSON.parse(
-      Deno.readTextFileSync(`${project.path}/package.json`),
+      readFileSync(`${project.path}/package.json`, 'utf8'),
     )
     if (packageJson.dependencies) {
       for (const [name, versions] of Object.entries({
@@ -56,7 +56,7 @@ export const detectDependencies = (
       id: 'deno:deno',
       name: 'deno',
       ecosystem: 'system',
-      versions: [Deno.version.deno],
+      versions: [process.version],
     })
   }
 

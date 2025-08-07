@@ -3,11 +3,7 @@ import { describe, it } from 'jsr:@std/testing/bdd'
 import { stub } from 'jsr:@std/testing/mock'
 import { stringify } from 'jsr:@std/yaml'
 
-import {
-  GLOBAL_CONFIG_PATH,
-  getGlobalConfig,
-  getProjectConfig,
-} from './config.ts'
+import { GLOBAL_CONFIG_PATH, getGlobalConfig, getProjectConfig } from './config'
 
 const mockGlobalConfig = {
   codeRootDir: '/mock/code/root',
@@ -28,7 +24,7 @@ describe('getGlobalConfig()', () => {
         'readTextFileSync',
         (path: string | URL) => {
           if (path === GLOBAL_CONFIG_PATH) return stringify(mockGlobalConfig)
-          throw new Deno.errors.NotFound()
+          throw new Error(`File not found: ${path}`)
         },
       )
 
@@ -63,7 +59,7 @@ describe('getProjectConfig()', () => {
       ) {
         return stringify(mockConfig)
       }
-      throw new Deno.errors.NotFound()
+      throw new Error(`File not found: ${path}`)
     })
 
     const projectSlug = mockConfig.name
