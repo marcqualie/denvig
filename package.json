@@ -4,7 +4,7 @@
   "license": "MIT",
   "description": "A CLI tool to consistently manage cross-discipline projects",
   "bin": {
-    "denvig": "./dist/cli.js"
+    "denvig": "./dist/cli.cjs"
   },
   "type": "module",
   "files": [

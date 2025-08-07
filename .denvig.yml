@@ -1,11 +1,21 @@
 name: Denvig
 
 quickActions:
+  - check
   - compile
   - lint:fix
   - test:ci
 
 actions:
+  check:
+    command: |
+      pnpm run check-types
+      pnpm run lint
+      pnpm run test
+      pnpm run build
+      node dist/cli.cjs version
+      bin/denvig run compile
+      bin/denvig version
   compile:
     command: |
       bin/denvig run compile:darwin-x86_64
