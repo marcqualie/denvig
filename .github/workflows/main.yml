@@ -10,6 +10,7 @@ on:
     branches: [ main ]
 
 env:
+  # Workspace is /home/runner/work/denvig/denvig so we want /home/runner/work as the root
   DENVIG_CODE_ROOT_DIR: ${{ github.workspace }}/../..
 
 jobs:
@@ -34,10 +35,8 @@ jobs:
           chmod +x biome
           mv biome /usr/local/bin/biome
 
-      - name: Print out working directory environment
-        run: |
-          echo $DENVIG_CODE_ROOT_DIR
-          echo $PWD
+      - name: Show Denvig config for this repo
+        run: deno task cli config
 
       - run: deno task lint
 
