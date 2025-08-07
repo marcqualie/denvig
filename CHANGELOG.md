@@ -8,6 +8,8 @@
 - Configurable quick actions globally and per project
 - Quick actions are displayed im root help
 - Custom per project actions in `.denvig.yml`
+- Code root path can be configured via `ENV.DENVIG_CODE_ROOT_DIR`
+- Support for running commands on linux and macOS
 
 
 ## [0.1.2] - 2025-08-06
