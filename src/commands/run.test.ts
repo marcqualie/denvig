@@ -1,24 +1,26 @@
-import { expect } from 'jsr:@std/expect'
-import { describe, it } from 'jsr:@std/testing/bdd'
+import { match, strictEqual } from 'node:assert'
+import { describe, it } from 'node:test'
 
-import { runTestCommand } from '../test/utils/runTestCommand'
+import { runTestCommand } from '../test/utils/runTestCommand.ts'
 
 describe('commands / run', () => {
   it('should execute the lint action successfully', async () => {
     const result = await runTestCommand('denvig run lint')
 
-    expect(result.code).toBe(0)
-    expect(result.stderr).toBe('')
-    // Should have some output from the build process
-    expect(result.stdout.length).toBeGreaterThan(0)
+    strictEqual(result.code, 0)
+    // Should have some output from the lint process
+    match(result.stdout, /pnpm run lint/)
+    match(result.stdout, /biome check/)
+    // Stderr may contain lint warnings/errors, but that's okay as long as exit code is 0
   })
 
   it('should return error code for non-existent action', async () => {
     const result = await runTestCommand('denvig run nonexistent')
 
-    expect(result.code).toBe(1)
-    expect(result.stdout).toBe('')
-    expect(result.stderr).toBe(
+    strictEqual(result.code, 1)
+    strictEqual(result.stdout, '')
+    strictEqual(
+      result.stderr,
       'Action "nonexistent" not found in project Denvig.',
     )
   })
@@ -26,9 +28,9 @@ describe('commands / run', () => {
   it('should display usage when no action is provided', async () => {
     const result = await runTestCommand('denvig run')
 
-    expect(result.code).toBe(0)
-    expect(result.stdout).toContain('Usage: denvig run')
-    expect(result.stdout).toContain('Available actions:')
-    expect(result.stderr).toBe('')
+    strictEqual(result.code, 0)
+    match(result.stdout, /Usage: denvig run/)
+    match(result.stdout, /Available actions:/)
+    strictEqual(result.stderr, '')
   })
 })

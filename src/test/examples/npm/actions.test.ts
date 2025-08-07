@@ -1,7 +1,7 @@
-import { expect } from 'jsr:@std/expect'
-import { describe, it } from 'jsr:@std/testing/bdd'
+import { match, strictEqual } from 'node:assert'
+import { describe, it } from 'node:test'
 
-import { runTestCommand } from '../../utils/runTestCommand'
+import { runTestCommand } from '../../utils/runTestCommand.ts'
 
 describe('examples / npm / actions', () => {
   it('should run the package.json ls command', async () => {
@@ -12,10 +12,10 @@ describe('examples / npm / actions', () => {
       },
     })
 
-    expect(result.stderr).toBe('')
-    expect(result.stdout).toContain('package.json')
-    expect(result.stdout).toContain('.denvig.yml')
-    expect(result.code).toBe(0)
+    strictEqual(result.stderr, '')
+    match(result.stdout, /package\.json/)
+    match(result.stdout, /\.denvig\.yml/)
+    strictEqual(result.code, 0)
   })
 
   it('should run the custom denvig hello command', async () => {
@@ -26,8 +26,8 @@ describe('examples / npm / actions', () => {
       },
     })
 
-    expect(result.stdout).toContain('Hello from npm example!')
-    expect(result.stderr).toBe('')
-    expect(result.code).toBe(0)
+    match(result.stdout, /Hello from npm example!/)
+    strictEqual(result.stderr, '')
+    strictEqual(result.code, 0)
   })
 })
