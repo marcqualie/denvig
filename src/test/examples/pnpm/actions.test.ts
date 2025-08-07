@@ -12,10 +12,10 @@ describe('examples / pnpm / actions', () => {
       },
     })
 
-    expect(result.code).toBe(0)
+    expect(result.stderr).toBe('')
     expect(result.stdout).toContain('package.json')
     expect(result.stdout).toContain('.denvig.yml')
-    expect(result.stderr).toBe('')
+    expect(result.code).toBe(0)
   })
 
   it('should run the ls command in the pnpm example project', async () => {
@@ -26,8 +26,8 @@ describe('examples / pnpm / actions', () => {
       },
     })
 
-    expect(result.code).toBe(0)
     expect(result.stdout).toContain('Hello from pnpm example!')
     expect(result.stderr).toBe('')
+    expect(result.code).toBe(0)
   })
 })
