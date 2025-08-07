@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: marcqualie/denvig
 
       - name: Install Deno
         uses: denoland/setup-deno@v2
