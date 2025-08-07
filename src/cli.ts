@@ -6,19 +6,6 @@ import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
-/**
- * Root aliases are convenient helpers to avoid typing `run` all the time.
- */
-const rootRunAliases = [
-  'build',
-  'check-types',
-  'dev',
-  'install',
-  'lint',
-  'outdated',
-  'test',
-] as const
-
 // Global flags that are available for all commands
 const globalFlags = [
   {
@@ -36,64 +23,57 @@ if (import.meta.main) {
   let commandName = Deno.args[0]
   let args = Deno.args
 
-  // Quick access aliases
-  if (rootRunAliases.includes(commandName as (typeof rootRunAliases)[number])) {
+  // If inside a valid folder, get the project slug from the current directory
+  const globalConfig = getGlobalConfig()
+  const currentDir = Deno.cwd()
+  const projectSlug =
+    parse(Deno.args).project?.toString() ||
+    currentDir
+      .replace(`${globalConfig.codeRootDir}/`, '')
+      .split('/')
+      .slice(0, 2)
+      .join('/')
+  const project = new DenvigProject(projectSlug)
+
+  // Quick actions
+  const quickActions = [
+    ...(globalConfig.quickActions || []),
+    ...(project?.config?.quickActions || []),
+  ].sort()
+  if (quickActions.includes(commandName as (typeof quickActions)[number])) {
     args = ['run', ...Deno.args]
     commandName = 'run'
+    console.log('> Proxying to denvig run', ...Deno.args)
   }
 
-  const flags = parse(args)
   const commands = {
     run: (await import('./commands/run.ts')).runCommand,
     config: (await import('./commands/config.ts')).configCommand,
     version: (await import('./commands/version.ts')).versionCommand,
   } as Record<string, GenericCommand>
 
-  if (!commandName) {
-    console.log(`Denvig v${getDenvigVersion()}`)
-    console.log('')
-    console.log('Usage: denvig <command> [args] [flags]')
-    console.log('')
-    console.log('Available commands:')
-    Object.keys(commands).forEach((cmd) => {
-      console.log(
-        `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
-      )
-    })
-    console.log('')
-    console.log('Global flags:')
-    globalFlags.forEach((flag) => {
-      console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
-    })
-    Deno.exit(1)
-  }
-
-  if (!commands[commandName]) {
-    console.error(`Command "${commandName}" not found.`)
-    Deno.exit(1)
-  }
-
   const command = commands[commandName]
-  const parsedArgs = command.args.reduce(
-    (acc, arg, index) => {
-      const value = flags._[index + 1]
-      if (value !== undefined) {
-        acc[arg.name] = value
-      } else if (arg.required) {
-        console.error(`Missing required argument: ${arg.name}`)
-        Deno.exit(1)
-      }
-      return acc
-    },
-    {} as Record<string, string | number>,
-  )
+  const flags = parse(args)
+  const parsedArgs =
+    command?.args.reduce(
+      (acc, arg, index) => {
+        const value = flags._[index + 1]
+        if (value !== undefined) {
+          acc[arg.name] = value
+        } else if (arg.required) {
+          console.error(`Missing required argument: ${arg.name}`)
+          Deno.exit(1)
+        }
+        return acc
+      },
+      {} as Record<string, string | number>,
+    ) || {}
 
   // Extract extra arguments that weren't consumed by the command definition
-  const extraPositionalArgs = flags._.slice(command.args.length + 1).map(
-    (arg) => String(arg),
-  )
+  const extraPositionalArgs =
+    flags._.slice(command?.args.length + 1).map((arg) => String(arg)) || []
 
-  const allFlags = [...globalFlags, ...command.flags]
+  const allFlags = [...globalFlags, ...(command?.flags || [])]
   const recognizedFlagNames = new Set(allFlags.map((flag) => flag.name))
 
   const parsedFlags = allFlags.reduce(
@@ -128,23 +108,43 @@ if (import.meta.main) {
   // Combine extra positional args and extra flag args
   const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
 
-  // If inside a valid folder, get the project slug from the current directory
-  const globalConfig = getGlobalConfig()
-  const currentDir = Deno.cwd()
-  const projectSlug =
-    parsedFlags.project?.toString() ||
-    currentDir
-      .replace(`${globalConfig.codeRootDir}/`, '')
-      .split('/')
-      .slice(0, 2)
-      .join('/')
-  if (!projectSlug) {
-    console.error('No project provided or detected.')
+  if (!commandName) {
+    console.log(`Denvig v${getDenvigVersion()}`)
+    console.log('')
+    console.log('Usage: denvig <command> [args] [flags]')
+    console.log('')
+    console.log('Available commands:')
+    Object.keys(commands).forEach((cmd) => {
+      console.log(
+        `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
+      )
+    })
+    console.log('')
+    console.log('Quick Actions:')
+    quickActions.forEach((actionName) => {
+      const action = project?.actions?.[actionName]
+      console.log(
+        `  - ${actionName.padEnd(19, ' ')} ${action ? `$ ${action}` : 'not defined'}`,
+      )
+    })
+    console.log('')
+    console.log('Global flags:')
+    globalFlags.forEach((flag) => {
+      console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
+    })
     Deno.exit(1)
   }
-  const project = new DenvigProject(projectSlug)
+
+  if (!commands[commandName]) {
+    console.error(`Command "${commandName}" not found.`)
+    Deno.exit(1)
+  }
 
   try {
+    if (!projectSlug) {
+      console.error('No project provided or detected.')
+    }
+
     const { success } = await command.run(
       project,
       parsedArgs,
@@ -152,7 +152,7 @@ if (import.meta.main) {
       extraArgs,
     )
     if (!success) {
-      console.error(`Command "${commandName}" failed.`)
+      // console.error(`Command "${commandName}" failed.`)
       Deno.exit(1)
     }
   } catch (e: unknown) {
