@@ -10,7 +10,7 @@ on:
     branches: [ main ]
 
 env:
-  DENVIG_CODE_ROOT_DIR: ${{ github.workspace }}
+  DENVIG_CODE_ROOT_DIR: ${{ github.workspace }}/../..
 
 jobs:
   build:
@@ -33,6 +33,11 @@ jobs:
           curl -L https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.1.3/biome-linux-x64 -o biome
           chmod +x biome
           mv biome /usr/local/bin/biome
+
+      - name: Print out working directory environment
+        run: |
+          echo $DENVIG_CODE_ROOT_DIR
+          echo $PWD
 
       - run: deno task lint
 
