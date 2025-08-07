@@ -1,11 +1,13 @@
 import { parse } from 'jsr:@std/yaml'
+import { dirname, resolve } from 'node:path'
 
 import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
 import { safeReadTextFileSync } from './safeReadFile.ts'
 
-export const GLOBAL_CONFIG_PATH =
+export const GLOBAL_CONFIG_PATH = resolve(
   Deno.env.get('DENVIG_GLOBAL_CONFIG_PATH') ||
-  `${Deno.env.get('HOME')}/.denvig/config.yml`
+    `${Deno.env.get('HOME')}/.denvig/config.yml`,
+)
 
 const DEFAULT_GLOBAL_CONFIG = {
   codeRootDir: `${Deno.env.get('HOME')}/src`,
@@ -26,10 +28,17 @@ export const getGlobalConfig =
   (): ConfigWithSourcePaths<GlobalConfigSchema> => {
     const configRaw = safeReadTextFileSync(GLOBAL_CONFIG_PATH)
     if (configRaw) {
+      const globalConfig = GlobalConfigSchema.parse(parse(configRaw))
       try {
+        if (globalConfig.codeRootDir?.startsWith('.')) {
+          const configDir = dirname(GLOBAL_CONFIG_PATH)
+          globalConfig.codeRootDir = resolve(
+            `${configDir}/${globalConfig.codeRootDir}`,
+          )
+        }
         return {
           ...DEFAULT_GLOBAL_CONFIG,
-          ...GlobalConfigSchema.parse(parse(configRaw)),
+          ...globalConfig,
           $sources: [GLOBAL_CONFIG_PATH],
         }
       } catch (e) {

@@ -52,6 +52,7 @@ export const runTestCommand = (
   options: RunTestCommandOptions = {},
 ): Promise<RunTestCommandResult> => {
   const { cwd = process.cwd(), env = {} } = options
+  const rootDir = process.cwd()
 
   // Enforce all commands start with 'denvig'
   if (!command.startsWith('denvig')) {
@@ -68,7 +69,7 @@ export const runTestCommand = (
       '--allow-env',
       '--allow-read',
       '--allow-run',
-      'src/cli.ts',
+      `${rootDir}/src/cli.ts`,
       ...args,
     ],
     {

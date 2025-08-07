@@ -1,0 +1,9 @@
+{
+  "name": "@denvig/examples-pnpm",
+  "version": "0.0.1",
+  "description": "Denvig example project using pnpm",
+  "private": true,
+  "scripts": {
+    "hello": "pnpm exec echo \"Hello from pnpm example!\""
+  }
+}
