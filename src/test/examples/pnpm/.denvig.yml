@@ -1,4 +1,0 @@
-name: denvig pnpm example
-actions:
-  ls:
-    command: ls -a
