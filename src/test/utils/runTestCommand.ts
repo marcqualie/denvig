@@ -53,11 +53,12 @@ export const runTestCommand = (
 ): Promise<RunTestCommandResult> => {
   const { cwd = process.cwd(), env = {} } = options
 
-  // Parse the command to extract arguments (remove "denvig" prefix if present)
-  const args = command.split(/\s+/)
-  if (args[0] === 'denvig') {
-    args.shift()
+  // Enforce all commands start with 'denvig'
+  if (!command.startsWith('denvig')) {
+    throw new Error(`Command must start with 'denvig'. Received: ${command}`)
   }
+  const args = command.split(/\s+/)
+  args.shift()
 
   // Execute the Denvig CLI using Deno
   const child = spawn(
