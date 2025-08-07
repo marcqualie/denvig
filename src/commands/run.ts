@@ -40,18 +40,56 @@ export const runCommand = new Command({
 
     const commandToProxy = `${action} ${extraArgs.join(' ')}`.trim()
     console.log(`$ ${commandToProxy}`)
-    const command = new Deno.Command('script', {
-      args: ['-q', '/dev/null', 'sh', '-c', commandToProxy],
-      cwd: project.path,
-      env: {
-        ...Deno.env.toObject(),
-        DENVIG_PROJECT: project.slug,
-      },
-      stdout: 'piped',
-      stderr: 'piped',
-    })
+
+    // Prepare environment with color forcing for better terminal output
+    const env = {
+      ...Deno.env.toObject(),
+      DENVIG_PROJECT: project.slug,
+      // Force color output even when not in a TTY
+      FORCE_COLOR: '1',
+      // cSpell:ignore CLICOLOR
+      CLICOLOR_FORCE: '1',
+    }
+
+    // Check if we're in a TTY environment
+    const isInteractive = Deno.stdout.isTerminal() && Deno.stdin.isTerminal()
+    let command: Deno.Command
+
+    if (isInteractive) {
+      // Use script command to preserve TTY behavior in interactive environments
+      const os = Deno.build.os
+      if (os === 'darwin') {
+        // macOS (BSD script): script [options] [file [command]]
+        command = new Deno.Command('script', {
+          args: ['-q', '/dev/null', 'sh', '-c', commandToProxy],
+          cwd: project.path,
+          env,
+          stdout: 'piped',
+          stderr: 'piped',
+        })
+      } else {
+        // Linux (util-linux script): script [options] [file]
+        command = new Deno.Command('script', {
+          args: ['-q', '-c', commandToProxy, '/dev/null'],
+          cwd: project.path,
+          env,
+          stdout: 'piped',
+          stderr: 'piped',
+        })
+      }
+    } else {
+      // Use direct execution in non-TTY environments (tests, CI, pipes)
+      command = new Deno.Command('sh', {
+        args: ['-c', commandToProxy],
+        cwd: project.path,
+        env,
+        stdout: 'piped',
+        stderr: 'piped',
+      })
+    }
 
     const child = command.spawn()
+
     const streamOutput = async (stream: ReadableStream<Uint8Array>) => {
       const reader = stream.getReader()
 
