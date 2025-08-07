@@ -45,10 +45,6 @@ export const runCommand = new Command({
     const env = {
       ...Deno.env.toObject(),
       DENVIG_PROJECT: project.slug,
-      // Force color output even when not in a TTY
-      FORCE_COLOR: '1',
-      // cSpell:ignore CLICOLOR
-      CLICOLOR_FORCE: '1',
     }
 
     // Check if we're in a TTY environment
