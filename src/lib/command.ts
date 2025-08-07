@@ -1,4 +1,4 @@
-import type { DenvigProject } from './project.ts'
+import type { DenvigProject } from './project'
 
 type CommandOptions<
   ArgDefinitions extends ArgDefinition[],

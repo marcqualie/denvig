@@ -66,17 +66,10 @@ export const runTestCommand = (
   const args = command.split(/\s+/)
   args.shift()
 
-  // Execute the Denvig CLI using Deno
+  // Execute the Denvig CLI using Node.js
   const child = spawn(
-    'deno',
-    [
-      'run',
-      '--allow-env',
-      '--allow-read',
-      '--allow-run',
-      `${rootDir}/src/cli.ts`,
-      ...args,
-    ],
+    'node',
+    ['--experimental-strip-types', `${rootDir}/src/cli.ts`, ...args],
     {
       cwd,
       env: { ...process.env, ...env },
@@ -102,9 +95,9 @@ export const runTestCommand = (
     child.on('close', (code: number | null) => {
       if (
         options.debug ||
-        (Deno.env.get('DENVIG_DEBUG')?.indexOf('runTestCommand') || -1) >= 0
+        (process.env.DENVIG_DEBUG?.indexOf('runTestCommand') || -1) >= 0
       ) {
-        console.log('$ denvig run hello')
+        console.log(`$ ${command}`)
         console.log(`|- code: ${code || 0}`)
         console.log('|- stdout:')
         stdout

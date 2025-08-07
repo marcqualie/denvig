@@ -1,4 +1,4 @@
-import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts'
+import { existsSync, readFileSync } from 'node:fs'
 
 import type { DenvigProject } from './project.ts'
 
@@ -23,7 +23,7 @@ export const detectActions = (project: DenvigProject): Actions => {
     actions = {
       ...actions,
       ...Object.entries(project.config.actions).reduce((acc, [key, value]) => {
-        acc[key] = value.command
+        acc[key] = (value as { command: string }).command
         return acc
       }, {} as Actions),
     }
@@ -32,9 +32,9 @@ export const detectActions = (project: DenvigProject): Actions => {
   // Deno
   if (dependencies.some((dep) => dep.name === 'deno')) {
     const denoJson = existsSync(`${project.path}/deno.json`)
-      ? JSON.parse(Deno.readTextFileSync(`${project.path}/deno.json`))
+      ? JSON.parse(readFileSync(`${project.path}/deno.json`, 'utf8'))
       : existsSync(`${project.path}/deno.jsonc`)
-        ? JSON.parse(Deno.readTextFileSync(`${project.path}/deno.jsonc`))
+        ? JSON.parse(readFileSync(`${project.path}/deno.jsonc`, 'utf8'))
         : {}
     const tasks = (denoJson.tasks || {}) as Record<string, string>
     actions = mergeActions(actions, {
@@ -57,7 +57,7 @@ export const detectActions = (project: DenvigProject): Actions => {
   // NPM / PNPM / Yarn
   if (dependencies.some((dep) => dep.name === 'npm')) {
     const packageJson = JSON.parse(
-      Deno.readTextFileSync(`${project.path}/package.json`),
+      readFileSync(`${project.path}/package.json`, 'utf8'),
     )
     const scripts = (packageJson.scripts || {}) as Record<string, string>
     let packageManager = 'npm'
