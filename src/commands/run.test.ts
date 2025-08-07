@@ -5,7 +5,7 @@ import { runCommand } from './run.ts'
 
 import type { DenvigProject } from '../lib/project.ts'
 
-describe('runCommand', () => {
+describe('commands / run', () => {
   let capturedArgs: string[] = []
   let originalCommand: typeof Deno.Command
 
