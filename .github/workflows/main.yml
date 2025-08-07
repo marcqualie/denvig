@@ -5,9 +5,9 @@ permissions:
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   # Workspace is /home/runner/work/denvig/denvig so we want /home/runner/work as the root
@@ -21,39 +21,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Deno
-        uses: denoland/setup-deno@v2
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          deno-version: v2.4
+          node-version: "22.18"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.14"
 
       - name: Install dependencies
-        run: deno install
+        run: pnpm install
 
-      - name: Install Biome
-        run: |
-          curl -L https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.1.3/biome-linux-x64 -o biome
-          chmod +x biome
-          mv biome /usr/local/bin/biome
+      - name: Run lint
+        run: pnpm run lint
 
-      - name: Show Denvig config for this repo
-        run: deno task cli config
+      - name: Run tests
+        run: pnpm run test
 
-      - run: deno task lint
-
-      - run: deno check
-
-      - name: Run build
-        run: |
-          deno task build
-          ls -lh dist/
-
-      - run: deno task test:ci
-
-      - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/html
-          retention-days: 3
-
-      - run: deno task cli version
+      - name: Check version
+        run: bin/denvig version
