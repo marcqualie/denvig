@@ -11,6 +11,11 @@ type RunTestCommandOptions = {
    * Environment variables to set for the command execution.
    */
   env?: Record<string, string>
+
+  /**
+   * Enabling will print result to console for debugging purposes.
+   */
+  debug?: boolean
 }
 
 type RunTestCommandResult = {
@@ -95,6 +100,23 @@ export const runTestCommand = (
   // Wait for the process to complete
   return new Promise((resolve) => {
     child.on('close', (code: number | null) => {
+      if (
+        options.debug ||
+        (Deno.env.get('DENVIG_DEBUG')?.indexOf('runTestCommand') || -1) >= 0
+      ) {
+        console.log('$ denvig run hello')
+        console.log(`|- code: ${code || 0}`)
+        console.log('|- stdout:')
+        stdout
+          .trim()
+          .split('\n')
+          .map((line) => console.log(`|    ${line}`))
+        console.log('|- stderr:')
+        stderr
+          .trim()
+          .split('\n')
+          .map((line) => console.log(`|    ${line}`))
+      }
       resolve({
         code: code ?? 0,
         stdout: stdout.trim(),

@@ -26,23 +26,6 @@ describe('examples / npm / actions', () => {
       },
     })
 
-    console.log('$ denvig run hello')
-    console.log(`| code: ${result.code}`)
-    console.log(
-      '|- stdout:',
-      result.stdout
-        .split('\n')
-        .map((line) => `\n|    ${line}`)
-        .join(''),
-    )
-    console.log(
-      '|- stderr:\n',
-      result.stderr
-        .split('\n')
-        .map((line) => `\n|    ${line}`)
-        .join(''),
-    )
-
     expect(result.stdout).toContain('Hello from npm example!')
     expect(result.stderr).toBe('')
     expect(result.code).toBe(0)
