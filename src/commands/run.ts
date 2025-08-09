@@ -27,7 +27,17 @@ export const runCommand = new Command({
       console.log(`Available actions:`)
       for (const action in project.actions) {
         if (!project.actions[action]) continue
-        console.log(`  ${action}: ${project.actions[action]}`)
+        const command = project.actions[action]
+        const lines = command.split('\n')
+        const firstLine = lines[0]
+        const remainingLines = lines.slice(1)
+
+        console.log(`  ${action}: ${firstLine}`)
+        for (const line of remainingLines) {
+          if (line.trim()) {
+            console.log(`${' '.repeat(action.length + 4)}${line}`)
+          }
+        }
       }
       return { success: true, message: 'No action specified.' }
     }

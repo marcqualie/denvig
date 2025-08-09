@@ -115,6 +115,7 @@ async function main() {
   const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
 
   if (!commandName) {
+    const padLength = 20
     console.log(`Denvig v${getDenvigVersion()}`)
     console.log('')
     console.log('Usage: denvig <command> [args] [flags]')
@@ -122,21 +123,33 @@ async function main() {
     console.log('Available commands:')
     Object.keys(commands).forEach((cmd) => {
       console.log(
-        `  - ${commands[cmd].usage.padEnd(19, ' ')} ${commands[cmd].description}`,
+        `  - ${commands[cmd].usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
       )
     })
     console.log('')
     console.log('Quick Actions:')
     quickActions.forEach((actionName) => {
       const action = project?.actions?.[actionName]
-      console.log(
-        `  - ${actionName.padEnd(19, ' ')} ${action ? `$ ${action}` : 'not defined'}`,
-      )
+      if (!action) {
+        console.log(`  - ${actionName.padEnd(padLength, ' ')} not defined`)
+        return
+      }
+
+      const lines = action.split('\n')
+      const firstLine = lines[0]
+      const remainingLines = lines.slice(1)
+
+      console.log(`  - ${actionName.padEnd(padLength, ' ')} $ ${firstLine}`)
+      for (const line of remainingLines) {
+        if (line.trim()) {
+          console.log(`${' '.repeat(padLength + 7)}${line}`)
+        }
+      }
     })
     console.log('')
     console.log('Global flags:')
     globalFlags.forEach((flag) => {
-      console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
+      console.log(`  --${flag.name.padEnd(padLength, ' ')} ${flag.description}`)
     })
     process.exit(1)
   }
