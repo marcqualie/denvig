@@ -52,10 +52,14 @@ denvig outdated
 There is a set of core languages and frameworks that Denvig will support out of the box. Any language or framework
 can be supported by using the per project configs.
 
-- [ ] Deno
-- [ ] Node.js / NextJS / Vite
-- [ ] Ruby / Rails
-- [ ] Python / Pip
+- [x] Node.js (npm, pnpm, yarn)
+- [ ] Bun
+- [ ] Vite
+- [x] Deno
+- [ ] NextJS
+- [ ] Ruby
+- [ ] Rails
+- [ ] Python
 
 
 

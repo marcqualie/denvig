@@ -40,5 +40,12 @@ jobs:
       - name: Run tests
         run: pnpm run test
 
+      - name: Install denvig-dev to PATH
+        run: cp bin/denvig-dev /usr/local/bin/denvig
+
       - name: Check version
-        run: bin/denvig-dev version
+        run: denvig version
+
+      - uses: oven-sh/setup-bun@v2
+      - name: Compile binaries for all platforms
+        run: denvig run compile
