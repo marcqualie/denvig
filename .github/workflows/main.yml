@@ -42,3 +42,6 @@ jobs:
 
       - name: Check version
         run: bin/denvig-dev version
+
+      - name: Compile binaries for all platforms
+        run: denvig run compile
