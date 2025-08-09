@@ -18,8 +18,6 @@ actions:
       denvig version
   compile:
     command: |
-  "compile:darwin-x86_64":
-      which -a denvig
       denvig run compile:darwin-x64
       denvig run compile:darwin-arm64
       denvig run compile:linux-x64
