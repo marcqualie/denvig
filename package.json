@@ -13,7 +13,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsup src/cli.ts",
+    "build": "rm -rf dist && tsup",
     "check-types": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "lint": "biome check",
