@@ -44,4 +44,4 @@ jobs:
         run: bin/denvig-dev version
 
       - name: Compile binaries for all platforms
-        run: denvig run compile
+        run: bin/denvig-dev run compile
