@@ -40,8 +40,11 @@ jobs:
       - name: Run tests
         run: pnpm run test
 
+      - name: Install denvig-dev to PATH
+        run: cp bin/denvig-dev /usr/local/bin/denvig
+
       - name: Check version
-        run: bin/denvig-dev version
+        run: denvig version
 
       - name: Compile binaries for all platforms
-        run: bin/denvig-dev run compile
+        run: denvig run compile

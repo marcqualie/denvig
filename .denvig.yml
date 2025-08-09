@@ -14,19 +14,21 @@ actions:
       pnpm run test
       pnpm run build
       node dist/cli.cjs version
-      bin/denvig run compile
-      bin/denvig version
+      denvig run compile
+      denvig version
   compile:
     command: |
-      bin/denvig run compile:darwin-x86_64
-      bin/denvig run compile:darwin-arm64
-      bin/denvig run compile:linux-x86_64
-      bin/denvig run compile:linux-arm64
   "compile:darwin-x86_64":
+      which -a denvig
+      denvig run compile:darwin-x64
+      denvig run compile:darwin-arm64
+      denvig run compile:linux-x64
+      denvig run compile:linux-arm64
+  "compile:darwin-x64":
     command: bun build --compile --minify --bytecode --target bun-darwin-x64 --outfile bin/denvig-darwin-x64 src/cli.ts
   "compile:darwin-arm64":
     command: bun build --compile --minify --bytecode --target bun-darwin-arm64 --outfile bin/denvig-darwin-arm64 src/cli.ts
-  "compile:linux-x86_64":
+  "compile:linux-x64":
     command: bun build --compile --minify --bytecode --target bun-linux-x64-modern --outfile bin/denvig-linux-x64 src/cli.ts
   "compile:linux-arm64":
     command: bun build --compile --minify --bytecode --target bun-linux-arm64 --outfile bin/denvig-linux-arm64 src/cli.ts
