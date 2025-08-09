@@ -1,16 +1,16 @@
-import { parse } from 'jsr:@std/yaml'
 import { dirname, resolve } from 'node:path'
+import { parse } from 'yaml'
 
 import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
 import { safeReadTextFileSync } from './safeReadFile.ts'
 
 export const GLOBAL_CONFIG_PATH = resolve(
-  Deno.env.get('DENVIG_GLOBAL_CONFIG_PATH') ||
-    `${Deno.env.get('HOME')}/.denvig/config.yml`,
+  process.env.DENVIG_GLOBAL_CONFIG_PATH ||
+    `${process.env.HOME}/.denvig/config.yml`,
 )
 
 export const CODE_ROOT_DIR = resolve(
-  Deno.env.get('DENVIG_CODE_ROOT_DIR') || `${Deno.env.get('HOME')}/src`,
+  process.env.DENVIG_CODE_ROOT_DIR || `${process.env.HOME}/src`,
 )
 
 const DEFAULT_GLOBAL_CONFIG = {
@@ -53,7 +53,7 @@ export const getGlobalConfig =
           `Error parsing global config at ${GLOBAL_CONFIG_PATH}:`,
           e,
         )
-        Deno.exit(1)
+        process.exit(1)
       }
     }
 

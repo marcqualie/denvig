@@ -1,4 +1,4 @@
 #!/bin/sh
 
 # shellcheck disable=SC2068
-deno task cli $@
+node --experimental-strip-types src/cli.ts $@

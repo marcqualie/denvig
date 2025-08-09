@@ -1,4 +1,4 @@
-import { z } from 'npm:zod'
+import { z } from 'zod'
 
 /**
  * Actions that are available on the CLI root for quick access.

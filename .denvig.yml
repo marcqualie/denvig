@@ -1,10 +1,32 @@
 name: Denvig
 
 quickActions:
+  - check
   - compile
   - lint:fix
   - test:ci
 
 actions:
+  check:
+    command: |
+      pnpm run check-types
+      pnpm run lint
+      pnpm run test
+      pnpm run build
+      node dist/cli.cjs version
+      bin/denvig run compile
+      bin/denvig version
   compile:
-    command: deno task build
+    command: |
+      bin/denvig run compile:darwin-x86_64
+      bin/denvig run compile:darwin-arm64
+      bin/denvig run compile:linux-x86_64
+      bin/denvig run compile:linux-arm64
+  "compile:darwin-x86_64":
+    command: deno compile -A --no-check --unstable-sloppy-imports --target x86_64-apple-darwin --output bin/denvig-darwin-x86_64 src/cli.ts
+  "compile:darwin-arm64":
+    command: deno compile -A --no-check --unstable-sloppy-imports --target aarch64-apple-darwin --output bin/denvig-darwin-arm64 src/cli.ts
+  "compile:linux-x86_64":
+    command: deno compile -A --no-check --unstable-sloppy-imports --target x86_64-unknown-linux-gnu --output bin/denvig-linux-x86_64 src/cli.ts
+  "compile:linux-arm64":
+    command: deno compile -A --no-check --unstable-sloppy-imports --target aarch64-unknown-linux-gnu --output bin/denvig-linux-arm64 src/cli.ts

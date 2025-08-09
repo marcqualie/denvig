@@ -1,4 +1,4 @@
-import { z } from 'npm:zod'
+import { z } from 'zod'
 
 export const ProjectDependencySchema = z.object({
   id: z.string().describe('Unique identifier for the ecosystem / dependency'),
