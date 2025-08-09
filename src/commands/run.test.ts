@@ -33,4 +33,24 @@ describe('commands / run', () => {
     match(result.stdout, /Available actions:/)
     strictEqual(result.stderr, '')
   })
+
+  it('should format multi-line actions with proper alignment', async () => {
+    const result = await runTestCommand('denvig run')
+
+    strictEqual(result.code, 0)
+
+    // Verify that multi-line actions are properly aligned
+    // The "check:" action should have subsequent lines aligned with the first command
+    match(result.stdout, /check: pnpm run check-types\n\s{9}pnpm run lint/)
+    match(
+      result.stdout,
+      /compile: denvig run compile:darwin-x64\n\s{11}denvig run compile:darwin-arm64/,
+    )
+
+    // Ensure single-line actions still work normally
+    match(result.stdout, /build: pnpm run build/)
+    match(result.stdout, /test: pnpm run test/)
+
+    strictEqual(result.stderr, '')
+  })
 })
