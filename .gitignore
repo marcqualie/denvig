@@ -2,6 +2,7 @@
 dist
 *.tgz
 bin/denvig
+bin/denvig-*
 
 # node
 node_modules

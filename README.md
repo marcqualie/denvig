@@ -16,12 +16,6 @@ You can install the CLI tool globally using npm:
 npm install -g denvig
 ```
 
-
-### Binary
-
-Prebuilt binaries can be downloaded from the [releases page](https://github.com/marcqualie/denvig/releases).
-
-
 After installation, the `denvig` command will be available in your terminal.
 
 

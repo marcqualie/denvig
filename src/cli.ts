@@ -1,4 +1,6 @@
-import { parse } from 'https://deno.land/std@0.203.0/flags/mod.ts'
+#!/usr/bin/env node
+
+import parseArgs from 'minimist'
 
 import { getGlobalConfig } from './lib/config.ts'
 import { DenvigProject } from './lib/project.ts'
@@ -18,16 +20,16 @@ const globalFlags = [
   },
 ]
 
-// Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
-if (import.meta.main) {
-  let commandName = Deno.args[0]
-  let args = Deno.args
+// Main CLI execution
+async function main() {
+  let commandName = process.argv[2]
+  let args = process.argv.slice(2)
 
   // If inside a valid folder, get the project slug from the current directory
   const globalConfig = getGlobalConfig()
-  const currentDir = Deno.cwd()
+  const currentDir = process.cwd()
   const projectSlug =
-    parse(Deno.args).project?.toString() ||
+    parseArgs(process.argv.slice(2)).project?.toString() ||
     currentDir
       .replace(`${globalConfig.codeRootDir}/`, '')
       .split('/')
@@ -41,19 +43,23 @@ if (import.meta.main) {
     ...(project?.config?.quickActions || []),
   ].sort()
   if (quickActions.includes(commandName as (typeof quickActions)[number])) {
-    args = ['run', ...Deno.args]
+    args = ['run', ...process.argv.slice(2)]
     commandName = 'run'
-    console.log('> Proxying to denvig run', ...Deno.args)
+    console.log('> Proxying to denvig run', ...process.argv.slice(2))
   }
 
+  const { runCommand } = await import('./commands/run.ts')
+  const { configCommand } = await import('./commands/config.ts')
+  const { versionCommand } = await import('./commands/version.ts')
+
   const commands = {
-    run: (await import('./commands/run.ts')).runCommand,
-    config: (await import('./commands/config.ts')).configCommand,
-    version: (await import('./commands/version.ts')).versionCommand,
+    run: runCommand,
+    config: configCommand,
+    version: versionCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]
-  const flags = parse(args)
+  const flags = parseArgs(args)
   const parsedArgs =
     command?.args.reduce(
       (acc, arg, index) => {
@@ -62,7 +68,7 @@ if (import.meta.main) {
           acc[arg.name] = value
         } else if (arg.required) {
           console.error(`Missing required argument: ${arg.name}`)
-          Deno.exit(1)
+          process.exit(1)
         }
         return acc
       },
@@ -84,7 +90,7 @@ if (import.meta.main) {
         acc[flag.name] = flag.defaultValue
       } else if (flag.required) {
         console.error(`Missing required flag: ${flag.name}`)
-        Deno.exit(1)
+        process.exit(1)
       }
       return acc
     },
@@ -132,12 +138,12 @@ if (import.meta.main) {
     globalFlags.forEach((flag) => {
       console.log(`  --${flag.name.padEnd(19, ' ')} ${flag.description}`)
     })
-    Deno.exit(1)
+    process.exit(1)
   }
 
   if (!commands[commandName]) {
     console.error(`Command "${commandName}" not found.`)
-    Deno.exit(1)
+    process.exit(1)
   }
 
   try {
@@ -153,10 +159,13 @@ if (import.meta.main) {
     )
     if (!success) {
       // console.error(`Command "${commandName}" failed.`)
-      Deno.exit(1)
+      process.exit(1)
     }
   } catch (e: unknown) {
     console.error(`Error executing command "${commandName}":`, e)
-    Deno.exit(1)
+    process.exit(1)
   }
 }
+
+// Run main function when this module is executed directly
+main()
