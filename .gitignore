@@ -3,6 +3,7 @@ dist
 *.tgz
 bin/denvig
 bin/denvig-*
+releases
 
 # node
 node_modules

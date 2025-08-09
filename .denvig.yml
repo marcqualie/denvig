@@ -23,10 +23,10 @@ actions:
       denvig run compile:linux-x64
       denvig run compile:linux-arm64
   "compile:darwin-x64":
-    command: bun build --compile --minify --bytecode --target bun-darwin-x64 --outfile bin/denvig-darwin-x64 src/cli.ts
+    command: bun build --compile --minify --bytecode --target bun-darwin-x64 --outfile releases/denvig-darwin-x64-$(denvig version) src/cli.ts
   "compile:darwin-arm64":
-    command: bun build --compile --minify --bytecode --target bun-darwin-arm64 --outfile bin/denvig-darwin-arm64 src/cli.ts
+    command: bun build --compile --minify --bytecode --target bun-darwin-arm64 --outfile releases/denvig-darwin-arm64-$(denvig version) src/cli.ts
   "compile:linux-x64":
-    command: bun build --compile --minify --bytecode --target bun-linux-x64-modern --outfile bin/denvig-linux-x64 src/cli.ts
+    command: bun build --compile --minify --bytecode --target bun-linux-x64-modern --outfile releases/denvig-linux-x64-$(denvig version) src/cli.ts
   "compile:linux-arm64":
-    command: bun build --compile --minify --bytecode --target bun-linux-arm64 --outfile bin/denvig-linux-arm64 src/cli.ts
+    command: bun build --compile --minify --bytecode --target bun-linux-arm64 --outfile releases/denvig-linux-arm64-$(denvig version) src/cli.ts
