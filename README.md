@@ -1,5 +1,8 @@
 # Denvig - Developer Environment Invigorator
 
+[![npm version](https://img.shields.io/npm/v/denvig?color=yellow)](https://npmjs.com/package/denvig)
+[![install size](https://packagephobia.com/badge?p=denvig)](https://packagephobia.com/result?p=denvig)
+
 Denvig is a concept of simplifying development environments across multiple languages and frameworks by creating a small
 set of consistent wrappers to avoid muscle memory and configuration headaches.
 
