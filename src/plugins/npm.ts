@@ -16,11 +16,11 @@ const plugin = definePlugin({
     const hasYarnLock = rootFiles.includes('yarn.lock')
     const hasDenoConfig =
       rootFiles.includes('deno.json') || rootFiles.includes('deno.jsonc')
-    const canhandle =
+    const canHandle =
       hasNpmLock ||
       (hasPackageJson && !hasPnpmLock && !hasYarnLock && !hasDenoConfig)
 
-    if (!canhandle) {
+    if (!canHandle) {
       return {}
     }
 
