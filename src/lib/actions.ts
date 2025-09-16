@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs'
+import plugins from './plugins.ts'
 
 import type { DenvigProject } from './project.ts'
 
-type Actions = Record<string, string>
+type Actions = Record<string, string[]>
 
 /**
  * Return the actions from combined sources.
@@ -13,76 +13,25 @@ type Actions = Record<string, string>
  * - deno.json tasks
  * - package.json scripts
  */
-export const detectActions = (project: DenvigProject): Actions => {
-  const dependencies = project.dependencies
-
-  let actions: Record<string, string> = {}
+export const detectActions = async (
+  project: DenvigProject,
+): Promise<Actions> => {
+  let actions: Actions = {}
 
   // Project
   if (project.config.actions) {
     actions = {
-      ...actions,
       ...Object.entries(project.config.actions).reduce((acc, [key, value]) => {
-        acc[key] = (value as { command: string }).command
+        acc[key] = [(value as { command: string }).command]
         return acc
       }, {} as Actions),
     }
   }
 
-  // Deno
-  if (dependencies.some((dep) => dep.name === 'deno')) {
-    const denoJson = existsSync(`${project.path}/deno.json`)
-      ? JSON.parse(readFileSync(`${project.path}/deno.json`, 'utf8'))
-      : existsSync(`${project.path}/deno.jsonc`)
-        ? JSON.parse(readFileSync(`${project.path}/deno.jsonc`, 'utf8'))
-        : {}
-    const tasks = (denoJson.tasks || {}) as Record<string, string>
-    actions = mergeActions(actions, {
-      ...actions,
-      test: tasks?.test ? `deno task test` : 'deno test',
-      lint: tasks?.lint ? `deno task lint` : 'deno lint',
-      'check-types': tasks?.checkTypes ? `deno task check-types` : 'deno check',
-      ...Object.entries(tasks).reduce(
-        (acc, [key, value]) => {
-          acc[key] = value.startsWith('deno') ? value : `deno task ${key}`
-          return acc
-        },
-        {} as Record<string, string>,
-      ),
-      install: 'deno install',
-      outdated: 'deno outdated',
-    })
-  }
-
-  // NPM / PNPM / Yarn
-  if (dependencies.some((dep) => dep.name === 'npm')) {
-    const packageJson = JSON.parse(
-      readFileSync(`${project.path}/package.json`, 'utf8'),
-    )
-    const scripts = (packageJson.scripts || {}) as Record<string, string>
-    let packageManager = 'npm'
-    if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
-      packageManager = 'pnpm'
-    } else if (existsSync(`${project.path}/yarn.lock`)) {
-      packageManager = 'yarn'
-    }
-    actions = mergeActions(actions, {
-      build: `${packageManager} ${scripts.build || 'run build'}`,
-      test: `${packageManager} ${scripts.test || 'run test'}`,
-      lint: `${packageManager} ${scripts.lint || 'run lint'}`,
-      dev: `${packageManager} ${scripts.dev || 'run dev'}`,
-      ...Object.entries(scripts).reduce(
-        (acc, [key, value]) => {
-          acc[key] = value.startsWith(packageManager)
-            ? value
-            : `${packageManager} run ${key}`
-          return acc
-        },
-        {} as Record<string, string>,
-      ),
-      install: `${packageManager} install`,
-      outdated: `${packageManager} outdated`,
-    })
+  // Plugins
+  for (const [_key, plugin] of Object.entries(plugins)) {
+    const pluginActions = await plugin.actions(project)
+    actions = mergeActions(actions, pluginActions)
   }
 
   return actions
@@ -91,11 +40,15 @@ export const detectActions = (project: DenvigProject): Actions => {
 /**
  * Combine two actions maps. Existing actions should not be overwritten.
  */
-const mergeActions = (actions: Actions, newActions: Actions): Actions => {
+export const mergeActions = (
+  actions: Actions,
+  newActions: Actions,
+): Actions => {
   for (const [key, value] of Object.entries(newActions)) {
     if (!actions[key]) {
-      actions[key] = value
+      actions[key] = []
     }
+    actions[key].push(...value)
   }
   return actions
 }

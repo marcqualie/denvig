@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+
 import { detectActions } from './actions.ts'
 import {
   type ConfigWithSourcePaths,
@@ -30,7 +32,17 @@ export class DenvigProject {
     return detectDependencies(this)
   }
 
+  /**
+   * Return all actions that can be run for the current project.
+   */
   get actions() {
     return detectActions(this)
+  }
+
+  /**
+   * List all files in the root of a project.
+   */
+  get rootFiles(): string[] {
+    return fs.readdirSync(this.path)
   }
 }
