@@ -1,6 +1,19 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- Added support for python via uv
+
+
+### Changed
+
+- Refactored codebase to use plugins for extensibility
+
+
+
 ## [0.2.0] - 2025-08-09
 
 ### Added
