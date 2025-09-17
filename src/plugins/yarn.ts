@@ -19,7 +19,7 @@ const plugin = definePlugin({
     const scripts = packageJson?.scripts || ({} as Record<string, string>)
     const actions: Record<string, string[]> = {
       ...Object.entries(scripts)
-        .map(([key, script]) => [key, `yarn ${script}`])
+        .map(([key, _script]) => [key, `yarn run ${key}`])
         .reduce(
           (acc, [key, script]) => {
             acc[key] = [script]

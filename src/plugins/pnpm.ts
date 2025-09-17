@@ -27,7 +27,7 @@ const plugin = definePlugin({
     const isWorkspace = project.rootFiles.includes('pnpm-workspace.yaml')
     const actions: Record<string, string[]> = {
       ...Object.entries(scripts)
-        .map(([key, script]) => [key, `pnpm ${script}`])
+        .map(([key, _script]) => [key, `pnpm run ${key}`])
         .reduce(
           (acc, [key, script]) => {
             acc[key] = [script]
