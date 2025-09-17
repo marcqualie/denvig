@@ -2,10 +2,10 @@ import { Command } from '../lib/command.ts'
 import plugins from '../lib/plugins.ts'
 
 export const pluginsCommand = new Command({
-  name: 'version',
-  description: 'Show the current version of Denvig',
-  usage: 'version',
-  example: 'denvig version',
+  name: 'plugins',
+  description: 'Show a list of available plugins and their actions',
+  usage: 'plugins',
+  example: 'denvig plugins',
   args: [],
   flags: [],
   handler: async ({ project }) => {

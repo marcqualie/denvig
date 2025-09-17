@@ -52,12 +52,14 @@ async function main() {
   const { configCommand } = await import('./commands/config.ts')
   const { pluginsCommand } = await import('./commands/plugins.ts')
   const { versionCommand } = await import('./commands/version.ts')
+  const { infoCommand } = await import('./commands/info.ts')
 
   const commands = {
     run: runCommand,
     config: configCommand,
     plugins: pluginsCommand,
     version: versionCommand,
+    info: infoCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]

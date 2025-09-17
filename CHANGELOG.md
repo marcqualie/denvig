@@ -5,7 +5,8 @@
 
 ### Added
 
-- Added support for python via uv
+- Added support for python via uv plugin
+- Added `info` command for project summary
 
 
 ### Changed
