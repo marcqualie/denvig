@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { detectActions } from './actions.ts'
+import { detectActions } from './actions/actions.ts'
 import {
   type ConfigWithSourcePaths,
   getGlobalConfig,

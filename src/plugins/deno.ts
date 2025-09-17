@@ -1,6 +1,6 @@
 import fs, { existsSync, readFileSync } from 'node:fs'
 
-import { mergeActions } from '../lib/actions.ts'
+import { mergeActions } from '../lib/actions/mergeActions.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 

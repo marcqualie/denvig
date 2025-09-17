@@ -1,8 +1,8 @@
-import plugins from './plugins.ts'
+import plugins from '../plugins.ts'
+import { mergeActions } from './mergeActions.ts'
 
-import type { DenvigProject } from './project.ts'
-
-type Actions = Record<string, string[]>
+import type { DenvigProject } from '../project.ts'
+import type { Actions } from './types.ts'
 
 /**
  * Return the actions from combined sources.
@@ -34,21 +34,5 @@ export const detectActions = async (
     actions = mergeActions(actions, pluginActions)
   }
 
-  return actions
-}
-
-/**
- * Combine two actions maps. Existing actions should not be overwritten.
- */
-export const mergeActions = (
-  actions: Actions,
-  newActions: Actions,
-): Actions => {
-  for (const [key, value] of Object.entries(newActions)) {
-    if (!actions[key]) {
-      actions[key] = []
-    }
-    actions[key].push(...value)
-  }
   return actions
 }
