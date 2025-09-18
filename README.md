@@ -62,7 +62,7 @@ can be supported by using the per project configs.
 - [ ] NextJS
 - [ ] Ruby
 - [ ] Rails
-- [ ] Python
+- [x] Python
 
 
 
