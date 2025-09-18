@@ -50,12 +50,16 @@ async function main() {
 
   const { runCommand } = await import('./commands/run.ts')
   const { configCommand } = await import('./commands/config.ts')
+  const { pluginsCommand } = await import('./commands/plugins.ts')
   const { versionCommand } = await import('./commands/version.ts')
+  const { infoCommand } = await import('./commands/info.ts')
 
   const commands = {
     run: runCommand,
     config: configCommand,
+    plugins: pluginsCommand,
     version: versionCommand,
+    info: infoCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]
@@ -128,24 +132,26 @@ async function main() {
     })
     console.log('')
     console.log('Quick Actions:')
-    quickActions.forEach((actionName) => {
-      const action = project?.actions?.[actionName]
-      if (!action) {
+    for (const actionName of quickActions) {
+      const actions = (await project?.actions)?.[actionName]
+      if (!actions) {
         console.log(`  - ${actionName.padEnd(padLength, ' ')} not defined`)
         return
       }
 
-      const lines = action.split('\n')
-      const firstLine = lines[0]
-      const remainingLines = lines.slice(1)
+      for (const action of actions) {
+        const lines = action.split('\n')
+        const firstLine = lines[0]
+        const remainingLines = lines.slice(1)
 
-      console.log(`  - ${actionName.padEnd(padLength, ' ')} $ ${firstLine}`)
-      for (const line of remainingLines) {
-        if (line.trim()) {
-          console.log(`${' '.repeat(padLength + 7)}${line}`)
+        console.log(`  - ${actionName.padEnd(padLength, ' ')} $ ${firstLine}`)
+        for (const line of remainingLines) {
+          if (line.trim()) {
+            console.log(`${' '.repeat(padLength + 7)}${line}`)
+          }
         }
       }
-    })
+    }
     console.log('')
     console.log('Global flags:')
     globalFlags.forEach((flag) => {

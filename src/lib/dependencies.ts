@@ -1,12 +1,25 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { z } from 'zod'
 
-import type { ProjectSchema } from '../schemas/project.ts'
 import type { DenvigProject } from './project.ts'
+
+export const ProjectDependencySchema = z.object({
+  id: z.string().describe('Unique identifier for the ecosystem / dependency'),
+  name: z.string().describe('Name of the dependency'),
+  versions: z
+    .array(z.string())
+    .describe('List of versions available for the dependency'),
+  ecosystem: z
+    .string()
+    .describe('Ecosystem of the dependency (e.g., npm, rubygems, pip)'),
+})
+
+type ProjectDependencySchema = z.infer<typeof ProjectDependencySchema>
 
 export const detectDependencies = (
   project: DenvigProject,
-): ProjectSchema['dependencies'] => {
-  const dependencies: ProjectSchema['dependencies'] = []
+): ProjectDependencySchema[] => {
+  const dependencies: ProjectDependencySchema[] = []
 
   if (existsSync(`${project.path}/package.json`)) {
     dependencies.push({

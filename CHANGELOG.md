@@ -1,6 +1,20 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- Added support for python via uv plugin
+- Added `info` command for project summary
+
+
+### Changed
+
+- Refactored codebase to use plugins for extensibility
+
+
+
 ## [0.2.0] - 2025-08-09
 
 ### Added
