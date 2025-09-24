@@ -6,6 +6,7 @@
 ### Added
 
 - Added support for python via uv plugin
+- Added support for ruby/rails via ruby plugin
 - Added `info` command for project summary
 
 
