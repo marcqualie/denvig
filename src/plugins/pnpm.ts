@@ -7,16 +7,8 @@ const plugin = definePlugin({
   name: 'pnpm',
 
   actions: async (project: DenvigProject) => {
-    const hasPackageJson = project.rootFiles.includes('package.json')
     const hasPnpmLock = project.rootFiles.includes('pnpm-lock.yaml')
-    const hasNpmLock = project.rootFiles.includes('package-lock.json')
-    const hasYarnLock = project.rootFiles.includes('yarn.lock')
-    const hasDenoConfig =
-      project.rootFiles.includes('deno.json') ||
-      project.rootFiles.includes('deno.jsonc')
-    const canHandle =
-      hasPnpmLock ||
-      (hasPackageJson && !hasNpmLock && !hasYarnLock && !hasDenoConfig)
+    const canHandle = hasPnpmLock
 
     if (!canHandle) {
       return {}
