@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://denvig.com/schemas/config.json",
-  "title": "Denvig Project Configuration (break codegen)",
+  "title": "Denvig Project Configuration",
   "description": "Configuration schema for denvig.yml files",
   "type": "object",
   "properties": {
