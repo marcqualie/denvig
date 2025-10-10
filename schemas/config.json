@@ -6,7 +6,8 @@
   "type": "object",
   "properties": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "description": "Unique identifier for the project"
     },
     "actions": {
       "type": "object",
@@ -14,20 +15,23 @@
         "type": "object",
         "properties": {
           "command": {
-            "type": "string"
+            "type": "string",
+            "description": "Shell command to run for the action"
           }
         },
         "additionalProperties": false,
         "required": [
           "command"
         ]
-      }
+      },
+      "description": "Actions that can be run against the project"
     },
     "quickActions": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Actions that are available on the CLI root for quick access"
     }
   },
   "additionalProperties": false,

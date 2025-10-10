@@ -1,7 +1,7 @@
-import { writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-import { ProjectConfigSchema } from '../schemas/config.ts'
+/**
+ * Test fixtures and utilities for codegen tests
+ * This file exposes internal functions for testing purposes
+ */
 
 import type { z } from 'zod'
 
@@ -17,8 +17,9 @@ type JsonSchemaIsh = {
 
 /**
  * Convert a Zod schema to JSON Schema using Zod internals
+ * This is a copy of the internal function from schema.ts for testing purposes
  */
-function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchemaIsh {
+export function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchemaIsh {
   // biome-ignore lint/suspicious/noExplicitAny: Required to access Zod internals
   const def = (schema as any)._def
   // biome-ignore lint/suspicious/noExplicitAny: Access description property from Zod v4
@@ -124,35 +125,4 @@ function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchemaIsh {
 
   // Fallback for unknown types
   return { type: 'object' }
-}
-
-/**
- * Generate JSON Schema for denvig.yml configuration files
- * Based on ProjectConfigSchema from src/schemas/config.ts
- */
-export function generateConfigSchema() {
-  const baseSchema = zodToJsonSchema(ProjectConfigSchema)
-
-  const schema = {
-    $schema: 'http://json-schema.org/draft-07/schema#',
-    $id: 'https://denvig.com/schemas/config.json',
-    title: 'Denvig Project Configuration',
-    description: 'Configuration schema for denvig.yml files',
-    ...baseSchema,
-  }
-
-  return schema
-}
-
-/**
- * Write the generated schema to schemas/config.json
- */
-export function writeConfigSchema() {
-  const schema = generateConfigSchema()
-  const outputPath = resolve(process.cwd(), 'schemas', 'config.json')
-  const content = JSON.stringify(schema, null, 2)
-
-  writeFileSync(outputPath, `${content}\n`, 'utf-8')
-
-  console.log(`Generated JSON schema: ${outputPath}`)
 }
