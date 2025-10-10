@@ -18,7 +18,7 @@ type JsonSchemaIsh = {
 /**
  * Convert a Zod schema to JSON Schema using Zod internals
  */
-function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchemaIsh {
+export const zodToJsonSchema = (schema: z.ZodTypeAny): JsonSchemaIsh => {
   // biome-ignore lint/suspicious/noExplicitAny: Required to access Zod internals
   const def = (schema as any)._def
   // biome-ignore lint/suspicious/noExplicitAny: Access description property from Zod v4

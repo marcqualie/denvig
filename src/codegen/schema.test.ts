@@ -2,8 +2,7 @@ import { deepStrictEqual, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 import { z } from 'zod'
 
-import { generateConfigSchema } from './schema.ts'
-import { zodToJsonSchema } from './testFixtures.ts'
+import { generateConfigSchema, zodToJsonSchema } from './schema.ts'
 
 describe('zodToJsonSchema()', () => {
   describe('basic types', () => {
