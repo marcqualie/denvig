@@ -2,6 +2,7 @@ name: Denvig
 
 quickActions:
   - check
+  - codegen
   - compile
   - lint:fix
   - test:ci

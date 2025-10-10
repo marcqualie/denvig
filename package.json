@@ -15,6 +15,7 @@
   "scripts": {
     "build": "rm -rf dist && tsup",
     "check-types": "tsc --noEmit",
+    "codegen": "bin/codegen",
     "prepublishOnly": "npm run build",
     "lint": "biome check",
     "lint:fix": "biome check --fix",

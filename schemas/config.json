@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://denvig.com/schemas/config.json",
+  "title": "Denvig Project Configuration (break codegen)",
+  "description": "Configuration schema for denvig.yml files",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "actions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "command"
+        ]
+      }
+    },
+    "quickActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ]
+}
