@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://denvig.com/schemas/config.json",
+  "title": "Denvig Project Configuration",
+  "description": "Configuration schema for denvig.yml files",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique identifier for the project"
+    },
+    "actions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Shell command to run for the action"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "command"
+        ]
+      },
+      "description": "Actions that can be run against the project"
+    },
+    "quickActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Actions that are available on the CLI root for quick access"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ]
+}

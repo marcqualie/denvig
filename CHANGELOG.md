@@ -1,6 +1,14 @@
 # Denvig Changelog
 
 
+## Unreleased
+
+### Added
+
+- JSON schema to assist with IDE validation and autocompletion
+
+
+
 ## [0.3.0] - 2025-09-24
 
 ### Added

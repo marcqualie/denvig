@@ -40,6 +40,17 @@ jobs:
       - name: Run tests
         run: pnpm run test
 
+      - name: Run codegen
+        run: pnpm run codegen
+
+      - name: Verify codegen has not changed any files
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Codegen has changed files. Please run 'pnpm run codegen' and commit the changes."
+            git --no-pager diff
+            exit 1
+          fi
+
       - name: Install denvig-dev to PATH
         run: cp bin/denvig-dev /usr/local/bin/denvig
 

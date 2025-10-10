@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+import { writeConfigSchema } from '../src/codegen/schema.ts'
+
+writeConfigSchema()
