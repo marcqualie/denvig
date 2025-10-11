@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { ServicesConfigSchema } from './services.ts'
+
 /**
  * Actions that are available on the CLI root for quick access.
  */
@@ -63,6 +65,9 @@ export const ProjectConfigSchema = SharedConfigSchema.extend({
     .array(z.string())
     .optional()
     .describe('Actions that are available on the CLI root for quick access'),
+  services: ServicesConfigSchema.optional().describe(
+    'Service definitions for the project',
+  ),
 })
 
 export type ProjectConfigSchema = z.infer<typeof ProjectConfigSchema>
