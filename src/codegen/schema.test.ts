@@ -24,6 +24,44 @@ describe('zodToJsonSchema()', () => {
         description: 'A test string',
       })
     })
+
+    it('should convert ZodNumber to JSON Schema', () => {
+      const schema = z.number()
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'number',
+      })
+    })
+
+    it('should convert ZodNumber with description to JSON Schema', () => {
+      const schema = z.number().describe('A test number')
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'number',
+        description: 'A test number',
+      })
+    })
+
+    it('should convert ZodBoolean to JSON Schema', () => {
+      const schema = z.boolean()
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'boolean',
+      })
+    })
+
+    it('should convert ZodBoolean with description to JSON Schema', () => {
+      const schema = z.boolean().describe('A test boolean')
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'boolean',
+        description: 'A test boolean',
+      })
+    })
   })
 
   describe('object types', () => {
@@ -42,6 +80,28 @@ describe('zodToJsonSchema()', () => {
         },
         additionalProperties: false,
         required: ['name', 'age'],
+      })
+    })
+
+    it('should convert ZodObject with number and boolean fields', () => {
+      const schema = z.object({
+        name: z.string(),
+        age: z.number(),
+        active: z.boolean(),
+        score: z.number().optional(),
+      })
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          age: { type: 'number' },
+          active: { type: 'boolean' },
+          score: { type: 'number' },
+        },
+        additionalProperties: false,
+        required: ['name', 'age', 'active'],
       })
     })
 

@@ -122,6 +122,32 @@ export const zodToJsonSchema = (schema: z.ZodTypeAny): JsonSchemaIsh => {
     return result
   }
 
+  // Handle ZodNumber (Zod v4 stores type in def.type)
+  if (
+    def.typeName === 'ZodNumber' ||
+    (def.type === 'number' && !def.element && !def.valueType && !def.shape)
+  ) {
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic JSON Schema object construction
+    const result: any = { type: 'number' }
+    if (description) {
+      result.description = description
+    }
+    return result
+  }
+
+  // Handle ZodBoolean (Zod v4 stores type in def.type)
+  if (
+    def.typeName === 'ZodBoolean' ||
+    (def.type === 'boolean' && !def.element && !def.valueType && !def.shape)
+  ) {
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic JSON Schema object construction
+    const result: any = { type: 'boolean' }
+    if (description) {
+      result.description = description
+    }
+    return result
+  }
+
   // Fallback for unknown types
   return { type: 'object' }
 }
