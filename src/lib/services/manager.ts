@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
+import { parseEnvFile } from './env.ts'
 import launchctl from './launchctl.ts'
 import { generatePlist } from './plist.ts'
 
@@ -91,7 +92,28 @@ export class ServiceManager {
     const environmentVariables: Record<string, string> = {
       DENVIG_PROJECT: this.project.slug,
       DENVIG_SERVICE: name,
-      ...config.env,
+    }
+
+    // Load environment variables from file if specified
+    if (config.envFile) {
+      try {
+        const envFilePath = resolve(this.project.path, config.envFile)
+        const envFromFile = await parseEnvFile(envFilePath)
+        Object.assign(environmentVariables, envFromFile)
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        return {
+          name,
+          success: false,
+          message: `Failed to load environment file: ${errorMessage}`,
+        }
+      }
+    }
+
+    // Merge with explicit env variables (these take precedence)
+    if (config.env) {
+      Object.assign(environmentVariables, config.env)
     }
 
     // Add PORT environment variable if port is configured

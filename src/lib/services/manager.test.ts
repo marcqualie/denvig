@@ -136,4 +136,24 @@ describe('ServiceManager', () => {
       ok(!path.includes(':'))
     })
   })
+
+  describe('startService() with envFile', () => {
+    it('should return error when envFile does not exist', async () => {
+      const project = new DenvigProject('denvig')
+
+      // Set up a service with a non-existent envFile
+      project.config.services = {
+        'test-service-envfile': {
+          command: 'echo test',
+          envFile: 'this-file-definitely-does-not-exist-12345.env',
+        },
+      }
+
+      const manager = new ServiceManager(project)
+      const result = await manager.startService('test-service-envfile')
+
+      ok(!result.success)
+      ok(result.message.includes('not found'))
+    })
+  })
 })

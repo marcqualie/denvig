@@ -11,6 +11,10 @@ export const ServiceConfigSchema = z.object({
   command: z.string().describe('Shell command to execute'),
   port: z.number().optional().describe('Port number the service listens on'),
   domain: z.string().optional().describe('Local domain for the service'),
+  envFile: z
+    .string()
+    .optional()
+    .describe('Path to .env file (relative to project root)'),
   env: z
     .record(z.string(), z.string())
     .optional()

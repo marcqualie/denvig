@@ -37,6 +37,42 @@ describe('ServiceConfigSchema', () => {
     ok(result.success)
   })
 
+  it('should parse service configuration with envFile', () => {
+    const configWithEnvFile = {
+      command: 'pnpm run dev',
+      envFile: '.env.local',
+    }
+
+    const result = ServiceConfigSchema.safeParse(configWithEnvFile)
+    ok(result.success)
+  })
+
+  it('should parse service configuration with env variables', () => {
+    const configWithEnv = {
+      command: 'pnpm run dev',
+      env: {
+        NODE_ENV: 'development',
+        API_KEY: 'secret',
+      },
+    }
+
+    const result = ServiceConfigSchema.safeParse(configWithEnv)
+    ok(result.success)
+  })
+
+  it('should parse service configuration with both envFile and env', () => {
+    const configWithBoth = {
+      command: 'pnpm run dev',
+      envFile: '.env.local',
+      env: {
+        NODE_ENV: 'development',
+      },
+    }
+
+    const result = ServiceConfigSchema.safeParse(configWithBoth)
+    ok(result.success)
+  })
+
   it('should reject configuration without required fields', () => {
     const invalidConfig = {
       port: 3000,
