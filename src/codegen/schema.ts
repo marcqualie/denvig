@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { ProjectConfigSchema } from '../schemas/config.ts'
+import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
 
 import type { z } from 'zod'
 
@@ -171,14 +171,46 @@ export function generateConfigSchema() {
 }
 
 /**
- * Write the generated schema to schemas/config.json
+ * Generate JSON Schema for global configuration files
+ * Based on GlobalConfigSchema from src/schemas/config.ts
+ */
+export function generateGlobalConfigSchema() {
+  const baseSchema = zodToJsonSchema(GlobalConfigSchema)
+
+  const schema = {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    $id: 'https://denvig.com/schemas/config.global.json',
+    title: 'Denvig Global Configuration',
+    description: 'Configuration schema for global denvig config files',
+    ...baseSchema,
+  }
+
+  return schema
+}
+
+/**
+ * Write the generated schemas to schemas directory
  */
 export function writeConfigSchema() {
-  const schema = generateConfigSchema()
-  const outputPath = resolve(process.cwd(), 'schemas', 'config.json')
-  const content = JSON.stringify(schema, null, 2)
+  // Write project config schema
+  const projectSchema = generateConfigSchema()
+  const projectOutputPath = resolve(process.cwd(), 'schemas', 'config.json')
+  const projectContent = JSON.stringify(projectSchema, null, 2)
 
-  writeFileSync(outputPath, `${content}\n`, 'utf-8')
+  writeFileSync(projectOutputPath, `${projectContent}\n`, 'utf-8')
 
-  console.log(`Generated JSON schema: ${outputPath}`)
+  console.log(`Generated JSON schema: ${projectOutputPath}`)
+
+  // Write global config schema
+  const globalSchema = generateGlobalConfigSchema()
+  const globalOutputPath = resolve(
+    process.cwd(),
+    'schemas',
+    'config.global.json',
+  )
+  const globalContent = JSON.stringify(globalSchema, null, 2)
+
+  writeFileSync(globalOutputPath, `${globalContent}\n`, 'utf-8')
+
+  console.log(`Generated JSON schema: ${globalOutputPath}`)
 }

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://denvig.com/schemas/config.global.json",
+  "title": "Denvig Global Configuration",
+  "description": "Configuration schema for global denvig config files",
+  "type": "object",
+  "properties": {
+    "codeRootDir": {
+      "type": "string",
+      "description": "The base directory where projects are stored"
+    },
+    "quickActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Quick actions that are available for all projects"
+    }
+  },
+  "additionalProperties": false
+}
