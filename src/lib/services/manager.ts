@@ -265,7 +265,7 @@ export class ServiceManager {
     }
 
     // Read recent logs
-    const logs = await this.getRecentLogs(name, 10)
+    const logs = await this.getRecentLogs(name, 20)
 
     return {
       name,
@@ -398,5 +398,25 @@ export class ServiceManager {
    */
   private getServiceConfig(name: string): ServiceConfig | undefined {
     return this.project.config.services?.[name]
+  }
+
+  /**
+   * Get the URL where a service can be accessed.
+   */
+  getServiceUrl(name: string): string | null {
+    const config = this.getServiceConfig(name)
+    if (!config) {
+      return null
+    }
+
+    if (config.domain) {
+      return `http://${config.domain}`
+    }
+
+    if (config.port) {
+      return `http://localhost:${config.port}`
+    }
+
+    return null
   }
 }

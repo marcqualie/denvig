@@ -29,13 +29,9 @@ export const servicesCommand = new Command({
       ...services.map((s) => s.name.length),
       'NAME'.length,
     )
-    const cwdWidth = Math.max(
-      ...services.map((s) => s.cwd.length),
-      'DIRECTORY'.length,
-    )
-    const commandWidth = Math.max(
-      ...services.map((s) => s.command.length),
-      'COMMAND'.length,
+    const commandWidth = Math.min(
+      20,
+      Math.max(...services.map((s) => s.command.length), 'COMMAND'.length),
     )
 
     // Print each service with status
@@ -59,10 +55,15 @@ export const servicesCommand = new Command({
         }
       }
 
+      const truncatedCommand =
+        service.command.length > 20
+          ? `${service.command.substring(0, 17)}...`
+          : service.command
+
       console.log(
         `${statusIcon} ${service.name.padEnd(nameWidth)}  ` +
-          `${service.cwd.padEnd(cwdWidth)}  ` +
-          `${service.command.padEnd(commandWidth)}  ` +
+          // `${service.cwd.padEnd(cwdWidth)}  ` +
+          `${truncatedCommand.padEnd(commandWidth)}  ` +
           `${domain}`,
       )
     }
