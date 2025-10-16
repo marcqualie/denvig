@@ -54,6 +54,10 @@
             "type": "string",
             "description": "Local domain for the service"
           },
+          "envFile": {
+            "type": "string",
+            "description": "Path to .env file (relative to project root)"
+          },
           "env": {
             "type": "object",
             "additionalProperties": {
