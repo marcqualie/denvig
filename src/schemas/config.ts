@@ -28,6 +28,7 @@ const SharedConfigSchema = z.object({})
 export const GlobalConfigSchema = SharedConfigSchema.extend({
   codeRootDir: z
     .string()
+    .optional()
     .describe('The root directory where all code is stored'),
   quickActions: z
     .array(z.string())
