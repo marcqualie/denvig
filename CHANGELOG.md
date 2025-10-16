@@ -6,6 +6,7 @@
 ### Added
 
 - JSON schema to assist with IDE validation and autocompletion
+- Support for services in `.denvig.yml` to launch alongside projects
 
 
 
