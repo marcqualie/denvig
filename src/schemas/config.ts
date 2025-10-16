@@ -16,25 +16,21 @@ const DEFAULT_QUICK_ACTIONS = [
 ]
 
 /**
- * Shared config schema that is valid in a global or per project context.
- */
-const SharedConfigSchema = z.object({})
-
-/**
  * Global configuration for the system.
  *
  * This is located in ~/.denvig/config.yml but can be overridden by ENV.DENVIG_GLOBAL_CONFIG_PATH
  */
-export const GlobalConfigSchema = SharedConfigSchema.extend({
+export const GlobalConfigSchema = z.object({
   codeRootDir: z
     .string()
     .optional()
-    .describe('The root directory where all code is stored'),
+    .default('~/src')
+    .describe('The base directory where projects are stored'),
   quickActions: z
     .array(z.string())
     .default(DEFAULT_QUICK_ACTIONS)
     .optional()
-    .describe('Actions that are available on the CLI root for quick access'),
+    .describe('Quick actions that are available for all projects'),
 })
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
@@ -51,7 +47,7 @@ export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
  *   clean:
  *     command: rf -rf dist
  */
-export const ProjectConfigSchema = SharedConfigSchema.extend({
+export const ProjectConfigSchema = z.object({
   name: z.string().describe('Unique identifier for the project'),
   actions: z
     .record(

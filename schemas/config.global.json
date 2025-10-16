@@ -7,18 +7,15 @@
   "properties": {
     "codeRootDir": {
       "type": "string",
-      "description": "The root directory where all code is stored"
+      "description": "The base directory where projects are stored"
     },
     "quickActions": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Actions that are available on the CLI root for quick access"
+      "description": "Quick actions that are available for all projects"
     }
   },
-  "additionalProperties": false,
-  "required": [
-    "codeRootDir"
-  ]
+  "additionalProperties": false
 }
