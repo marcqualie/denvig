@@ -7,6 +7,16 @@ quickActions:
   - lint:fix
   - test:ci
 
+services:
+  hello:
+    command: |
+      node -e "require('http').createServer((req, res) => { res.writeHead(200, {'Content-Type': 'text/plain'}); res.end('Hello World\n'); }).listen(process.env.PORT, () => console.log(`Server running at http://localhost:${process.env.PORT}/`))"
+    port: 8080
+  wontlaunch:
+    command: |
+      node -e "throw new Error('This service is intended to fail to launch')"
+    port: 8080
+
 actions:
   check:
     command: |
