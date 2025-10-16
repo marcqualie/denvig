@@ -53,6 +53,11 @@ async function main() {
   const { pluginsCommand } = await import('./commands/plugins.ts')
   const { versionCommand } = await import('./commands/version.ts')
   const { infoCommand } = await import('./commands/info.ts')
+  const { servicesCommand } = await import('./commands/services.ts')
+  const { startCommand } = await import('./commands/start.ts')
+  const { stopCommand } = await import('./commands/stop.ts')
+  const { restartCommand } = await import('./commands/restart.ts')
+  const { statusCommand } = await import('./commands/status.ts')
 
   const commands = {
     run: runCommand,
@@ -60,6 +65,11 @@ async function main() {
     plugins: pluginsCommand,
     version: versionCommand,
     info: infoCommand,
+    services: servicesCommand,
+    start: startCommand,
+    stop: stopCommand,
+    restart: restartCommand,
+    status: statusCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]

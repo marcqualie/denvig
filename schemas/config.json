@@ -32,6 +32,50 @@
         "type": "string"
       },
       "description": "Actions that are available on the CLI root for quick access"
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "cwd": {
+            "type": "string",
+            "description": "Working directory for the service (relative to project root)"
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command to execute"
+          },
+          "port": {
+            "type": "number",
+            "description": "Port number the service listens on"
+          },
+          "domain": {
+            "type": "string",
+            "description": "Local domain for the service"
+          },
+          "envFile": {
+            "type": "string",
+            "description": "Path to .env file (relative to project root)"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables"
+          },
+          "keepAlive": {
+            "type": "boolean",
+            "description": "Restart service if it exits"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "command"
+        ]
+      },
+      "description": "Service definitions for the project"
     }
   },
   "additionalProperties": false,
