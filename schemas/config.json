@@ -75,7 +75,7 @@
           "command"
         ]
       },
-      "description": "Service definitions for the project"
+      "description": "Service that can be managed for this project"
     }
   },
   "additionalProperties": false,
