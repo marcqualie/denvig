@@ -3,7 +3,7 @@
 
 ## Global Configuration
 
-The file location for global configuration is `~/.denvig.yml`.
+The file location for global configuration is `~/.denvig/config.yml`.
 
 ## codeRootDir
 
