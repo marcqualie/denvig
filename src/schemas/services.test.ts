@@ -11,7 +11,6 @@ describe('ServiceConfigSchema', () => {
       port: 3000,
       domain: 'api.denvig.local',
       keepAlive: true,
-      runAtLoad: false,
     }
 
     const result = ServiceConfigSchema.safeParse(validConfig)

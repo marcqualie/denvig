@@ -68,10 +68,6 @@
           "keepAlive": {
             "type": "boolean",
             "description": "Restart service if it exits"
-          },
-          "runAtLoad": {
-            "type": "boolean",
-            "description": "Start service at system load"
           }
         },
         "additionalProperties": false,

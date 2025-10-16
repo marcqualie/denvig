@@ -129,7 +129,6 @@ export class ServiceManager {
       standardOutPath: this.getLogPath(name, 'stdout'),
       standardErrorPath: this.getLogPath(name, 'stderr'),
       keepAlive: config.keepAlive ?? true,
-      runAtLoad: config.runAtLoad ?? false,
     })
 
     await writeFile(plistPath, plistContent, 'utf-8')

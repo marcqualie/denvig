@@ -17,7 +17,6 @@ describe('plist', () => {
         standardOutPath: '/tmp/denvig-test-project-api.log',
         standardErrorPath: '/tmp/denvig-test-project-api.error.log',
         keepAlive: true,
-        runAtLoad: false,
       })
 
       ok(plistXml.includes('<?xml version="1.0" encoding="UTF-8"?>'))
@@ -48,7 +47,6 @@ describe('plist', () => {
         standardOutPath: '/tmp/test.log',
         standardErrorPath: '/tmp/test.error.log',
         keepAlive: false,
-        runAtLoad: false,
       })
 
       ok(plistXml.includes('com.denvig.test.simple'))
@@ -67,7 +65,6 @@ describe('plist', () => {
         standardOutPath: '/tmp/test.log',
         standardErrorPath: '/tmp/test.error.log',
         keepAlive: true,
-        runAtLoad: false,
       })
 
       ok(plistXml.includes('&amp;'))
@@ -89,7 +86,6 @@ describe('plist', () => {
         standardOutPath: '/tmp/test.log',
         standardErrorPath: '/tmp/test.error.log',
         keepAlive: true,
-        runAtLoad: false,
       })
 
       ok(plistXml.includes('<key>PORT</key>'))
@@ -104,7 +100,6 @@ describe('plist', () => {
         standardOutPath: '/tmp/test.log',
         standardErrorPath: '/tmp/test.error.log',
         keepAlive: true,
-        runAtLoad: false,
       })
 
       ok(plistXml.includes('com.denvig.test.export'))

@@ -20,7 +20,6 @@ export const ServiceConfigSchema = z.object({
     .optional()
     .describe('Environment variables'),
   keepAlive: z.boolean().optional().describe('Restart service if it exits'),
-  runAtLoad: z.boolean().optional().describe('Start service at system load'),
 })
 
 export type ServiceConfig = z.infer<typeof ServiceConfigSchema>

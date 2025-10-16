@@ -9,7 +9,6 @@ export interface PlistOptions {
   standardOutPath: string
   standardErrorPath: string
   keepAlive: boolean
-  runAtLoad: boolean
 }
 
 /**
@@ -42,7 +41,6 @@ export function generatePlist(options: PlistOptions): string {
     standardOutPath,
     standardErrorPath,
     keepAlive,
-    runAtLoad,
   } = options
 
   // Build environment variables section
@@ -86,7 +84,7 @@ ${envVarsXml}
   <${keepAlive ? 'true' : 'false'}/>
 
   <key>RunAtLoad</key>
-  <${runAtLoad ? 'true' : 'false'}/>
+  <false/>
 </dict>
 </plist>
 `
