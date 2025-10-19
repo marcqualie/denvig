@@ -361,7 +361,7 @@ export class ServiceManager {
   /**
    * Check if a service is bootstrapped (loaded in launchctl).
    */
-  private async isServiceBootstrapped(name: string): Promise<boolean> {
+  async isServiceBootstrapped(name: string): Promise<boolean> {
     const label = this.getServiceLabel(name)
     const info = await launchctl.print(label)
     return info !== null
@@ -370,7 +370,7 @@ export class ServiceManager {
   /**
    * Get the service label for launchctl.
    */
-  private getServiceLabel(name: string): string {
+  getServiceLabel(name: string): string {
     const { hash } = generateDenvigResourceHash({
       project: this.project,
       resource: `service/${name}`,
@@ -382,14 +382,14 @@ export class ServiceManager {
   /**
    * Get the denvig directory path.
    */
-  private getDenvigHomeDir(): string {
+  getDenvigHomeDir(): string {
     return resolve(homedir(), '.denvig')
   }
 
   /**
    * Get the plist file path.
    */
-  private getPlistPath(name: string): string {
+  getPlistPath(name: string): string {
     const label = this.getServiceLabel(name)
     return resolve(homedir(), 'Library', 'LaunchAgents', `${label}.plist`)
   }
@@ -397,7 +397,7 @@ export class ServiceManager {
   /**
    * Get the log file path.
    */
-  private getLogPath(name: string, type: 'stdout' | 'stderr'): string {
+  getLogPath(name: string, type: 'stdout' | 'stderr'): string {
     const { hash } = generateDenvigResourceHash({
       project: this.project,
       resource: `service/${name}`,
@@ -409,7 +409,7 @@ export class ServiceManager {
   /**
    * Ensure denvig directories exist.
    */
-  private async ensureDenvigDirectories(): Promise<void> {
+  async ensureDenvigDirectories(): Promise<void> {
     const denvigDir = this.getDenvigHomeDir()
     await mkdir(resolve(denvigDir, 'logs'), { recursive: true })
   }
@@ -417,7 +417,7 @@ export class ServiceManager {
   /**
    * Get recent log lines from a service.
    */
-  private async getRecentLogs(name: string, lines: number): Promise<string[]> {
+  async getRecentLogs(name: string, lines: number): Promise<string[]> {
     try {
       const logPath = this.getLogPath(name, 'stdout')
       const content = await readFile(logPath, 'utf-8')
@@ -427,6 +427,7 @@ export class ServiceManager {
       return []
     }
   }
+
   /**
    * Resolve the absolute working directory for a service.
    */
@@ -437,7 +438,7 @@ export class ServiceManager {
   /**
    * Get the configuration for a specific service.
    */
-  private getServiceConfig(name: string): ServiceConfig | undefined {
+  getServiceConfig(name: string): ServiceConfig | undefined {
     return this.project.config.services?.[name]
   }
 

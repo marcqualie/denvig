@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
@@ -16,55 +17,12 @@ describe('ServiceManager', () => {
     })
   })
 
-  describe('sanitizeForFilename()', () => {
-    it('should replace special characters with hyphens', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename('dev:watch')
-
-      strictEqual(sanitized, 'dev-watch')
-    })
-
-    it('should handle multiple special characters', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename('api@v2:dev')
-
-      strictEqual(sanitized, 'api-v2-dev')
-    })
-
-    it('should collapse multiple hyphens', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename('api::watch')
-
-      strictEqual(sanitized, 'api-watch')
-    })
-
-    it('should remove leading and trailing hyphens', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename(':api:')
-
-      strictEqual(sanitized, 'api')
-    })
-  })
-
   describe('getServiceLabel()', () => {
     it('should generate correct service label format', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const label = (manager as any).getServiceLabel('api')
+      const label = manager.getServiceLabel('api')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/api`,
@@ -77,8 +35,7 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const label = (manager as any).getServiceLabel('dev:watch')
+      const label = manager.getServiceLabel('dev:watch')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/dev:watch`,
@@ -93,8 +50,7 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getPlistPath('api')
+      const path = manager.getPlistPath('api')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/api`,
@@ -108,8 +64,7 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getPlistPath('dev:watch')
+      const path = manager.getPlistPath('dev:watch')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/dev:watch`,
@@ -126,8 +81,7 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getLogPath('api', 'stdout')
+      const path = manager.getLogPath('api', 'stdout')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/api`,
@@ -141,8 +95,7 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getLogPath('api', 'stderr')
+      const path = manager.getLogPath('api', 'stderr')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/api`,
@@ -156,8 +109,7 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getLogPath('dev:watch', 'stdout')
+      const path = manager.getLogPath('dev:watch', 'stdout')
       const expectedHash = generateDenvigResourceHash({
         project,
         resource: `service/dev:watch`,

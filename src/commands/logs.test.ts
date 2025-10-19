@@ -1,4 +1,4 @@
-import { ok, strictEqual } from 'node:assert'
+import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { DenvigProject } from '../lib/project.ts'
@@ -33,20 +33,28 @@ describe('logsCommand', () => {
       { recursive: true },
     )
     const lines = Array.from({ length: 20 }, (_, i) => `line-${i + 1}`)
-    await fs.writeFile(path, lines.join('\n') + '\n', 'utf-8')
+    await fs.writeFile(path, `${lines.join('\n')}\n`, 'utf-8')
 
     // Run using --lines
-    const result1 = await logsCommand.run(project, { name: 'test-logs' }, {
-      lines: 5,
-      follow: false,
-    } as any)
+    const result1 = await logsCommand.run(
+      project,
+      { name: 'test-logs' },
+      {
+        lines: 5,
+        follow: false,
+      },
+    )
     ok(result1.success)
 
     // Run using -n alias
-    const result2 = await logsCommand.run(project, { name: 'test-logs' }, {
-      n: 3,
-      follow: false,
-    } as any)
+    const result2 = await logsCommand.run(
+      project,
+      { name: 'test-logs' },
+      {
+        n: 3,
+        follow: false,
+      },
+    )
     ok(result2.success)
 
     // Clean up

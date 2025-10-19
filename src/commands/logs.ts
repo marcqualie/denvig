@@ -33,19 +33,19 @@ export const logsCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: async ({ project, args, flags }: any) => {
+  handler: async ({ project, args, flags }) => {
     const manager = new ServiceManager(project)
     const name = args.name as string
     // Support alias `-n` through `flags.n` for compatibility with common CLI usage
     const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
     const follow = !!flags.follow
 
-    const logPath = (manager as any).getLogPath(name, 'stdout') as string
+    const logPath = manager.getLogPath(name, 'stdout')
 
     if (follow) {
       // Use system tail for follow behavior — acceptable on macOS
       const tailArgs = ['-n', `${lines}`, '-f', logPath]
-      const child = spawn('tail', tailArgs, { stdio: 'inherit' })
+      spawn('tail', tailArgs, { stdio: 'inherit' })
 
       // Return a Promise that never resolves until the process is killed by the user
       return new Promise(() => {
