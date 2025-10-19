@@ -188,4 +188,122 @@ describe('ServiceManager', () => {
       ok(result.message.includes('not found'))
     })
   })
+
+  describe('log entries on start/stop', () => {
+    it('should append a timestamped Service Started line on start', async () => {
+      const project = new DenvigProject('denvig')
+      project.config.services = {
+        'test-logger': {
+          command: 'echo hello',
+        },
+      }
+
+      const manager = new ServiceManager(project)
+
+      // Stub launchctl to simulate successful bootstrap
+      const launchctl = await import('./launchctl.ts')
+      ;(launchctl as any).bootstrap = async () => ({
+        success: true,
+        output: '',
+      })
+      ;(launchctl as any).print = async () => null
+
+      const startResult = await manager.startService('test-logger')
+      ok(startResult.success)
+
+      const { hash } = generateDenvigResourceHash({
+        project,
+        resource: `service/test-logger`,
+      })
+      const home = require('node:os').homedir()
+      const logPath = require('node:path').resolve(
+        home,
+        '.denvig',
+        'logs',
+        `${hash}.log`,
+      )
+
+      // Read the log and assert the started line exists
+      const fs = await import('node:fs/promises')
+      const content = await fs.readFile(logPath, 'utf-8')
+      const match = content.match(
+        /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] Service Started/,
+      )
+      ok(match !== null)
+
+      // Clean up
+      await fs.unlink(logPath).catch(() => {})
+      await import('node:fs').then((fsSync) =>
+        fsSync.rmSync(
+          require('node:path').resolve(
+            home,
+            'Library',
+            'LaunchAgents',
+            `com.denvig.${hash}.plist`,
+          ),
+          { force: true },
+        ),
+      )
+    })
+
+    it('should append a timestamped Service Stopped line on stop', async () => {
+      const project = new DenvigProject('denvig')
+      project.config.services = {
+        'test-logger-stop': {
+          command: 'echo bye',
+        },
+      }
+
+      const manager = new ServiceManager(project)
+
+      // Stub launchctl to simulate a bootstrapped service and successful bootout
+      const launchctl = await import('./launchctl.ts')
+      ;(launchctl as any).print = async () => ({
+        label: 'loaded',
+        state: 'running',
+      })
+      ;(launchctl as any).bootout = async () => ({ success: true, output: '' })
+
+      // Ensure log file exists to be appended to
+      const { hash } = generateDenvigResourceHash({
+        project,
+        resource: `service/test-logger-stop`,
+      })
+      const home = require('node:os').homedir()
+      const logPath = require('node:path').resolve(
+        home,
+        '.denvig',
+        'logs',
+        `${hash}.log`,
+      )
+      const fs = await import('node:fs/promises')
+      await fs.mkdir(require('node:path').resolve(home, '.denvig', 'logs'), {
+        recursive: true,
+      })
+      await fs.writeFile(logPath, 'initial log\n', 'utf-8')
+
+      const stopResult = await manager.stopService('test-logger-stop')
+      ok(stopResult.success)
+
+      const content = await fs.readFile(logPath, 'utf-8')
+      const match = content.match(
+        /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] Service Stopped/,
+      )
+      ok(match !== null)
+
+      // Clean up
+      await fs.unlink(logPath).catch(() => {})
+      await import('node:fs').then((fsSync) =>
+        fsSync.rmSync(
+          require('node:path').resolve(
+            home,
+            'Library',
+            'LaunchAgents',
+            `com.denvig.${hash}.plist`,
+          ),
+          { force: true },
+        ),
+      )
+    })
+  })
 })

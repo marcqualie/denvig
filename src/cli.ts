@@ -58,6 +58,7 @@ async function main() {
   const { stopCommand } = await import('./commands/stop.ts')
   const { restartCommand } = await import('./commands/restart.ts')
   const { statusCommand } = await import('./commands/status.ts')
+  const { logsCommand } = await import('./commands/logs.ts')
   const { internalsResourceHashCommand, internalsResourceIdCommand } =
     await import('./commands/internals.ts')
 
@@ -72,6 +73,7 @@ async function main() {
     stop: stopCommand,
     restart: restartCommand,
     status: statusCommand,
+    logs: logsCommand,
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
   } as Record<string, GenericCommand>

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
@@ -173,6 +173,18 @@ export class ServiceManager {
       }
     }
 
+    // Append Service Started entry to stdout log
+    try {
+      const timestamp = new Date().toISOString()
+      await appendFile(
+        this.getLogPath(name, 'stdout'),
+        `[${timestamp}] Service Started\n`,
+        'utf-8',
+      )
+    } catch {
+      // ignore logging errors
+    }
+
     return {
       name,
       success: true,
@@ -213,6 +225,18 @@ export class ServiceManager {
         success: false,
         message: `Failed to stop service: ${result.output}`,
       }
+    }
+
+    // Append Service Stopped entry to stdout log
+    try {
+      const timestamp = new Date().toISOString()
+      await appendFile(
+        this.getLogPath(name, 'stdout'),
+        `[${timestamp}] Service Stopped\n`,
+        'utf-8',
+      )
+    } catch {
+      // ignore logging errors
     }
 
     return {
