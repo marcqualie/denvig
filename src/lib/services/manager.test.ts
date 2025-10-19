@@ -2,6 +2,7 @@ import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { DenvigProject } from '../project.ts'
+import { generateDenvigResourceHash } from '../resources.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {
@@ -64,8 +65,12 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const label = (manager as any).getServiceLabel('api')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      strictEqual(label, 'com.denvig.my-app.api')
+      strictEqual(label, `com.denvig.${expectedHash}`)
     })
 
     it('should sanitize service name with special characters', () => {
@@ -74,8 +79,12 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const label = (manager as any).getServiceLabel('dev:watch')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/dev:watch`,
+      }).hash
 
-      strictEqual(label, 'com.denvig.my-app.dev-watch')
+      strictEqual(label, `com.denvig.${expectedHash}`)
     })
   })
 
@@ -86,9 +95,13 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const path = (manager as any).getPlistPath('api')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes('com.denvig.my-app.api.plist'))
+      ok(path.includes('.denvig/LaunchAgents'))
+      ok(path.includes(`com.denvig.${expectedHash}.plist`))
     })
 
     it('should sanitize special characters in plist filename', () => {
@@ -97,9 +110,13 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const path = (manager as any).getPlistPath('dev:watch')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/dev:watch`,
+      }).hash
 
-      ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes('com.denvig.my-app.dev-watch.plist'))
+      ok(path.includes('.denvig/LaunchAgents'))
+      ok(path.includes(`com.denvig.${expectedHash}.plist`))
       ok(!path.includes(':'))
     })
   })
@@ -111,8 +128,13 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const path = (manager as any).getLogPath('api', 'stdout')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      strictEqual(path, '/tmp/denvig-my-app-api.log')
+      ok(path.includes('.denvig/logs'))
+      ok(path.includes(`${expectedHash}.log`))
     })
 
     it('should generate correct stderr log path', () => {
@@ -121,8 +143,13 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const path = (manager as any).getLogPath('api', 'stderr')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      strictEqual(path, '/tmp/denvig-my-app-api.error.log')
+      ok(path.includes('.denvig/logs'))
+      ok(path.includes(`${expectedHash}.error.log`))
     })
 
     it('should sanitize special characters in log filename', () => {
@@ -131,8 +158,13 @@ describe('ServiceManager', () => {
 
       // Access private method via any cast for testing
       const path = (manager as any).getLogPath('dev:watch', 'stdout')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/dev:watch`,
+      }).hash
 
-      strictEqual(path, '/tmp/denvig-my-app-dev-watch.log')
+      ok(path.includes('.denvig/logs'))
+      ok(path.includes(`${expectedHash}.log`))
       ok(!path.includes(':'))
     })
   })

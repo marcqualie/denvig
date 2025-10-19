@@ -57,14 +57,14 @@ You can forcefully stop and remove all denvig services at once by running:
 
 ```bash
 launchctl list | grep denvig | awk '{print $3}' | xargs -I {} -n 1 launchctl bootout gui/$(id -u)/{}
-rm ~/.denvig/LaunchAgents/com.denvig.*
+rm ~/Library/LaunchAgents/com.denvig.*
 ```
 
 You can target a specific service by using it resource hash (detailed above):
 
 ```bash
 launchctl bootout gui/$(id -u)/com.denvig.<resource-hash>
-rm ~/.denvig/LaunchAgents/com.denvig.<resource-hash>.plist
+rm ~/Library/LaunchAgents/com.denvig.<resource-hash>.plist
 ```
 
 

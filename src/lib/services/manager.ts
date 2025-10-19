@@ -1,13 +1,16 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
+import { generateDenvigResourceHash } from '../resources.ts'
 import { parseEnvFile } from './env.ts'
 import launchctl from './launchctl.ts'
 import { generatePlist } from './plist.ts'
 
-import type { ServiceConfig } from '../../schemas/services.ts'
+import type { ProjectConfigSchema } from '../../schemas/config.ts'
 import type { DenvigProject } from '../project.ts'
+
+type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
 
 /**
  * Service information for display.
@@ -40,6 +43,7 @@ export interface ServiceStatus {
   command: string
   cwd: string
   logs?: string[]
+  logPath: string
   lastExitCode?: number
 }
 
@@ -83,6 +87,9 @@ export class ServiceManager {
 
     const label = this.getServiceLabel(name)
     const isBootstrapped = await this.isServiceBootstrapped(name)
+
+    // Ensure denvig directories exist
+    await this.ensureDenvigDirectories()
 
     // Ensure plist file exists
     const plistPath = this.getPlistPath(name)
@@ -133,7 +140,7 @@ export class ServiceManager {
 
     await writeFile(plistPath, plistContent, 'utf-8')
 
-    // Bootstrap if not already loaded
+    // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents
     if (!isBootstrapped) {
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
@@ -260,6 +267,7 @@ export class ServiceManager {
         running: false,
         command: config.command,
         cwd: this.resolveServiceCwd(config),
+        logPath: this.getLogPath(name, 'stdout'),
       }
     }
 
@@ -273,6 +281,7 @@ export class ServiceManager {
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logs,
+      logPath: this.getLogPath(name, 'stdout'),
       lastExitCode: info.lastExitCode,
     }
   }
@@ -335,22 +344,22 @@ export class ServiceManager {
   }
 
   /**
-   * Sanitize a string for use in filenames by replacing non-alphanumeric characters.
-   */
-  private sanitizeForFilename(str: string): string {
-    return str
-      .replace(/[^a-zA-Z0-9_-]/g, '-') // Replace non-alphanumeric with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
-  }
-
-  /**
    * Get the service label for launchctl.
    */
   private getServiceLabel(name: string): string {
-    const sanitizedSlug = this.sanitizeForFilename(this.project.slug)
-    const sanitizedName = this.sanitizeForFilename(name)
-    return `com.denvig.${sanitizedSlug}.${sanitizedName}`
+    const { hash } = generateDenvigResourceHash({
+      project: this.project,
+      resource: `service/${name}`,
+    })
+
+    return `com.denvig.${hash}`
+  }
+
+  /**
+   * Get the denvig directory path.
+   */
+  private getDenvigHomeDir(): string {
+    return resolve(homedir(), '.denvig')
   }
 
   /**
@@ -365,10 +374,20 @@ export class ServiceManager {
    * Get the log file path.
    */
   private getLogPath(name: string, type: 'stdout' | 'stderr'): string {
-    const sanitizedSlug = this.sanitizeForFilename(this.project.slug)
-    const sanitizedName = this.sanitizeForFilename(name)
+    const { hash } = generateDenvigResourceHash({
+      project: this.project,
+      resource: `service/${name}`,
+    })
     const suffix = type === 'stderr' ? '.error' : ''
-    return `/tmp/denvig-${sanitizedSlug}-${sanitizedName}${suffix}.log`
+    return resolve(this.getDenvigHomeDir(), 'logs', `${hash}${suffix}.log`)
+  }
+
+  /**
+   * Ensure denvig directories exist.
+   */
+  private async ensureDenvigDirectories(): Promise<void> {
+    const denvigDir = this.getDenvigHomeDir()
+    await mkdir(resolve(denvigDir, 'logs'), { recursive: true })
   }
 
   /**
@@ -384,7 +403,6 @@ export class ServiceManager {
       return []
     }
   }
-
   /**
    * Resolve the absolute working directory for a service.
    */
