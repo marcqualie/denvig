@@ -23,22 +23,22 @@ Examples of resource IDs:
 You can find the hash details for a resource with the following command:
 
 ```bash
-denvig tools:resource-hash service/hello # Example output: abc123...
+denvig internals:resource-hash service/hello # Example output: abc123...
 
 # You can also use workspace notation:
-denvig tools:resource-hash "apps/web|action/dev"
+denvig internals:resource-hash "apps/web|action/dev"
 
 # Or use the --workspace flag:
-denvig tools:resource-hash action/dev --workspace apps/web
+denvig internals:resource-hash action/dev --workspace apps/web
 
 # a full ID can also be passed in:
-denvig tools:resource-hash "@marcqualie/denvig#apps/web|action/dev
+denvig internals:resource-hash "@marcqualie/denvig#apps/web|action/dev
 ```
 
 You can also find the ID to verify it has been resolved correctly:
 
 ```bash
-denvig tools:resource-id service/hello # @marcqualie/denvig#root|service/hello
+denvig internals:resource-id service/hello # @marcqualie/denvig#root|service/hello
 ```
 
 
