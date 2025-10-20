@@ -58,6 +58,9 @@ async function main() {
   const { stopCommand } = await import('./commands/stop.ts')
   const { restartCommand } = await import('./commands/restart.ts')
   const { statusCommand } = await import('./commands/status.ts')
+  const { logsCommand } = await import('./commands/logs.ts')
+  const { internalsResourceHashCommand, internalsResourceIdCommand } =
+    await import('./commands/internals.ts')
 
   const commands = {
     run: runCommand,
@@ -70,6 +73,9 @@ async function main() {
     stop: stopCommand,
     restart: restartCommand,
     status: statusCommand,
+    logs: logsCommand,
+    'internals:resource-hash': internalsResourceHashCommand,
+    'internals:resource-id': internalsResourceIdCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]
@@ -136,6 +142,7 @@ async function main() {
     console.log('')
     console.log('Available commands:')
     Object.keys(commands).forEach((cmd) => {
+      if (cmd.startsWith('internals:')) return
       console.log(
         `  - ${commands[cmd].usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
       )

@@ -1,7 +1,9 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { DenvigProject } from '../project.ts'
+import { generateDenvigResourceHash } from '../resources.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {
@@ -15,67 +17,31 @@ describe('ServiceManager', () => {
     })
   })
 
-  describe('sanitizeForFilename()', () => {
-    it('should replace special characters with hyphens', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename('dev:watch')
-
-      strictEqual(sanitized, 'dev-watch')
-    })
-
-    it('should handle multiple special characters', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename('api@v2:dev')
-
-      strictEqual(sanitized, 'api-v2-dev')
-    })
-
-    it('should collapse multiple hyphens', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename('api::watch')
-
-      strictEqual(sanitized, 'api-watch')
-    })
-
-    it('should remove leading and trailing hyphens', () => {
-      const project = new DenvigProject('test-project')
-      const manager = new ServiceManager(project)
-
-      // Access private method via any cast for testing
-      const sanitized = (manager as any).sanitizeForFilename(':api:')
-
-      strictEqual(sanitized, 'api')
-    })
-  })
-
   describe('getServiceLabel()', () => {
     it('should generate correct service label format', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const label = (manager as any).getServiceLabel('api')
+      const label = manager.getServiceLabel('api')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      strictEqual(label, 'com.denvig.my-app.api')
+      strictEqual(label, `com.denvig.${expectedHash}`)
     })
 
     it('should sanitize service name with special characters', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const label = (manager as any).getServiceLabel('dev:watch')
+      const label = manager.getServiceLabel('dev:watch')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/dev:watch`,
+      }).hash
 
-      strictEqual(label, 'com.denvig.my-app.dev-watch')
+      strictEqual(label, `com.denvig.${expectedHash}`)
     })
   })
 
@@ -84,22 +50,28 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getPlistPath('api')
+      const path = manager.getPlistPath('api')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes('com.denvig.my-app.api.plist'))
+      ok(path.includes('.denvig/LaunchAgents'))
+      ok(path.includes(`com.denvig.${expectedHash}.plist`))
     })
 
     it('should sanitize special characters in plist filename', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getPlistPath('dev:watch')
+      const path = manager.getPlistPath('dev:watch')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/dev:watch`,
+      }).hash
 
-      ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes('com.denvig.my-app.dev-watch.plist'))
+      ok(path.includes('.denvig/LaunchAgents'))
+      ok(path.includes(`com.denvig.${expectedHash}.plist`))
       ok(!path.includes(':'))
     })
   })
@@ -109,30 +81,42 @@ describe('ServiceManager', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getLogPath('api', 'stdout')
+      const path = manager.getLogPath('api', 'stdout')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      strictEqual(path, '/tmp/denvig-my-app-api.log')
+      ok(path.includes('.denvig/logs'))
+      ok(path.includes(`${expectedHash}.log`))
     })
 
     it('should generate correct stderr log path', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getLogPath('api', 'stderr')
+      const path = manager.getLogPath('api', 'stderr')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/api`,
+      }).hash
 
-      strictEqual(path, '/tmp/denvig-my-app-api.error.log')
+      ok(path.includes('.denvig/logs'))
+      ok(path.includes(`${expectedHash}.error.log`))
     })
 
     it('should sanitize special characters in log filename', () => {
       const project = new DenvigProject('my-app')
       const manager = new ServiceManager(project)
 
-      // Access private method via any cast for testing
-      const path = (manager as any).getLogPath('dev:watch', 'stdout')
+      const path = manager.getLogPath('dev:watch', 'stdout')
+      const expectedHash = generateDenvigResourceHash({
+        project,
+        resource: `service/dev:watch`,
+      }).hash
 
-      strictEqual(path, '/tmp/denvig-my-app-dev-watch.log')
+      ok(path.includes('.denvig/logs'))
+      ok(path.includes(`${expectedHash}.log`))
       ok(!path.includes(':'))
     })
   })
@@ -154,6 +138,124 @@ describe('ServiceManager', () => {
 
       ok(!result.success)
       ok(result.message.includes('not found'))
+    })
+  })
+
+  describe('log entries on start/stop', () => {
+    it('should append a timestamped Service Started line on start', async () => {
+      const project = new DenvigProject('denvig')
+      project.config.services = {
+        'test-logger': {
+          command: 'echo hello',
+        },
+      }
+
+      const manager = new ServiceManager(project)
+
+      // Stub launchctl to simulate successful bootstrap
+      const launchctl = await import('./launchctl.ts')
+      ;(launchctl as any).bootstrap = async () => ({
+        success: true,
+        output: '',
+      })
+      ;(launchctl as any).print = async () => null
+
+      const startResult = await manager.startService('test-logger')
+      ok(startResult.success)
+
+      const { hash } = generateDenvigResourceHash({
+        project,
+        resource: `service/test-logger`,
+      })
+      const home = require('node:os').homedir()
+      const logPath = require('node:path').resolve(
+        home,
+        '.denvig',
+        'logs',
+        `${hash}.log`,
+      )
+
+      // Read the log and assert the started line exists
+      const fs = await import('node:fs/promises')
+      const content = await fs.readFile(logPath, 'utf-8')
+      const match = content.match(
+        /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] Service Started/,
+      )
+      ok(match !== null)
+
+      // Clean up
+      await fs.unlink(logPath).catch(() => {})
+      await import('node:fs').then((fsSync) =>
+        fsSync.rmSync(
+          require('node:path').resolve(
+            home,
+            'Library',
+            'LaunchAgents',
+            `com.denvig.${hash}.plist`,
+          ),
+          { force: true },
+        ),
+      )
+    })
+
+    it('should append a timestamped Service Stopped line on stop', async () => {
+      const project = new DenvigProject('denvig')
+      project.config.services = {
+        'test-logger-stop': {
+          command: 'echo bye',
+        },
+      }
+
+      const manager = new ServiceManager(project)
+
+      // Stub launchctl to simulate a bootstrapped service and successful bootout
+      const launchctl = await import('./launchctl.ts')
+      ;(launchctl as any).print = async () => ({
+        label: 'loaded',
+        state: 'running',
+      })
+      ;(launchctl as any).bootout = async () => ({ success: true, output: '' })
+
+      // Ensure log file exists to be appended to
+      const { hash } = generateDenvigResourceHash({
+        project,
+        resource: `service/test-logger-stop`,
+      })
+      const home = require('node:os').homedir()
+      const logPath = require('node:path').resolve(
+        home,
+        '.denvig',
+        'logs',
+        `${hash}.log`,
+      )
+      const fs = await import('node:fs/promises')
+      await fs.mkdir(require('node:path').resolve(home, '.denvig', 'logs'), {
+        recursive: true,
+      })
+      await fs.writeFile(logPath, 'initial log\n', 'utf-8')
+
+      const stopResult = await manager.stopService('test-logger-stop')
+      ok(stopResult.success)
+
+      const content = await fs.readFile(logPath, 'utf-8')
+      const match = content.match(
+        /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] Service Stopped/,
+      )
+      ok(match !== null)
+
+      // Clean up
+      await fs.unlink(logPath).catch(() => {})
+      await import('node:fs').then((fsSync) =>
+        fsSync.rmSync(
+          require('node:path').resolve(
+            home,
+            'Library',
+            'LaunchAgents',
+            `com.denvig.${hash}.plist`,
+          ),
+          { force: true },
+        ),
+      )
     })
   })
 })
