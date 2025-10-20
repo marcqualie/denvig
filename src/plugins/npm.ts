@@ -11,14 +11,8 @@ const plugin = definePlugin({
   actions: async (project: DenvigProject) => {
     const rootFiles = fs.readdirSync(project.path)
     const hasPackageJson = rootFiles.includes('package.json')
-    const hasPnpmLock = rootFiles.includes('pnpm-lock.yaml')
     const hasNpmLock = rootFiles.includes('package-lock.json')
-    const hasYarnLock = rootFiles.includes('yarn.lock')
-    const hasDenoConfig =
-      rootFiles.includes('deno.json') || rootFiles.includes('deno.jsonc')
-    const canHandle =
-      hasNpmLock ||
-      (hasPackageJson && !hasPnpmLock && !hasYarnLock && !hasDenoConfig)
+    const canHandle = hasPackageJson && hasNpmLock
 
     if (!canHandle) {
       return {}
