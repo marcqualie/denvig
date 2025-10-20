@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import { Command } from '../lib/command.ts'
 import { ServiceManager } from '../lib/services/manager.ts'
 
@@ -18,13 +20,16 @@ export const startCommand = new Command({
   handler: async ({ project, args }) => {
     const manager = new ServiceManager(project)
 
+    // Parse service name from args (ensures it's a string)
+    const serviceName = z.string().parse(args.name)
+
     // Start specific service or all services
-    if (args.name) {
-      console.log(`Starting ${args.name}...`)
-      const result = await manager.startService(args.name)
+    if (serviceName) {
+      console.log(`Starting ${serviceName}...`)
+      const result = await manager.startService(serviceName)
 
       if (!result.success) {
-        console.error(`✗ Failed to start ${args.name}: ${result.message}`)
+        console.error(`✗ Failed to start ${serviceName}: ${result.message}`)
         return { success: false, message: result.message }
       }
 
@@ -32,16 +37,16 @@ export const startCommand = new Command({
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Check if service is actually running
-      const status = await manager.getServiceStatus(args.name)
+      const status = await manager.getServiceStatus(serviceName)
       if (status?.running) {
-        const url = manager.getServiceUrl(args.name)
+        const url = manager.getServiceUrl(serviceName)
         const urlInfo = url ? ` → ${url}` : ''
-        console.log(`✓ ${args.name} started successfully${urlInfo}`)
+        console.log(`✓ ${serviceName} started successfully${urlInfo}`)
         return { success: true, message: 'Service started successfully.' }
       }
 
       // Service failed to start - show logs
-      console.error(`✗ ${args.name} failed to start`)
+      console.error(`✗ ${serviceName} failed to start`)
       if (status?.logs && status.logs.length > 0) {
         console.error('')
         console.error('Recent logs:')

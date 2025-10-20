@@ -1,3 +1,6 @@
+import { homedir } from 'node:os'
+import { z } from 'zod'
+
 import { Command } from '../lib/command.ts'
 import { ServiceManager } from '../lib/services/manager.ts'
 
@@ -17,13 +20,14 @@ export const statusCommand = new Command({
   flags: [],
   handler: async ({ project, args }) => {
     const manager = new ServiceManager(project)
-    const status = await manager.getServiceStatus(args.name)
+    const serviceName = z.string().parse(args.name)
+    const status = await manager.getServiceStatus(serviceName)
 
     if (!status) {
-      console.error(`Service "${args.name}" not found in configuration`)
+      console.error(`Service "${serviceName}" not found in configuration`)
       return {
         success: false,
-        message: `Service "${args.name}" not found.`,
+        message: `Service "${serviceName}" not found.`,
       }
     }
 
@@ -35,7 +39,8 @@ export const statusCommand = new Command({
     }
 
     console.log(`Command: ${status.command}`)
-    console.log(`CWD:     ${status.cwd}`)
+    console.log(`CWD:     ${status.cwd.replace(homedir(), '~')}`)
+    console.log(`Logs:    ${status.logPath.replace(homedir(), '~')}`)
 
     if (status.lastExitCode !== undefined && !status.running) {
       console.log(`Last exit code: ${status.lastExitCode}`)

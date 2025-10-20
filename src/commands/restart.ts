@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import { Command } from '../lib/command.ts'
 import { ServiceManager } from '../lib/services/manager.ts'
 
@@ -17,14 +19,15 @@ export const restartCommand = new Command({
   flags: [],
   handler: async ({ project, args }) => {
     const manager = new ServiceManager(project)
+    const serviceName = z.string().parse(args.name)
 
     // Restart specific service or all services
-    if (args.name) {
-      console.log(`Restarting ${args.name}...`)
-      const result = await manager.restartService(args.name)
+    if (serviceName) {
+      console.log(`Restarting ${serviceName}...`)
+      const result = await manager.restartService(serviceName)
 
       if (!result.success) {
-        console.error(`✗ Failed to restart ${args.name}: ${result.message}`)
+        console.error(`✗ Failed to restart ${serviceName}: ${result.message}`)
         return { success: false, message: result.message }
       }
 
@@ -32,16 +35,16 @@ export const restartCommand = new Command({
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Check if service is actually running
-      const status = await manager.getServiceStatus(args.name)
+      const status = await manager.getServiceStatus(serviceName)
       if (status?.running) {
-        const url = manager.getServiceUrl(args.name)
+        const url = manager.getServiceUrl(serviceName)
         const urlInfo = url ? ` → ${url}` : ''
-        console.log(`✓ ${args.name} restarted successfully${urlInfo}`)
+        console.log(`✓ ${serviceName} restarted successfully${urlInfo}`)
         return { success: true, message: 'Service restarted successfully.' }
       }
 
       // Service failed to start - show logs
-      console.error(`✗ ${args.name} failed to start`)
+      console.error(`✗ ${serviceName} failed to start`)
       if (status?.logs && status.logs.length > 0) {
         console.error('')
         console.error('Recent logs:')
