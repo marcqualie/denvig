@@ -1,4 +1,6 @@
-import { readPackageJson } from '../lib/packageJson.ts'
+import fs, { existsSync } from 'node:fs'
+
+import { type PackageJson, readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
 import type { DenvigProject } from '../lib/project.ts'
@@ -32,6 +34,49 @@ const plugin = definePlugin({
     }
 
     return actions
+  },
+
+  dependencies: async (project: DenvigProject) => {
+    const data = []
+    if (existsSync(`${project.path}/yarn.lock`)) {
+      data.push({
+        id: 'npm:yarn',
+        name: 'yarn',
+        ecosystem: 'system',
+        versions: [],
+      })
+    }
+    if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
+      data.push({
+        id: 'npm:pnpm',
+        name: 'pnpm',
+        ecosystem: 'system',
+        versions: [],
+      })
+    }
+
+    // find all package.json files from the project root, ignoring node_modules folders
+    const packageJsonPaths = project.findFilesByName('package.json')
+
+    for (const packageJsonPath of packageJsonPaths) {
+      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
+      const packageJson = JSON.parse(packageJsonContent) as PackageJson
+      if (packageJson?.dependencies) {
+        for (const [name, versions] of Object.entries({
+          ...packageJson.dependencies,
+          ...packageJson.devDependencies,
+        })) {
+          data.push({
+            id: `npm:${name}`,
+            name,
+            ecosystem: 'npm',
+            versions: Array.isArray(versions) ? versions : [versions],
+          })
+        }
+      }
+    }
+
+    return data.sort((a, b) => a.name.localeCompare(b.name))
   },
 })
 

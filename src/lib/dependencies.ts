@@ -14,7 +14,7 @@ export const ProjectDependencySchema = z.object({
     .describe('Ecosystem of the dependency (e.g., npm, rubygems, pip)'),
 })
 
-type ProjectDependencySchema = z.infer<typeof ProjectDependencySchema>
+export type ProjectDependencySchema = z.infer<typeof ProjectDependencySchema>
 
 export const detectDependencies = (
   project: DenvigProject,
