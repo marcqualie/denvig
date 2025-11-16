@@ -61,6 +61,7 @@ async function main() {
   const { logsCommand } = await import('./commands/logs.ts')
   const { internalsResourceHashCommand, internalsResourceIdCommand } =
     await import('./commands/internals.ts')
+  const { depsListCommand } = await import('./commands/deps/list.ts')
 
   const commands = {
     run: runCommand,
@@ -74,6 +75,7 @@ async function main() {
     restart: restartCommand,
     status: statusCommand,
     logs: logsCommand,
+    'deps:list': depsListCommand,
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
   } as Record<string, GenericCommand>

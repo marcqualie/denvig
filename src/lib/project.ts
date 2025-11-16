@@ -78,4 +78,27 @@ export class DenvigProject {
   get rootFiles(): string[] {
     return fs.readdirSync(this.path)
   }
+
+  /**
+   * Find all files recursively with a given name in the project.
+   */
+  findFilesByName(fileName: string): string[] {
+    const results: string[] = []
+
+    const walk = (dir: string) => {
+      const files = fs.readdirSync(dir, { withFileTypes: true })
+      for (const file of files) {
+        if (file.isDirectory()) {
+          if (file.name !== 'node_modules') {
+            walk(`${dir}/${file.name}`)
+          }
+        } else if (file.name === fileName) {
+          results.push(`${dir}/${file.name}`)
+        }
+      }
+    }
+
+    walk(this.path)
+    return results
+  }
 }

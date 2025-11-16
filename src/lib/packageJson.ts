@@ -2,7 +2,7 @@ import fs from 'node:fs'
 
 import type { DenvigProject } from './project'
 
-type PackageJson = {
+export type PackageJson = {
   name: string
   scripts: Record<string, string>
   dependencies: Record<string, string>
