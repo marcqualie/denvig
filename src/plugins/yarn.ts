@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
@@ -32,6 +34,45 @@ const plugin = definePlugin({
     }
 
     return actions
+  },
+
+  dependencies: async (project: DenvigProject) => {
+    const data = []
+    if (existsSync(`${project.path}/yarn.lock`)) {
+      data.push({
+        id: 'npm:yarn',
+        name: 'yarn',
+        ecosystem: 'system',
+        versions: [],
+      })
+    }
+    if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
+      data.push({
+        id: 'npm:pnpm',
+        name: 'pnpm',
+        ecosystem: 'system',
+        versions: [],
+      })
+    }
+
+    if (existsSync(`${project.path}/package.json`)) {
+      const packageJson = readPackageJson(project)
+      if (packageJson?.dependencies) {
+        for (const [name, versions] of Object.entries({
+          ...packageJson.dependencies,
+          ...packageJson.devDependencies,
+        })) {
+          data.push({
+            id: `npm:${name}`,
+            name,
+            ecosystem: 'npm',
+            versions: Array.isArray(versions) ? versions : [versions],
+          })
+        }
+      }
+    }
+
+    return data
   },
 })
 
