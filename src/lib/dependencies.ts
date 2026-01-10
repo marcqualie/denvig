@@ -7,7 +7,7 @@ export const ProjectDependencySchema = z.object({
   id: z.string().describe('Unique identifier for the ecosystem / dependency'),
   name: z.string().describe('Name of the dependency'),
   versions: z
-    .array(z.string())
+    .record(z.string(), z.array(z.string()))
     .describe('List of versions available for the dependency'),
   ecosystem: z
     .string()
@@ -26,7 +26,7 @@ export const detectDependencies = (
       id: 'npm:npm',
       name: 'npm',
       ecosystem: 'system',
-      versions: [],
+      versions: {},
     })
     const packageJson = JSON.parse(
       readFileSync(`${project.path}/package.json`, 'utf8'),

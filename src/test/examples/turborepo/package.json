@@ -1,0 +1,8 @@
+{
+  "name": "denvig-examples-turborepo",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "turbo": "^2.7.3"
+  }
+}

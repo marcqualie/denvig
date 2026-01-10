@@ -1,9 +1,25 @@
-import fs, { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { parse } from 'yaml'
 
-import { type PackageJson, readPackageJson } from '../lib/packageJson.ts'
+import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
+import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
+
+type PnpmLockfileDep = {
+  specifier: string
+  version: string
+}
+
+type PnpmLockfileImporter = {
+  dependencies?: Record<string, PnpmLockfileDep>
+  devDependencies?: Record<string, PnpmLockfileDep>
+}
+
+type PnpmLockfile = {
+  importers?: Record<string, PnpmLockfileImporter>
+}
 
 const plugin = definePlugin({
   name: 'pnpm',
@@ -37,46 +53,82 @@ const plugin = definePlugin({
   },
 
   dependencies: async (project: DenvigProject) => {
-    const data = []
+    const data: Map<string, ProjectDependencySchema> = new Map()
+
+    // Helper to add or update a dependency
+    const addDependency = (
+      id: string,
+      name: string,
+      ecosystem: string,
+      resolvedVersion: string,
+      specifier: string,
+    ) => {
+      const existing = data.get(id)
+      if (existing) {
+        const versions = existing.versions[resolvedVersion] || []
+        if (!versions.includes(specifier)) {
+          versions.push(specifier)
+        }
+        existing.versions[resolvedVersion] = versions
+      } else {
+        data.set(id, {
+          id,
+          name,
+          ecosystem,
+          versions: { [resolvedVersion]: [specifier] },
+        })
+      }
+    }
+
+    // Add system dependencies
     if (existsSync(`${project.path}/yarn.lock`)) {
-      data.push({
+      data.set('npm:yarn', {
         id: 'npm:yarn',
         name: 'yarn',
         ecosystem: 'system',
-        versions: [],
+        versions: {},
       })
     }
     if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
-      data.push({
+      data.set('npm:pnpm', {
         id: 'npm:pnpm',
         name: 'pnpm',
         ecosystem: 'system',
-        versions: [],
+        versions: {},
       })
     }
 
-    // find all package.json files from the project root, ignoring node_modules folders
-    const packageJsonPaths = project.findFilesByName('package.json')
+    // Parse the lockfile to get resolved versions
+    const lockfilePath = `${project.path}/pnpm-lock.yaml`
+    if (existsSync(lockfilePath)) {
+      const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+      const lockfile = parse(lockfileContent) as PnpmLockfile
 
-    for (const packageJsonPath of packageJsonPaths) {
-      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
-      const packageJson = JSON.parse(packageJsonContent) as PackageJson
-      if (packageJson?.dependencies) {
-        for (const [name, versions] of Object.entries({
-          ...packageJson.dependencies,
-          ...packageJson.devDependencies,
-        })) {
-          data.push({
-            id: `npm:${name}`,
-            name,
-            ecosystem: 'npm',
-            versions: Array.isArray(versions) ? versions : [versions],
-          })
+      // Iterate through importers (workspace packages)
+      if (lockfile?.importers) {
+        for (const importer of Object.values(lockfile.importers)) {
+          const allDeps = {
+            ...importer.dependencies,
+            ...importer.devDependencies,
+          }
+          for (const [name, depInfo] of Object.entries(allDeps)) {
+            if (depInfo?.specifier && depInfo?.version) {
+              addDependency(
+                `npm:${name}`,
+                name,
+                'npm',
+                depInfo.version,
+                depInfo.specifier,
+              )
+            }
+          }
         }
       }
     }
 
-    return data.sort((a, b) => a.name.localeCompare(b.name))
+    return Array.from(data.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )
   },
 })
 

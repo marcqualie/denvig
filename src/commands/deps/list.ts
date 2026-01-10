@@ -28,10 +28,18 @@ export const depsListCommand = new Command({
       if (!existing) {
         depsMap.set(dep.id, dep)
       } else {
-        // Merge versions if the dependency already exists
-        const mergedVersions = [
-          ...new Set([...existing.versions, ...dep.versions]),
-        ]
+        // Merge versions records if the dependency already exists
+        const mergedVersions: Record<string, string[]> = {
+          ...existing.versions,
+        }
+        for (const [resolvedVersion, specifiers] of Object.entries(
+          dep.versions,
+        )) {
+          const existingSpecifiers = mergedVersions[resolvedVersion] || []
+          mergedVersions[resolvedVersion] = [
+            ...new Set([...existingSpecifiers, ...specifiers]),
+          ]
+        }
         depsMap.set(dep.id, { ...existing, versions: mergedVersions })
       }
     }
@@ -66,7 +74,9 @@ export const depsListCommand = new Command({
 
     // Print each dependency
     for (const dep of dependencies) {
-      const versions = dep.versions.length > 0 ? dep.versions.join(', ') : '-'
+      const resolvedVersions = Object.keys(dep.versions)
+      const versions =
+        resolvedVersions.length > 0 ? resolvedVersions.join(', ') : '-'
       console.log(
         `${dep.name.padEnd(nameWidth)}  ${dep.ecosystem.padEnd(ecosystemWidth)}  ${versions}`,
       )
