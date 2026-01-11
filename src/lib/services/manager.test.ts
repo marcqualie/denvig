@@ -3,7 +3,6 @@ import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { DenvigProject } from '../project.ts'
-import { generateDenvigResourceHash } from '../resources.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {
@@ -19,104 +18,76 @@ describe('ServiceManager', () => {
 
   describe('getServiceLabel()', () => {
     it('should generate correct service label format', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const label = manager.getServiceLabel('api')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/api`,
-      }).hash
 
-      strictEqual(label, `com.denvig.${expectedHash}`)
+      strictEqual(label, 'denvig.workspace__my-app__api')
     })
 
     it('should sanitize service name with special characters', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const label = manager.getServiceLabel('dev:watch')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/dev:watch`,
-      }).hash
 
-      strictEqual(label, `com.denvig.${expectedHash}`)
+      strictEqual(label, 'denvig.workspace__my-app__dev-watch')
     })
   })
 
   describe('getPlistPath()', () => {
     it('should generate correct plist path', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getPlistPath('api')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/api`,
-      }).hash
 
       ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes(`com.denvig.${expectedHash}.plist`))
+      ok(path.includes('denvig.workspace__my-app__api.plist'))
     })
 
     it('should sanitize special characters in plist filename', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getPlistPath('dev:watch')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/dev:watch`,
-      }).hash
 
       ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes(`com.denvig.${expectedHash}.plist`))
+      ok(path.includes('denvig.workspace__my-app__dev-watch.plist'))
       ok(!path.includes(':'))
     })
   })
 
   describe('getLogPath()', () => {
     it('should generate correct stdout log path', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api', 'stdout')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/api`,
-      }).hash
 
       ok(path.includes('.denvig/logs'))
-      ok(path.includes(`${expectedHash}.log`))
+      ok(path.includes('workspace__my-app__api.log'))
     })
 
     it('should generate correct stderr log path', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api', 'stderr')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/api`,
-      }).hash
 
       ok(path.includes('.denvig/logs'))
-      ok(path.includes(`${expectedHash}.error.log`))
+      ok(path.includes('workspace__my-app__api.error.log'))
     })
 
     it('should sanitize special characters in log filename', () => {
-      const project = new DenvigProject('my-app')
+      const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('dev:watch', 'stdout')
-      const expectedHash = generateDenvigResourceHash({
-        project,
-        resource: `service/dev:watch`,
-      }).hash
 
       ok(path.includes('.denvig/logs'))
-      ok(path.includes(`${expectedHash}.log`))
+      ok(path.includes('workspace__my-app__dev-watch.log'))
       ok(!path.includes(':'))
     })
   })
@@ -145,7 +116,7 @@ describe('ServiceManager', () => {
     // These tests require mocking ES modules which isn't supported with direct assignment
     // TODO: Implement proper dependency injection or use a mocking library
     it.skip('should append a timestamped Service Started line on start', async () => {
-      const project = new DenvigProject('denvig')
+      const project = new DenvigProject('workspace/denvig')
       project.config.services = {
         'test-logger': {
           command: 'echo hello',
@@ -165,16 +136,12 @@ describe('ServiceManager', () => {
       const startResult = await manager.startService('test-logger')
       ok(startResult.success)
 
-      const { hash } = generateDenvigResourceHash({
-        project,
-        resource: `service/test-logger`,
-      })
       const home = require('node:os').homedir()
       const logPath = require('node:path').resolve(
         home,
         '.denvig',
         'logs',
-        `${hash}.log`,
+        'workspace__denvig__test-logger.log',
       )
 
       // Read the log and assert the started line exists
@@ -193,7 +160,7 @@ describe('ServiceManager', () => {
             home,
             'Library',
             'LaunchAgents',
-            `com.denvig.${hash}.plist`,
+            'denvig.workspace__denvig__test-logger.plist',
           ),
           { force: true },
         ),
@@ -201,7 +168,7 @@ describe('ServiceManager', () => {
     })
 
     it.skip('should append a timestamped Service Stopped line on stop', async () => {
-      const project = new DenvigProject('denvig')
+      const project = new DenvigProject('workspace/denvig')
       project.config.services = {
         'test-logger-stop': {
           command: 'echo bye',
@@ -219,16 +186,12 @@ describe('ServiceManager', () => {
       ;(launchctl as any).bootout = async () => ({ success: true, output: '' })
 
       // Ensure log file exists to be appended to
-      const { hash } = generateDenvigResourceHash({
-        project,
-        resource: `service/test-logger-stop`,
-      })
       const home = require('node:os').homedir()
       const logPath = require('node:path').resolve(
         home,
         '.denvig',
         'logs',
-        `${hash}.log`,
+        'workspace__denvig__test-logger-stop.log',
       )
       const fs = await import('node:fs/promises')
       await fs.mkdir(require('node:path').resolve(home, '.denvig', 'logs'), {
@@ -253,7 +216,7 @@ describe('ServiceManager', () => {
             home,
             'Library',
             'LaunchAgents',
-            `com.denvig.${hash}.plist`,
+            'denvig.workspace__denvig__test-logger-stop.plist',
           ),
           { force: true },
         ),
