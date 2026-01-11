@@ -10,7 +10,6 @@ import {
   detectDependencies,
   type ProjectDependencySchema,
 } from './dependencies.ts'
-import plugins from './plugins.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 

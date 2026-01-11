@@ -11,6 +11,33 @@ const stripPeerDeps = (ref: string): string => {
   return parenIndex === -1 ? ref : ref.slice(0, parenIndex)
 }
 
+/**
+ * Lockfile source prefixes for different package managers.
+ * Sources starting with these are transitive dependencies.
+ */
+const LOCKFILE_PREFIXES = ['pnpm-lock.yaml:', 'yarn.lock:']
+
+/**
+ * Check if a source is from a lockfile (transitive dependency).
+ */
+const isLockfileSource = (source: string): boolean => {
+  return LOCKFILE_PREFIXES.some((prefix) => source.startsWith(prefix))
+}
+
+/**
+ * Extract parent reference from a lockfile source.
+ * e.g., "pnpm-lock.yaml:tsup@8.5.0" -> "tsup@8.5.0"
+ * e.g., "yarn.lock:react@18.2.0" -> "react@18.2.0"
+ */
+const extractParentRef = (source: string): string => {
+  for (const prefix of LOCKFILE_PREFIXES) {
+    if (source.startsWith(prefix)) {
+      return stripPeerDeps(source.slice(prefix.length))
+    }
+  }
+  return source
+}
+
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
@@ -68,7 +95,7 @@ export const depsListCommand = new Command({
       depsByName.set(dep.name, dep)
     }
 
-    // Find direct dependencies (sources not starting with pnpm-lock.yaml:)
+    // Find direct dependencies (sources not from lockfile)
     // Use a Set to deduplicate by name@version
     const directDepsSet = new Set<string>()
     const directDeps: Array<{
@@ -79,7 +106,7 @@ export const depsListCommand = new Command({
     for (const dep of dependencies) {
       for (const [version, sources] of Object.entries(dep.versions)) {
         for (const source of Object.keys(sources)) {
-          if (!source.startsWith('pnpm-lock.yaml:')) {
+          if (!isLockfileSource(source)) {
             const key = `${dep.name}@${version}`
             if (!directDepsSet.has(key)) {
               directDepsSet.add(key)
@@ -103,12 +130,10 @@ export const depsListCommand = new Command({
     for (const dep of dependencies) {
       for (const [version, sources] of Object.entries(dep.versions)) {
         for (const source of Object.keys(sources)) {
-          if (source.startsWith('pnpm-lock.yaml:')) {
+          if (isLockfileSource(source)) {
             // Extract parent package from source like "pnpm-lock.yaml:tsup@8.5.0"
-            // Strip peer deps so "tsup@8.5.0(typescript@5.9.3)" becomes "tsup@8.5.0"
-            const parentRef = stripPeerDeps(
-              source.replace('pnpm-lock.yaml:', ''),
-            )
+            // or "yarn.lock:react@18.2.0"
+            const parentRef = extractParentRef(source)
             const children = childrenMap.get(parentRef) || []
             // Avoid duplicates
             if (
