@@ -63,7 +63,7 @@ export function generatePlist(options: PlistOptions): string {
     <string>/bin/zsh</string>
     <string>-l</string>
     <string>-c</string>
-    <string>${escapeXml(command)}</string>
+    <string>${escapeXml(command.trim())}</string>
   </array>
 
   <key>WorkingDirectory</key>

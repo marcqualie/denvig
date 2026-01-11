@@ -2,7 +2,6 @@ import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
-import { generateDenvigResourceHash } from '../resources.ts'
 import { parseEnvFile } from './env.ts'
 import launchctl from './launchctl.ts'
 import { generatePlist } from './plist.ts'
@@ -368,15 +367,24 @@ export class ServiceManager {
   }
 
   /**
+   * Normalize a string for use in launchctl labels and filenames.
+   * Replaces special characters with safe alternatives.
+   */
+  private normalizeForLabel(str: string): string {
+    return str
+      .replace(/\//g, '__') // Replace path separators with double underscore
+      .replace(/:/g, '-') // Replace colons with dashes
+      .replace(/[^a-zA-Z0-9_.-]/g, '_') // Replace other special chars with underscore
+  }
+
+  /**
    * Get the service label for launchctl.
+   * Format: denvig.[workspace]__[repo]__[service]
    */
   getServiceLabel(name: string): string {
-    const { hash } = generateDenvigResourceHash({
-      project: this.project,
-      resource: `service/${name}`,
-    })
-
-    return `com.denvig.${hash}`
+    const normalizedSlug = this.normalizeForLabel(this.project.slug)
+    const normalizedName = this.normalizeForLabel(name)
+    return `denvig.${normalizedSlug}__${normalizedName}`
   }
 
   /**
@@ -396,14 +404,17 @@ export class ServiceManager {
 
   /**
    * Get the log file path.
+   * Format: [workspace]__[repo]__[service].log or [workspace]__[repo]__[service].error.log
    */
   getLogPath(name: string, type: 'stdout' | 'stderr'): string {
-    const { hash } = generateDenvigResourceHash({
-      project: this.project,
-      resource: `service/${name}`,
-    })
+    const normalizedSlug = this.normalizeForLabel(this.project.slug)
+    const normalizedName = this.normalizeForLabel(name)
     const suffix = type === 'stderr' ? '.error' : ''
-    return resolve(this.getDenvigHomeDir(), 'logs', `${hash}${suffix}.log`)
+    return resolve(
+      this.getDenvigHomeDir(),
+      'logs',
+      `${normalizedSlug}__${normalizedName}${suffix}.log`,
+    )
   }
 
   /**

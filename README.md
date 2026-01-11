@@ -75,6 +75,20 @@ can be supported by using the per project configs.
 
 
 
+## Troubleshooting
+
+### Reset all services
+
+If you encounter issues with services (e.g., stale plist files or naming mismatches), you can fully reset all denvig-managed launchctl entries with:
+
+```shell
+launchctl list | awk '/denvig/ {print $3}' | xargs -I {} sh -c 'launchctl bootout gui/$(id -u)/{} 2>/dev/null; rm -f ~/Library/LaunchAgents/{}.plist'
+```
+
+This will stop and unload all services, then remove their plist files from `~/Library/LaunchAgents/`.
+
+
+
 ## Building from source
 
 You can build a fresh binary from source instead of using the provided methods above

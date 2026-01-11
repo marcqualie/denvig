@@ -2,29 +2,23 @@ import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { DenvigProject } from '../lib/project.ts'
-import { generateDenvigResourceHash } from '../lib/resources.ts'
 import { logsCommand } from './logs.ts'
 
 describe('logsCommand', () => {
   it('should show last N lines using --lines flag', async () => {
-    const project = new DenvigProject('denvig')
+    const project = new DenvigProject('workspace/denvig')
     project.config.services = {
       'test-logs': {
         command: 'echo hi',
       },
     }
 
-    const { hash } = generateDenvigResourceHash({
-      project,
-      resource: 'service/test-logs',
-    })
-
     const home = (await import('node:os')).homedir()
     const path = (await import('node:path')).resolve(
       home,
       '.denvig',
       'logs',
-      `${hash}.log`,
+      'workspace__denvig__test-logs.log',
     )
 
     const fs = await import('node:fs/promises')
