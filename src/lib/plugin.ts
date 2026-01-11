@@ -22,6 +22,14 @@ export type OutdatedDependency = {
  */
 export type OutdatedDependencies = Record<string, OutdatedDependency>
 
+/**
+ * Options for outdatedDependencies method
+ */
+export type OutdatedDependenciesOptions = {
+  /** Use cache for registry requests (default: true) */
+  cache?: boolean
+}
+
 type PluginOptions = {
   name: string
 
@@ -35,6 +43,7 @@ type PluginOptions = {
    */
   outdatedDependencies?: (
     project: DenvigProject,
+    options?: OutdatedDependenciesOptions,
   ) => Promise<OutdatedDependencies>
 }
 
