@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
+import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
 
 const plugin = definePlugin({
@@ -36,39 +37,36 @@ const plugin = definePlugin({
     return actions
   },
 
-  dependencies: async (project: DenvigProject) => {
-    const data = []
-    if (existsSync(`${project.path}/yarn.lock`)) {
-      data.push({
-        id: 'npm:yarn',
-        name: 'yarn',
-        ecosystem: 'system',
-        versions: [],
-      })
+  dependencies: async (
+    project: DenvigProject,
+  ): Promise<ProjectDependencySchema[]> => {
+    const data: ProjectDependencySchema[] = []
+    if (
+      !existsSync(`${project.path}/yarn.lock`) ||
+      !existsSync(`${project.path}/package.json`)
+    ) {
+      return []
     }
-    if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
-      data.push({
-        id: 'npm:pnpm',
-        name: 'pnpm',
-        ecosystem: 'system',
-        versions: [],
-      })
-    }
+    data.push({
+      id: 'npm:yarn',
+      name: 'yarn',
+      ecosystem: 'system',
+      versions: {},
+    })
 
-    if (existsSync(`${project.path}/package.json`)) {
-      const packageJson = readPackageJson(project)
-      if (packageJson?.dependencies) {
-        for (const [name, versions] of Object.entries({
-          ...packageJson.dependencies,
-          ...packageJson.devDependencies,
-        })) {
-          data.push({
-            id: `npm:${name}`,
-            name,
-            ecosystem: 'npm',
-            versions: Array.isArray(versions) ? versions : [versions],
-          })
-        }
+    const packageJson = readPackageJson(project)
+    if (packageJson?.dependencies) {
+      for (const [name, versions] of Object.entries({
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+      })) {
+        data.push({
+          id: `npm:${name}`,
+          name,
+          ecosystem: 'npm',
+          versions: {},
+          // versions: Array.isArray(versions) ? versions : [versions],
+        })
       }
     }
 

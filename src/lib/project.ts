@@ -6,7 +6,11 @@ import {
   getGlobalConfig,
   getProjectConfig,
 } from './config.ts'
-import { detectDependencies } from './dependencies.ts'
+import {
+  detectDependencies,
+  type ProjectDependencySchema,
+} from './dependencies.ts'
+import plugins from './plugins.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 
@@ -61,8 +65,8 @@ export class DenvigProject {
     return this.packageManagers[0] || null
   }
 
-  get dependencies() {
-    return detectDependencies(this)
+  async dependencies(): Promise<ProjectDependencySchema[]> {
+    return await detectDependencies(this)
   }
 
   /**

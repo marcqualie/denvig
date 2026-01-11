@@ -17,8 +17,24 @@ type PnpmLockfileImporter = {
   devDependencies?: Record<string, PnpmLockfileDep>
 }
 
+type PnpmSnapshotDep = {
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
+}
+
 type PnpmLockfile = {
   importers?: Record<string, PnpmLockfileImporter>
+  snapshots?: Record<string, PnpmSnapshotDep>
+}
+
+/**
+ * Strip peer dependency qualifiers from version strings.
+ * e.g., "8.5.0(typescript@5.9.3)(yaml@2.8.1)" -> "8.5.0"
+ */
+const stripPeerDeps = (version: string): string => {
+  const parenIndex = version.indexOf('(')
+  return parenIndex === -1 ? version : version.slice(0, parenIndex)
 }
 
 const plugin = definePlugin({
@@ -52,8 +68,15 @@ const plugin = definePlugin({
     return actions
   },
 
-  dependencies: async (project: DenvigProject) => {
+  dependencies: async (
+    project: DenvigProject,
+  ): Promise<ProjectDependencySchema[]> => {
+    if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
+      return []
+    }
+
     const data: Map<string, ProjectDependencySchema> = new Map()
+    const directDependencies: Set<string> = new Set()
 
     // Helper to add or update a dependency
     const addDependency = (
@@ -61,66 +84,81 @@ const plugin = definePlugin({
       name: string,
       ecosystem: string,
       resolvedVersion: string,
+      source: string,
       specifier: string,
     ) => {
       const existing = data.get(id)
       if (existing) {
-        const versions = existing.versions[resolvedVersion] || []
-        if (!versions.includes(specifier)) {
-          versions.push(specifier)
-        }
-        existing.versions[resolvedVersion] = versions
+        const sources = existing.versions[resolvedVersion] || {}
+        sources[source] = specifier
+        existing.versions[resolvedVersion] = sources
       } else {
         data.set(id, {
           id,
           name,
           ecosystem,
-          versions: { [resolvedVersion]: [specifier] },
+          versions: { [resolvedVersion]: { [source]: specifier } },
         })
       }
     }
 
-    // Add system dependencies
-    if (existsSync(`${project.path}/yarn.lock`)) {
-      data.set('npm:yarn', {
-        id: 'npm:yarn',
-        name: 'yarn',
-        ecosystem: 'system',
-        versions: {},
-      })
-    }
-    if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
-      data.set('npm:pnpm', {
-        id: 'npm:pnpm',
-        name: 'pnpm',
-        ecosystem: 'system',
-        versions: {},
-      })
-    }
+    data.set('npm:pnpm', {
+      id: 'npm:pnpm',
+      name: 'pnpm',
+      ecosystem: 'system',
+      versions: {},
+    })
 
     // Parse the lockfile to get resolved versions
     const lockfilePath = `${project.path}/pnpm-lock.yaml`
-    if (existsSync(lockfilePath)) {
-      const lockfileContent = readFileSync(lockfilePath, 'utf-8')
-      const lockfile = parse(lockfileContent) as PnpmLockfile
+    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+    const lockfile = parse(lockfileContent) as PnpmLockfile
 
-      // Iterate through importers (workspace packages)
-      if (lockfile?.importers) {
-        for (const importer of Object.values(lockfile.importers)) {
-          const allDeps = {
-            ...importer.dependencies,
-            ...importer.devDependencies,
+    // Iterate through importers (workspace packages)
+    if (lockfile?.importers) {
+      for (const [importerPath, importer] of Object.entries(
+        lockfile.importers,
+      )) {
+        const allDeps = {
+          ...importer.dependencies,
+          ...importer.devDependencies,
+        }
+        for (const [name, depInfo] of Object.entries(allDeps)) {
+          if (depInfo?.specifier && depInfo?.version) {
+            directDependencies.add(name)
+            addDependency(
+              `npm:${name}`,
+              name,
+              'npm',
+              stripPeerDeps(depInfo.version),
+              importerPath === '.' ? '.' : importerPath,
+              depInfo.specifier,
+            )
           }
-          for (const [name, depInfo] of Object.entries(allDeps)) {
-            if (depInfo?.specifier && depInfo?.version) {
-              addDependency(
-                `npm:${name}`,
-                name,
-                'npm',
-                depInfo.version,
-                depInfo.specifier,
-              )
-            }
+        }
+      }
+    }
+
+    // Add transitive dependencies from snapshots
+    if (lockfile?.snapshots) {
+      for (const [snapshotKey, snapshot] of Object.entries(
+        lockfile.snapshots,
+      )) {
+        const transitiveDeps = {
+          ...snapshot.dependencies,
+        }
+        for (const [depName, depVersion] of Object.entries(transitiveDeps)) {
+          if (!directDependencies.has(depName)) {
+            const cleanVersion = stripPeerDeps(depVersion)
+            const source = `pnpm-lock.yaml:${snapshotKey}`
+            addDependency(
+              `npm:${depName}`,
+              depName,
+              'npm',
+              cleanVersion,
+              source,
+              cleanVersion,
+            )
           }
         }
       }

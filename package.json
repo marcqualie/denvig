@@ -19,8 +19,8 @@
     "prepublishOnly": "npm run build",
     "lint": "biome check",
     "lint:fix": "biome check --fix",
-    "test": "node --test src/**/*.test.ts",
-    "test:ci": "node --test src/**/*.test.ts --reporter=default",
+    "test": "find src -name '*.test.ts' -not -path '*/node_modules/*' | xargs node --test",
+    "test:ci": "find src -name '*.test.ts' -not -path '*/node_modules/*' | xargs node --test --reporter=default",
     "dev": "tsc --watch"
   },
   "dependencies": {

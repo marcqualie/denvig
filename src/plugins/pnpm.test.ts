@@ -77,7 +77,9 @@ describe('pnpm plugin', () => {
       const pkg2Dep = deps.find((d) => d.name === 'denvig')
       ok(pkg2Dep, 'denvig should be detected from package2')
       strictEqual(pkg2Dep.ecosystem, 'npm')
-      deepStrictEqual(pkg2Dep.versions, { '0.3.0': ['0.3.0'] })
+      deepStrictEqual(pkg2Dep.versions, {
+        '0.3.0': { 'packages/package2': '0.3.0' },
+      })
     })
 
     it('should combine multiple of the same dependency into one', async () => {
@@ -98,8 +100,41 @@ describe('pnpm plugin', () => {
       strictEqual(reactDep.ecosystem, 'npm')
       // Two specifiers resolve to 19.2.3, one resolves to 18.3.1
       deepStrictEqual(reactDep.versions, {
-        '19.2.3': ['^19.2', '^19.2.0'],
-        '18.3.1': ['^18'],
+        '19.2.3': {
+          'packages/package1': '^19.2',
+          'packages/package2': '^19.2.0',
+        },
+        '18.3.1': {
+          'packages/package3': '^18',
+        },
+      })
+    })
+
+    it('should return dependencies that are in the lock file but not in any package.json', async () => {
+      const project = createMockProject(turborepoExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const yamlDep = deps.find((d) => d.name === 'yaml')
+      ok(yamlDep, 'yaml should be detected from lockfile only')
+      strictEqual(yamlDep.ecosystem, 'npm')
+      deepStrictEqual(yamlDep.versions, {
+        '2.8.2': { 'pnpm-lock.yaml:denvig@0.3.0': '2.8.2' },
+      })
+    })
+
+    it('should not include bracketed versions', async () => {
+      const project = createMockProject(turborepoExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const tsDep = deps.find((d) => d.name === 'tsup')
+      ok(tsDep, 'tsup should be detected from package.json and lockfile')
+      strictEqual(tsDep.ecosystem, 'npm')
+      deepStrictEqual(tsDep.versions, {
+        '8.5.1': {
+          '.': '^8.5.0',
+        },
       })
     })
 

@@ -1,25 +1,34 @@
 import { Command } from '../../lib/command.ts'
-import plugins from '../../lib/plugins.ts'
 
 import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
+
+/**
+ * Strip peer dependency qualifiers from version strings.
+ * e.g., "tsup@8.5.0(typescript@5.9.3)" -> "tsup@8.5.0"
+ */
+const stripPeerDeps = (ref: string): string => {
+  const parenIndex = ref.indexOf('(')
+  return parenIndex === -1 ? ref : ref.slice(0, parenIndex)
+}
 
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps:list',
-  example: 'denvig deps:list',
+  usage: 'deps:list [--depth <n>]',
+  example: 'denvig deps:list --depth 2',
   args: [],
-  flags: [],
-  handler: async ({ project }) => {
-    const allDependencies: ProjectDependencySchema[] = []
-
-    // Collect dependencies from all plugins
-    for (const [_key, plugin] of Object.entries(plugins)) {
-      if (plugin.dependencies) {
-        const pluginDeps = await plugin.dependencies(project)
-        allDependencies.push(...pluginDeps)
-      }
-    }
+  flags: [
+    {
+      name: 'depth',
+      description: 'Depth of transitive dependencies to show (default: 0)',
+      required: false,
+      type: 'number',
+      defaultValue: 0,
+    },
+  ],
+  handler: async ({ project, flags }) => {
+    const maxDepth = (flags.depth as number) ?? 0
+    const allDependencies = await project.dependencies()
 
     // Deduplicate dependencies by id
     const depsMap = new Map<string, ProjectDependencySchema>()
@@ -29,16 +38,15 @@ export const depsListCommand = new Command({
         depsMap.set(dep.id, dep)
       } else {
         // Merge versions records if the dependency already exists
-        const mergedVersions: Record<string, string[]> = {
+        const mergedVersions: Record<string, Record<string, string>> = {
           ...existing.versions,
         }
-        for (const [resolvedVersion, specifiers] of Object.entries(
-          dep.versions,
-        )) {
-          const existingSpecifiers = mergedVersions[resolvedVersion] || []
-          mergedVersions[resolvedVersion] = [
-            ...new Set([...existingSpecifiers, ...specifiers]),
-          ]
+        for (const [resolvedVersion, sources] of Object.entries(dep.versions)) {
+          const existingSources = mergedVersions[resolvedVersion] || {}
+          mergedVersions[resolvedVersion] = {
+            ...existingSources,
+            ...sources,
+          }
         }
         depsMap.set(dep.id, { ...existing, versions: mergedVersions })
       }
@@ -54,37 +62,138 @@ export const depsListCommand = new Command({
     console.log(`Dependencies for project: ${project.name}`)
     console.log('')
 
-    // Calculate column widths for alignment
-    const nameWidth = Math.max(
-      ...dependencies.map((d) => d.name.length),
-      'NAME'.length,
-    )
-    const ecosystemWidth = Math.max(
-      ...dependencies.map((d) => d.ecosystem.length),
-      'ECOSYSTEM'.length,
-    )
-
-    // Print header
-    console.log(
-      `${'NAME'.padEnd(nameWidth)}  ${'ECOSYSTEM'.padEnd(ecosystemWidth)}  VERSIONS`,
-    )
-    console.log(
-      `${''.padEnd(nameWidth, '-')}  ${''.padEnd(ecosystemWidth, '-')}  --------`,
-    )
-
-    // Print each dependency
+    // Build lookup maps
+    const depsByName = new Map<string, ProjectDependencySchema>()
     for (const dep of dependencies) {
-      const resolvedVersions = Object.keys(dep.versions)
-      const versions =
-        resolvedVersions.length > 0 ? resolvedVersions.join(', ') : '-'
-      console.log(
-        `${dep.name.padEnd(nameWidth)}  ${dep.ecosystem.padEnd(ecosystemWidth)}  ${versions}`,
-      )
+      depsByName.set(dep.name, dep)
+    }
+
+    // Find direct dependencies (sources not starting with pnpm-lock.yaml:)
+    // Use a Set to deduplicate by name@version
+    const directDepsSet = new Set<string>()
+    const directDeps: Array<{
+      name: string
+      version: string
+    }> = []
+
+    for (const dep of dependencies) {
+      for (const [version, sources] of Object.entries(dep.versions)) {
+        for (const source of Object.keys(sources)) {
+          if (!source.startsWith('pnpm-lock.yaml:')) {
+            const key = `${dep.name}@${version}`
+            if (!directDepsSet.has(key)) {
+              directDepsSet.add(key)
+              directDeps.push({ name: dep.name, version })
+            }
+          }
+        }
+      }
+    }
+
+    // Sort direct deps alphabetically
+    directDeps.sort((a, b) => a.name.localeCompare(b.name))
+
+    // Build a map of parent -> children for transitive deps
+    // Key: "parentName@version", Value: array of {name, version}
+    const childrenMap = new Map<
+      string,
+      Array<{ name: string; version: string }>
+    >()
+
+    for (const dep of dependencies) {
+      for (const [version, sources] of Object.entries(dep.versions)) {
+        for (const source of Object.keys(sources)) {
+          if (source.startsWith('pnpm-lock.yaml:')) {
+            // Extract parent package from source like "pnpm-lock.yaml:tsup@8.5.0"
+            // Strip peer deps so "tsup@8.5.0(typescript@5.9.3)" becomes "tsup@8.5.0"
+            const parentRef = stripPeerDeps(
+              source.replace('pnpm-lock.yaml:', ''),
+            )
+            const children = childrenMap.get(parentRef) || []
+            // Avoid duplicates
+            if (
+              !children.some(
+                (c) => c.name === dep.name && c.version === version,
+              )
+            ) {
+              children.push({ name: dep.name, version })
+            }
+            childrenMap.set(parentRef, children)
+          }
+        }
+      }
+    }
+
+    // Count all transitive dependencies (full depth)
+    const countAllTransitive = (
+      name: string,
+      version: string,
+      visited: Set<string>,
+    ): number => {
+      const key = `${name}@${version}`
+      if (visited.has(key)) return 0
+      visited.add(key)
+
+      const children = childrenMap.get(key) || []
+      let count = children.length
+      for (const child of children) {
+        count += countAllTransitive(child.name, child.version, visited)
+      }
+      return count
+    }
+
+    // Print tree recursively and count displayed deps
+    let displayedCount = 0
+    const printTree = (
+      name: string,
+      version: string,
+      depth: number,
+      prefix: string,
+      isLast: boolean,
+    ) => {
+      const connector = depth === 0 ? '' : isLast ? '└─ ' : '├─ '
+      console.log(`${prefix}${connector}${name} ${version}`)
+      displayedCount++
+
+      if (depth >= maxDepth) return
+
+      // Find children of this package
+      const parentKey = `${name}@${version}`
+      const children = childrenMap.get(parentKey) || []
+
+      // Sort children alphabetically
+      children.sort((a, b) => a.name.localeCompare(b.name))
+
+      const childPrefix = depth === 0 ? '' : prefix + (isLast ? '   ' : '│  ')
+
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]
+        const isLastChild = i === children.length - 1
+        printTree(
+          child.name,
+          child.version,
+          depth + 1,
+          childPrefix,
+          isLastChild,
+        )
+      }
+    }
+
+    // Print each direct dependency and its tree
+    for (const dep of directDeps) {
+      printTree(dep.name, dep.version, 0, '', true)
+    }
+
+    // Calculate total transitive dependencies
+    const visited = new Set<string>()
+    let totalTransitive = 0
+    for (const dep of directDeps) {
+      totalTransitive += countAllTransitive(dep.name, dep.version, visited)
     }
 
     console.log('')
     console.log(
-      `${dependencies.length} dependenc${dependencies.length === 1 ? 'y' : 'ies'} detected`,
+      `${directDeps.length} direct, ${displayedCount} shown, ${totalTransitive} total transitive`,
     )
 
     return { success: true, message: 'Dependencies listed successfully.' }
