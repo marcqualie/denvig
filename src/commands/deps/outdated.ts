@@ -54,11 +54,54 @@ const getVersionColor = (current: string, target: string): string => {
   return COLORS.white
 }
 
+/**
+ * Get the semver update level between two versions.
+ * Returns 'major', 'minor', 'patch', or null if versions match or can't be parsed.
+ */
+const getSemverLevel = (
+  current: string,
+  target: string,
+): 'major' | 'minor' | 'patch' | null => {
+  if (current === target) return null
+
+  const currentParsed = parseVersion(current)
+  const targetParsed = parseVersion(target)
+
+  if (!currentParsed || !targetParsed) return null
+
+  if (targetParsed.major !== currentParsed.major) {
+    return 'major'
+  }
+  if (targetParsed.minor !== currentParsed.minor) {
+    return 'minor'
+  }
+  if (targetParsed.patch !== currentParsed.patch) {
+    return 'patch'
+  }
+
+  return null
+}
+
+/**
+ * Check if a semver level matches the filter.
+ * - 'patch': only patch updates match
+ * - 'minor': minor and patch updates match
+ */
+const matchesSemverFilter = (
+  level: 'major' | 'minor' | 'patch' | null,
+  filter: 'patch' | 'minor',
+): boolean => {
+  if (level === null) return false
+  if (filter === 'patch') return level === 'patch'
+  if (filter === 'minor') return level === 'patch' || level === 'minor'
+  return false
+}
+
 export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
-  usage: 'deps:outdated [--no-cache]',
-  example: 'denvig deps:outdated',
+  usage: 'deps:outdated [--no-cache] [--semver patch|minor]',
+  example: 'denvig deps:outdated --semver patch',
   args: [],
   flags: [
     {
@@ -68,15 +111,44 @@ export const depsOutdatedCommand = new Command({
       type: 'boolean',
       defaultValue: false,
     },
+    {
+      name: 'semver',
+      description:
+        'Filter by semver level: "patch" for patch updates only, "minor" for minor and patch updates',
+      required: false,
+      type: 'string',
+      defaultValue: undefined,
+    },
   ],
   handler: async ({ project, flags }) => {
     const cache = !(flags['no-cache'] as boolean)
+    const semverFilter = flags.semver as 'patch' | 'minor' | undefined
+
+    // Validate semver flag
+    if (semverFilter && semverFilter !== 'patch' && semverFilter !== 'minor') {
+      console.error(
+        `Invalid --semver value: "${semverFilter}". Must be "patch" or "minor".`,
+      )
+      return { success: false, message: 'Invalid --semver value.' }
+    }
+
     const outdated = await project.outdatedDependencies({ cache })
-    const entries = Object.entries(outdated)
+    let entries = Object.entries(outdated)
+
+    // Filter by semver level if specified
+    if (semverFilter) {
+      entries = entries.filter(([, info]) => {
+        const level = getSemverLevel(info.current, info.wanted)
+        return matchesSemverFilter(level, semverFilter)
+      })
+    }
 
     if (entries.length === 0) {
-      console.log('All dependencies are up to date!')
-      return { success: true, message: 'All dependencies up to date.' }
+      const message = semverFilter
+        ? `No ${semverFilter}-level updates available.`
+        : 'All dependencies are up to date!'
+      console.log(message)
+      return { success: true, message }
     }
 
     // Sort entries alphabetically
