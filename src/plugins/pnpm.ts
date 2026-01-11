@@ -1,9 +1,41 @@
-import fs, { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { parse } from 'yaml'
 
-import { type PackageJson, readPackageJson } from '../lib/packageJson.ts'
+import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
+import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
+
+type PnpmLockfileDep = {
+  specifier: string
+  version: string
+}
+
+type PnpmLockfileImporter = {
+  dependencies?: Record<string, PnpmLockfileDep>
+  devDependencies?: Record<string, PnpmLockfileDep>
+}
+
+type PnpmSnapshotDep = {
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
+}
+
+type PnpmLockfile = {
+  importers?: Record<string, PnpmLockfileImporter>
+  snapshots?: Record<string, PnpmSnapshotDep>
+}
+
+/**
+ * Strip peer dependency qualifiers from version strings.
+ * e.g., "8.5.0(typescript@5.9.3)(yaml@2.8.1)" -> "8.5.0"
+ */
+const stripPeerDeps = (version: string): string => {
+  const parenIndex = version.indexOf('(')
+  return parenIndex === -1 ? version : version.slice(0, parenIndex)
+}
 
 const plugin = definePlugin({
   name: 'pnpm',
@@ -36,47 +68,125 @@ const plugin = definePlugin({
     return actions
   },
 
-  dependencies: async (project: DenvigProject) => {
-    const data = []
-    if (existsSync(`${project.path}/yarn.lock`)) {
-      data.push({
-        id: 'npm:yarn',
-        name: 'yarn',
-        ecosystem: 'system',
-        versions: [],
-      })
-    }
-    if (existsSync(`${project.path}/pnpm-lock.yaml`)) {
-      data.push({
-        id: 'npm:pnpm',
-        name: 'pnpm',
-        ecosystem: 'system',
-        versions: [],
-      })
+  dependencies: async (
+    project: DenvigProject,
+  ): Promise<ProjectDependencySchema[]> => {
+    if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
+      return []
     }
 
-    // find all package.json files from the project root, ignoring node_modules folders
-    const packageJsonPaths = project.findFilesByName('package.json')
+    const data: Map<string, ProjectDependencySchema> = new Map()
+    const directDependencies: Set<string> = new Set()
 
-    for (const packageJsonPath of packageJsonPaths) {
-      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
-      const packageJson = JSON.parse(packageJsonContent) as PackageJson
-      if (packageJson?.dependencies) {
-        for (const [name, versions] of Object.entries({
-          ...packageJson.dependencies,
-          ...packageJson.devDependencies,
-        })) {
-          data.push({
-            id: `npm:${name}`,
-            name,
-            ecosystem: 'npm',
-            versions: Array.isArray(versions) ? versions : [versions],
-          })
+    // Helper to add or update a dependency
+    const addDependency = (
+      id: string,
+      name: string,
+      ecosystem: string,
+      resolvedVersion: string,
+      source: string,
+      specifier: string,
+    ) => {
+      const existing = data.get(id)
+      if (existing) {
+        const sources = existing.versions[resolvedVersion] || {}
+        sources[source] = specifier
+        existing.versions[resolvedVersion] = sources
+      } else {
+        data.set(id, {
+          id,
+          name,
+          ecosystem,
+          versions: { [resolvedVersion]: { [source]: specifier } },
+        })
+      }
+    }
+
+    data.set('npm:pnpm', {
+      id: 'npm:pnpm',
+      name: 'pnpm',
+      ecosystem: 'system',
+      versions: {},
+    })
+
+    // Parse the lockfile to get resolved versions
+    const lockfilePath = `${project.path}/pnpm-lock.yaml`
+    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+    const lockfile = parse(lockfileContent) as PnpmLockfile
+
+    // Iterate through importers (workspace packages)
+    if (lockfile?.importers) {
+      for (const [importerPath, importer] of Object.entries(
+        lockfile.importers,
+      )) {
+        const basePath = importerPath === '.' ? '.' : importerPath
+
+        // Process dependencies
+        if (importer.dependencies) {
+          for (const [name, depInfo] of Object.entries(importer.dependencies)) {
+            if (depInfo?.specifier && depInfo?.version) {
+              directDependencies.add(name)
+              addDependency(
+                `npm:${name}`,
+                name,
+                'npm',
+                stripPeerDeps(depInfo.version),
+                `${basePath}#dependencies`,
+                depInfo.specifier,
+              )
+            }
+          }
+        }
+
+        // Process devDependencies
+        if (importer.devDependencies) {
+          for (const [name, depInfo] of Object.entries(
+            importer.devDependencies,
+          )) {
+            if (depInfo?.specifier && depInfo?.version) {
+              directDependencies.add(name)
+              addDependency(
+                `npm:${name}`,
+                name,
+                'npm',
+                stripPeerDeps(depInfo.version),
+                `${basePath}#devDependencies`,
+                depInfo.specifier,
+              )
+            }
+          }
         }
       }
     }
 
-    return data.sort((a, b) => a.name.localeCompare(b.name))
+    // Add transitive dependencies from snapshots
+    if (lockfile?.snapshots) {
+      for (const [snapshotKey, snapshot] of Object.entries(
+        lockfile.snapshots,
+      )) {
+        const transitiveDeps = {
+          ...snapshot.dependencies,
+        }
+        for (const [depName, depVersion] of Object.entries(transitiveDeps)) {
+          if (!directDependencies.has(depName)) {
+            const cleanVersion = stripPeerDeps(depVersion)
+            const source = `pnpm-lock.yaml:${snapshotKey}`
+            addDependency(
+              `npm:${depName}`,
+              depName,
+              'npm',
+              cleanVersion,
+              source,
+              cleanVersion,
+            )
+          }
+        }
+      }
+    }
+
+    return Array.from(data.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )
   },
 })
 
