@@ -36,19 +36,11 @@ export class DenvigProject {
     const rootFiles = this.rootFiles
     const packageManagers = []
 
-    if (
-      rootFiles.includes('pnpm-lock.yaml') ||
-      rootFiles.includes('package.json')
-    ) {
+    if (rootFiles.includes('pnpm-lock.yaml')) {
       packageManagers.push('pnpm')
-    }
-    if (
-      rootFiles.includes('package-lock.json') ||
-      rootFiles.includes('package.json')
-    ) {
+    } else if (rootFiles.includes('package-lock.json')) {
       packageManagers.push('npm')
-    }
-    if (rootFiles.includes('yarn.lock')) {
+    } else if (rootFiles.includes('yarn.lock')) {
       packageManagers.push('yarn')
     }
     if (rootFiles.includes('deno.json') || rootFiles.includes('deno.jsonc')) {
