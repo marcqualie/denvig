@@ -5,8 +5,23 @@
 
 ### Added
 
-- JSON schema to assist with IDE validation and autocompletion
-- Support for services in `.denvig.yml` to launch alongside projects
+- `deps:list` command to list project dependencies (#45)
+- `deps:outdated` command to show outdated dependencies (#47)
+- NPM registry caching for `deps:outdated` command (#48)
+- JSON schema generation from zod schema for IDE validation and autocompletion (#34)
+- Support for services in `.denvig.yml` to launch alongside projects (#37)
+- CI testing against multiple Node.js versions (#50)
+
+### Changed
+
+- Improved services and logs output (#44)
+- Split out npm outdated helpers for plugin reuse (#49)
+- Cleaned up config schemas (#38)
+- Upgraded dependencies (#33)
+
+### Fixed
+
+- Fixed number and boolean property generation in JSON schema (#36)
 
 
 
