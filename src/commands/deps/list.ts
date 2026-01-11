@@ -25,6 +25,20 @@ const isLockfileSource = (source: string): boolean => {
 }
 
 /**
+ * Check if a source is from dependencies section.
+ */
+const isDependenciesSource = (source: string): boolean => {
+  return source.endsWith('#dependencies')
+}
+
+/**
+ * Check if a source is from devDependencies section.
+ */
+const isDevDependenciesSource = (source: string): boolean => {
+  return source.endsWith('#devDependencies')
+}
+
+/**
  * Extract parent reference from a lockfile source.
  * e.g., "pnpm-lock.yaml:tsup@8.5.0" -> "tsup@8.5.0"
  * e.g., "yarn.lock:react@18.2.0" -> "react@18.2.0"
@@ -96,29 +110,39 @@ export const depsListCommand = new Command({
     }
 
     // Find direct dependencies (sources not from lockfile)
-    // Use a Set to deduplicate by name@version
-    const directDepsSet = new Set<string>()
-    const directDeps: Array<{
-      name: string
-      version: string
-    }> = []
+    // Split into dependencies and devDependencies
+    const depsSet = new Set<string>()
+    const devDepsSet = new Set<string>()
+    const prodDeps: Array<{ name: string; version: string }> = []
+    const devDeps: Array<{ name: string; version: string }> = []
 
     for (const dep of dependencies) {
       for (const [version, sources] of Object.entries(dep.versions)) {
         for (const source of Object.keys(sources)) {
           if (!isLockfileSource(source)) {
             const key = `${dep.name}@${version}`
-            if (!directDepsSet.has(key)) {
-              directDepsSet.add(key)
-              directDeps.push({ name: dep.name, version })
+            if (isDependenciesSource(source)) {
+              if (!depsSet.has(key)) {
+                depsSet.add(key)
+                prodDeps.push({ name: dep.name, version })
+              }
+            } else if (isDevDependenciesSource(source)) {
+              if (!devDepsSet.has(key)) {
+                devDepsSet.add(key)
+                devDeps.push({ name: dep.name, version })
+              }
             }
           }
         }
       }
     }
 
-    // Sort direct deps alphabetically
-    directDeps.sort((a, b) => a.name.localeCompare(b.name))
+    // Sort deps alphabetically
+    prodDeps.sort((a, b) => a.name.localeCompare(b.name))
+    devDeps.sort((a, b) => a.name.localeCompare(b.name))
+
+    // Combined list for transitive counting
+    const directDeps = [...prodDeps, ...devDeps]
 
     // Build a map of parent -> children for transitive deps
     // Key: "parentName@version", Value: array of {name, version}
@@ -167,8 +191,7 @@ export const depsListCommand = new Command({
       return count
     }
 
-    // Print tree recursively and count displayed deps
-    let displayedCount = 0
+    // Print tree recursively
     const printTree = (
       name: string,
       version: string,
@@ -178,7 +201,6 @@ export const depsListCommand = new Command({
     ) => {
       const connector = depth === 0 ? '' : isLast ? '└─ ' : '├─ '
       console.log(`${prefix}${connector}${name} ${version}`)
-      displayedCount++
 
       if (depth >= maxDepth) return
 
@@ -204,9 +226,22 @@ export const depsListCommand = new Command({
       }
     }
 
-    // Print each direct dependency and its tree
-    for (const dep of directDeps) {
-      printTree(dep.name, dep.version, 0, '', true)
+    // Print dependencies section
+    if (prodDeps.length > 0) {
+      console.log('\x1b[1mdependencies:\x1b[0m')
+      for (const dep of prodDeps) {
+        printTree(dep.name, dep.version, 0, '', true)
+      }
+      console.log('')
+    }
+
+    // Print devDependencies section
+    if (devDeps.length > 0) {
+      console.log('\x1b[1mdevDependencies:\x1b[0m')
+      for (const dep of devDeps) {
+        printTree(dep.name, dep.version, 0, '', true)
+      }
+      console.log('')
     }
 
     // Calculate total transitive dependencies
@@ -216,9 +251,8 @@ export const depsListCommand = new Command({
       totalTransitive += countAllTransitive(dep.name, dep.version, visited)
     }
 
-    console.log('')
     console.log(
-      `${directDeps.length} direct, ${displayedCount} shown, ${totalTransitive} total transitive`,
+      `${prodDeps.length} dependencies, ${devDeps.length} devDependencies, ${totalTransitive} transitive`,
     )
 
     return { success: true, message: 'Dependencies listed successfully.' }

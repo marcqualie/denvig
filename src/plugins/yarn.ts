@@ -205,49 +205,55 @@ const plugin = definePlugin({
           devDependencies?: Record<string, string>
         }
 
-        // Determine source path (relative to project root)
-        let source = '.'
+        // Determine base source path (relative to project root)
+        let basePath = '.'
         if (pkgJsonPath !== packageJsonPath) {
-          source = pkgJsonPath
+          basePath = pkgJsonPath
             .replace(`${project.path}/`, '')
             .replace('/package.json', '')
         }
 
-        const allDeps = {
-          ...pkg.dependencies,
-          ...pkg.devDependencies,
-        }
+        // Helper to process a dependency group
+        const processDeps = (
+          deps: Record<string, string> | undefined,
+          section: 'dependencies' | 'devDependencies',
+        ) => {
+          if (!deps) return
 
-        for (const [name, specifier] of Object.entries(allDeps)) {
-          directDependencies.add(name)
+          for (const [name, specifier] of Object.entries(deps)) {
+            directDependencies.add(name)
 
-          // Find resolved version from lockfile
-          const versionMap = resolvedVersionsByName.get(name)
-          let resolvedVersion = specifier
+            // Find resolved version from lockfile
+            const versionMap = resolvedVersionsByName.get(name)
+            let resolvedVersion = specifier
 
-          if (versionMap) {
-            // Try exact specifier match first
-            const exactMatch = versionMap.get(specifier)
-            if (exactMatch) {
-              resolvedVersion = exactMatch
-            } else {
-              // Fall back to first available resolved version
-              const firstVersion = versionMap.values().next().value
-              if (firstVersion) {
-                resolvedVersion = firstVersion
+            if (versionMap) {
+              // Try exact specifier match first
+              const exactMatch = versionMap.get(specifier)
+              if (exactMatch) {
+                resolvedVersion = exactMatch
+              } else {
+                // Fall back to first available resolved version
+                const firstVersion = versionMap.values().next().value
+                if (firstVersion) {
+                  resolvedVersion = firstVersion
+                }
               }
             }
-          }
 
-          addDependency(
-            `npm:${name}`,
-            name,
-            'npm',
-            resolvedVersion,
-            source,
-            specifier,
-          )
+            addDependency(
+              `npm:${name}`,
+              name,
+              'npm',
+              resolvedVersion,
+              `${basePath}#${section}`,
+              specifier,
+            )
+          }
         }
+
+        processDeps(pkg.dependencies, 'dependencies')
+        processDeps(pkg.devDependencies, 'devDependencies')
       } catch {
         // Skip invalid package.json files
       }

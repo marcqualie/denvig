@@ -78,7 +78,7 @@ describe('pnpm plugin', () => {
       ok(pkg2Dep, 'denvig should be detected from package2')
       strictEqual(pkg2Dep.ecosystem, 'npm')
       deepStrictEqual(pkg2Dep.versions, {
-        '0.3.0': { 'packages/package2': '0.3.0' },
+        '0.3.0': { 'packages/package2#dependencies': '0.3.0' },
       })
     })
 
@@ -101,11 +101,11 @@ describe('pnpm plugin', () => {
       // Two specifiers resolve to 19.2.3, one resolves to 18.3.1
       deepStrictEqual(reactDep.versions, {
         '19.2.3': {
-          'packages/package1': '^19.2',
-          'packages/package2': '^19.2.0',
+          'packages/package1#dependencies': '^19.2',
+          'packages/package2#dependencies': '^19.2.0',
         },
         '18.3.1': {
-          'packages/package3': '^18',
+          'packages/package3#dependencies': '^18',
         },
       })
     })
@@ -133,7 +133,7 @@ describe('pnpm plugin', () => {
       strictEqual(tsDep.ecosystem, 'npm')
       deepStrictEqual(tsDep.versions, {
         '8.5.1': {
-          '.': '^8.5.0',
+          '.#devDependencies': '^8.5.0',
         },
       })
     })

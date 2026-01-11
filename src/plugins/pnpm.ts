@@ -119,21 +119,41 @@ const plugin = definePlugin({
       for (const [importerPath, importer] of Object.entries(
         lockfile.importers,
       )) {
-        const allDeps = {
-          ...importer.dependencies,
-          ...importer.devDependencies,
+        const basePath = importerPath === '.' ? '.' : importerPath
+
+        // Process dependencies
+        if (importer.dependencies) {
+          for (const [name, depInfo] of Object.entries(importer.dependencies)) {
+            if (depInfo?.specifier && depInfo?.version) {
+              directDependencies.add(name)
+              addDependency(
+                `npm:${name}`,
+                name,
+                'npm',
+                stripPeerDeps(depInfo.version),
+                `${basePath}#dependencies`,
+                depInfo.specifier,
+              )
+            }
+          }
         }
-        for (const [name, depInfo] of Object.entries(allDeps)) {
-          if (depInfo?.specifier && depInfo?.version) {
-            directDependencies.add(name)
-            addDependency(
-              `npm:${name}`,
-              name,
-              'npm',
-              stripPeerDeps(depInfo.version),
-              importerPath === '.' ? '.' : importerPath,
-              depInfo.specifier,
-            )
+
+        // Process devDependencies
+        if (importer.devDependencies) {
+          for (const [name, depInfo] of Object.entries(
+            importer.devDependencies,
+          )) {
+            if (depInfo?.specifier && depInfo?.version) {
+              directDependencies.add(name)
+              addDependency(
+                `npm:${name}`,
+                name,
+                'npm',
+                stripPeerDeps(depInfo.version),
+                `${basePath}#devDependencies`,
+                depInfo.specifier,
+              )
+            }
           }
         }
       }
