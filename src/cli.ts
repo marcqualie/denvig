@@ -37,6 +37,14 @@ async function main() {
       .join('/')
   const project = new DenvigProject(projectSlug)
 
+  // Command aliases - map shortcuts to their full commands
+  const commandAliases: Record<string, string> = {
+    outdated: 'deps:outdated',
+  }
+  if (commandAliases[commandName]) {
+    commandName = commandAliases[commandName]
+  }
+
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions || []),
