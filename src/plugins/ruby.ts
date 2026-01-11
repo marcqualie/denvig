@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 
 import { definePlugin } from '../lib/plugin.ts'
+import { rubygemsOutdated } from '../lib/rubygems/outdated.ts'
 import { parseRubyDependencies } from '../lib/rubygems/parse.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
@@ -50,6 +51,16 @@ const plugin = definePlugin({
       return []
     }
     return parseRubyDependencies(project)
+  },
+
+  outdatedDependencies: async (project, options) => {
+    const hasGemfile = project.rootFiles.includes('Gemfile')
+    if (!hasGemfile) {
+      return {}
+    }
+    const dependencies = await plugin.dependencies?.(project)
+    if (!dependencies) return {}
+    return rubygemsOutdated(dependencies, options)
   },
 })
 
