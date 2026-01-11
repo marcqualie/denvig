@@ -1,13 +1,7 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
-import { homedir } from 'node:os'
+import { existsSync, readFileSync } from 'node:fs'
 import { parse } from 'yaml'
 
+import { fetchNpmPackageInfo } from '../lib/npm/info.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
@@ -17,65 +11,6 @@ import type {
   OutdatedDependenciesOptions,
 } from '../lib/plugin.ts'
 import type { DenvigProject } from '../lib/project.ts'
-
-/** Cache duration in milliseconds (30 minutes) */
-const CACHE_DURATION_MS = 30 * 60 * 1000
-
-/** Cache directory for npm package info */
-const getCacheDir = (): string => {
-  const cacheDir = `${homedir()}/.cache/denvig/dependencies/npm`
-  if (!existsSync(cacheDir)) {
-    mkdirSync(cacheDir, { recursive: true })
-  }
-  return cacheDir
-}
-
-/** Get cache file path for a package */
-const getCacheFilePath = (packageName: string): string => {
-  // Replace @ and / with safe characters for filename
-  const safeFileName = packageName.replace(/@/g, '_at_').replace(/\//g, '_')
-  return `${getCacheDir()}/${safeFileName}.json`
-}
-
-/** Check if cache file is still valid (less than 30 minutes old) */
-const isCacheValid = (filePath: string): boolean => {
-  try {
-    const stats = statSync(filePath)
-    const age = Date.now() - stats.mtimeMs
-    return age < CACHE_DURATION_MS
-  } catch {
-    return false
-  }
-}
-
-/** Read cached package info */
-const readCache = (
-  packageName: string,
-): { versions: string[]; latest: string } | null => {
-  const filePath = getCacheFilePath(packageName)
-  if (!existsSync(filePath) || !isCacheValid(filePath)) {
-    return null
-  }
-  try {
-    const content = readFileSync(filePath, 'utf-8')
-    return JSON.parse(content) as { versions: string[]; latest: string }
-  } catch {
-    return null
-  }
-}
-
-/** Write package info to cache */
-const writeCache = (
-  packageName: string,
-  data: { versions: string[]; latest: string },
-): void => {
-  try {
-    const filePath = getCacheFilePath(packageName)
-    writeFileSync(filePath, JSON.stringify(data), 'utf-8')
-  } catch {
-    // Ignore cache write errors
-  }
-}
 
 type PnpmLockfileDep = {
   specifier: string
@@ -202,47 +137,6 @@ const satisfiesRange = (version: string, specifier: string): boolean => {
   return (
     v.major === base.major && v.minor === base.minor && v.patch === base.patch
   )
-}
-
-/**
- * Fetch package info from npm registry with caching.
- */
-const fetchNpmPackageInfo = async (
-  packageName: string,
-  noCache = false,
-): Promise<{ versions: string[]; latest: string } | null> => {
-  // Try to read from cache first (unless noCache is set)
-  if (!noCache) {
-    const cached = readCache(packageName)
-    if (cached) {
-      return cached
-    }
-  }
-
-  try {
-    const response = await fetch(
-      `https://registry.npmjs.org/${encodeURIComponent(packageName)}`,
-      { headers: { Accept: 'application/json' } },
-    )
-    if (!response.ok) return null
-
-    const data = (await response.json()) as {
-      versions: Record<string, unknown>
-      'dist-tags': { latest: string }
-    }
-
-    const versions = Object.keys(data.versions)
-    const latest = data['dist-tags']?.latest || versions[versions.length - 1]
-
-    const result = { versions, latest }
-
-    // Write to cache
-    writeCache(packageName, result)
-
-    return result
-  } catch {
-    return null
-  }
 }
 
 /**
