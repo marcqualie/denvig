@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { z } from 'zod'
 
@@ -41,6 +42,11 @@ export const statusCommand = new Command({
     console.log(`Command: ${status.command}`)
     console.log(`CWD:     ${status.cwd.replace(homedir(), '~')}`)
     console.log(`Logs:    ${status.logPath.replace(homedir(), '~')}`)
+
+    const plistPath = manager.getPlistPath(serviceName)
+    if (existsSync(plistPath)) {
+      console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
+    }
 
     if (status.lastExitCode !== undefined && !status.running) {
       console.log(`Last exit code: ${status.lastExitCode}`)
