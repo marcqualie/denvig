@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { parse as parseToml } from 'smol-toml'
+
+import { parseToml } from './toml.ts'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
 import type { DenvigProject } from '../project.ts'
