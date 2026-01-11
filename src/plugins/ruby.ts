@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 
 import { definePlugin } from '../lib/plugin.ts'
+import { parseRubyDependencies } from '../lib/rubygems/parse.ts'
 
+import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
 
 const plugin = definePlugin({
@@ -38,6 +40,16 @@ const plugin = definePlugin({
     }
 
     return actions
+  },
+
+  dependencies: async (
+    project: DenvigProject,
+  ): Promise<ProjectDependencySchema[]> => {
+    const hasGemfile = project.rootFiles.includes('Gemfile')
+    if (!hasGemfile) {
+      return []
+    }
+    return parseRubyDependencies(project)
   },
 })
 
