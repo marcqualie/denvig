@@ -1,0 +1,9 @@
+{
+  "name": "@denvig/examples-turborepo-package2",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "react": "^19.2.0",
+    "denvig": "0.3.0"
+  }
+}

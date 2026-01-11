@@ -6,7 +6,10 @@ import {
   getGlobalConfig,
   getProjectConfig,
 } from './config.ts'
-import { detectDependencies } from './dependencies.ts'
+import {
+  detectDependencies,
+  type ProjectDependencySchema,
+} from './dependencies.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 
@@ -32,19 +35,11 @@ export class DenvigProject {
     const rootFiles = this.rootFiles
     const packageManagers = []
 
-    if (
-      rootFiles.includes('pnpm-lock.yaml') ||
-      rootFiles.includes('package.json')
-    ) {
+    if (rootFiles.includes('pnpm-lock.yaml')) {
       packageManagers.push('pnpm')
-    }
-    if (
-      rootFiles.includes('package-lock.json') ||
-      rootFiles.includes('package.json')
-    ) {
+    } else if (rootFiles.includes('package-lock.json')) {
       packageManagers.push('npm')
-    }
-    if (rootFiles.includes('yarn.lock')) {
+    } else if (rootFiles.includes('yarn.lock')) {
       packageManagers.push('yarn')
     }
     if (rootFiles.includes('deno.json') || rootFiles.includes('deno.jsonc')) {
@@ -61,8 +56,8 @@ export class DenvigProject {
     return this.packageManagers[0] || null
   }
 
-  get dependencies() {
-    return detectDependencies(this)
+  async dependencies(): Promise<ProjectDependencySchema[]> {
+    return await detectDependencies(this)
   }
 
   /**
