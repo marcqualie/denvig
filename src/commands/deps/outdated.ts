@@ -57,12 +57,21 @@ const getVersionColor = (current: string, target: string): string => {
 export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
-  usage: 'deps:outdated',
+  usage: 'deps:outdated [--no-cache]',
   example: 'denvig deps:outdated',
   args: [],
-  flags: [],
-  handler: async ({ project }) => {
-    const outdated = await project.outdatedDependencies()
+  flags: [
+    {
+      name: 'no-cache',
+      description: 'Skip cache and fetch fresh data from registry',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+  ],
+  handler: async ({ project, flags }) => {
+    const cache = !(flags['no-cache'] as boolean)
+    const outdated = await project.outdatedDependencies({ cache })
     const entries = Object.entries(outdated)
 
     if (entries.length === 0) {

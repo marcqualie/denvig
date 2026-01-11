@@ -1,12 +1,81 @@
-import { existsSync, readFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { homedir } from 'node:os'
 import { parse } from 'yaml'
 
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
-import type { OutdatedDependencies } from '../lib/plugin.ts'
+import type {
+  OutdatedDependencies,
+  OutdatedDependenciesOptions,
+} from '../lib/plugin.ts'
 import type { DenvigProject } from '../lib/project.ts'
+
+/** Cache duration in milliseconds (30 minutes) */
+const CACHE_DURATION_MS = 30 * 60 * 1000
+
+/** Cache directory for npm package info */
+const getCacheDir = (): string => {
+  const cacheDir = `${homedir()}/.cache/denvig/dependencies/npm`
+  if (!existsSync(cacheDir)) {
+    mkdirSync(cacheDir, { recursive: true })
+  }
+  return cacheDir
+}
+
+/** Get cache file path for a package */
+const getCacheFilePath = (packageName: string): string => {
+  // Replace @ and / with safe characters for filename
+  const safeFileName = packageName.replace(/@/g, '_at_').replace(/\//g, '_')
+  return `${getCacheDir()}/${safeFileName}.json`
+}
+
+/** Check if cache file is still valid (less than 30 minutes old) */
+const isCacheValid = (filePath: string): boolean => {
+  try {
+    const stats = statSync(filePath)
+    const age = Date.now() - stats.mtimeMs
+    return age < CACHE_DURATION_MS
+  } catch {
+    return false
+  }
+}
+
+/** Read cached package info */
+const readCache = (
+  packageName: string,
+): { versions: string[]; latest: string } | null => {
+  const filePath = getCacheFilePath(packageName)
+  if (!existsSync(filePath) || !isCacheValid(filePath)) {
+    return null
+  }
+  try {
+    const content = readFileSync(filePath, 'utf-8')
+    return JSON.parse(content) as { versions: string[]; latest: string }
+  } catch {
+    return null
+  }
+}
+
+/** Write package info to cache */
+const writeCache = (
+  packageName: string,
+  data: { versions: string[]; latest: string },
+): void => {
+  try {
+    const filePath = getCacheFilePath(packageName)
+    writeFileSync(filePath, JSON.stringify(data), 'utf-8')
+  } catch {
+    // Ignore cache write errors
+  }
+}
 
 type PnpmLockfileDep = {
   specifier: string
@@ -136,11 +205,20 @@ const satisfiesRange = (version: string, specifier: string): boolean => {
 }
 
 /**
- * Fetch package info from npm registry.
+ * Fetch package info from npm registry with caching.
  */
 const fetchNpmPackageInfo = async (
   packageName: string,
+  noCache = false,
 ): Promise<{ versions: string[]; latest: string } | null> => {
+  // Try to read from cache first (unless noCache is set)
+  if (!noCache) {
+    const cached = readCache(packageName)
+    if (cached) {
+      return cached
+    }
+  }
+
   try {
     const response = await fetch(
       `https://registry.npmjs.org/${encodeURIComponent(packageName)}`,
@@ -156,7 +234,12 @@ const fetchNpmPackageInfo = async (
     const versions = Object.keys(data.versions)
     const latest = data['dist-tags']?.latest || versions[versions.length - 1]
 
-    return { versions, latest }
+    const result = { versions, latest }
+
+    // Write to cache
+    writeCache(packageName, result)
+
+    return result
   } catch {
     return null
   }
@@ -330,11 +413,13 @@ const plugin = definePlugin({
 
   outdatedDependencies: async (
     project: DenvigProject,
+    options?: OutdatedDependenciesOptions,
   ): Promise<OutdatedDependencies> => {
     if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
       return {}
     }
 
+    const useCache = options?.cache ?? true
     const result: OutdatedDependencies = {}
 
     // Parse the lockfile to get current versions
@@ -390,7 +475,7 @@ const plugin = definePlugin({
     // Fetch latest versions from npm registry for each dependency
     const fetchPromises = Array.from(directDeps.entries()).map(
       async ([name, info]) => {
-        const npmInfo = await fetchNpmPackageInfo(name)
+        const npmInfo = await fetchNpmPackageInfo(name, !useCache)
         if (!npmInfo) return
 
         const wanted = findWantedVersion(npmInfo.versions, info.specifier)
