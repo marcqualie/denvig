@@ -15,7 +15,7 @@ const stripPeerDeps = (ref: string): string => {
  * Lockfile source prefixes for different package managers.
  * Sources starting with these are transitive dependencies.
  */
-const LOCKFILE_PREFIXES = ['pnpm-lock.yaml:', 'yarn.lock:']
+const LOCKFILE_PREFIXES = ['pnpm-lock.yaml:', 'yarn.lock:', 'Gemfile.lock:']
 
 /**
  * Check if a source is from a lockfile (transitive dependency).
