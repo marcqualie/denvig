@@ -62,6 +62,7 @@ async function main() {
   const { internalsResourceHashCommand, internalsResourceIdCommand } =
     await import('./commands/internals.ts')
   const { depsListCommand } = await import('./commands/deps/list.ts')
+  const { depsOutdatedCommand } = await import('./commands/deps/outdated.ts')
   const { depsWhyCommand } = await import('./commands/deps/why.ts')
 
   const commands = {
@@ -77,6 +78,7 @@ async function main() {
     status: statusCommand,
     logs: logsCommand,
     'deps:list': depsListCommand,
+    'deps:outdated': depsOutdatedCommand,
     'deps:why': depsWhyCommand,
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
