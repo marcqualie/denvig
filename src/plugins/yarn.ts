@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { parse } from 'yaml'
 
+import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { parseYarnLockContent } from '../lib/parsers/yarn.ts'
 import { definePlugin } from '../lib/plugin.ts'
@@ -320,6 +321,15 @@ const plugin = definePlugin({
     return Array.from(data.values()).sort((a, b) =>
       a.name.localeCompare(b.name),
     )
+  },
+
+  outdatedDependencies: async (project: DenvigProject, options) => {
+    if (!existsSync(`${project.path}/yarn.lock`)) {
+      return {}
+    }
+    const dependencies = await plugin.dependencies?.(project)
+    if (!dependencies) return {}
+    return npmOutdated(dependencies, options)
   },
 })
 
