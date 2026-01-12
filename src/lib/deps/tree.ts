@@ -1,4 +1,5 @@
 import type { ProjectDependencySchema } from '../dependencies.ts'
+import type { TreeNode } from '../formatters/tree.ts'
 
 /**
  * Lockfile source prefixes for different package managers.
@@ -228,4 +229,76 @@ export const buildDependencyTree = (
   })
 
   return entries
+}
+
+/**
+ * Build a reverse dependency chain from a target dependency back to a direct dependency.
+ * Returns the chain as a tree structure starting from the root, or null if chain cannot be built.
+ */
+export const buildReverseChain = (
+  targetName: string,
+  targetVersion: string,
+  source: string,
+  depsMap: Map<string, ProjectDependencySchema>,
+): TreeNode | null => {
+  // If this is a direct dependency, return it as a single node
+  if (!isLockfileSource(source)) {
+    return { name: targetName, version: targetVersion, children: [] }
+  }
+
+  // Build the chain by walking up the parent references
+  const chain: { name: string; version: string }[] = [
+    { name: targetName, version: targetVersion },
+  ]
+
+  let currentSource = source
+  const maxDepth = 50
+  let depth = 0
+
+  while (depth < maxDepth) {
+    const parent = parseParentFromSource(currentSource)
+    if (!parent) break
+
+    chain.unshift({ name: parent.name, version: parent.version })
+
+    // Find the parent dependency and its source
+    const parentDep = depsMap.get(parent.name)
+    if (!parentDep) break
+
+    // Find the version entry for this parent
+    const parentVersion = parentDep.versions.find(
+      (v) => v.resolved === parent.version,
+    )
+    if (!parentVersion) break
+
+    // If this is a direct dependency, we're done
+    if (!isLockfileSource(parentVersion.source)) {
+      break
+    }
+
+    currentSource = parentVersion.source
+    depth++
+  }
+
+  // Convert chain array to tree structure
+  if (chain.length === 0) return null
+
+  const result: TreeNode = {
+    name: chain[0].name,
+    version: chain[0].version,
+    children: [],
+  }
+
+  let current = result
+  for (let i = 1; i < chain.length; i++) {
+    const child: TreeNode = {
+      name: chain[i].name,
+      version: chain[i].version,
+      children: [],
+    }
+    current.children.push(child)
+    current = child
+  }
+
+  return result
 }
