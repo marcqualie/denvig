@@ -10,6 +10,6 @@ describe('stopCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(stopCommand.usage === 'stop [name]')
+    ok(stopCommand.usage === 'stop [name] [--format table|json]')
   })
 })

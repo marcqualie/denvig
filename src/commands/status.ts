@@ -8,7 +8,7 @@ import { getServiceContext } from '../lib/services/identifier.ts'
 export const statusCommand = new Command({
   name: 'status',
   description: 'Show status of a specific service',
-  usage: 'status <name>',
+  usage: 'status <name> [--format table|json]',
   example: 'status api or status marcqualie/api/dev',
   args: [
     {
@@ -19,9 +19,18 @@ export const statusCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [],
-  handler: async ({ project, args }) => {
+  flags: [
+    {
+      name: 'format',
+      description: 'Output format: table or json (default: table)',
+      required: false,
+      type: 'string',
+      defaultValue: 'table',
+    },
+  ],
+  handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
+    const format = flags.format as string
     const {
       manager,
       serviceName,
@@ -35,13 +44,44 @@ export const statusCommand = new Command({
         targetProject.slug !== project.slug
           ? ` in project "${targetProject.slug}"`
           : ''
-      console.error(
-        `Service "${serviceName}" not found in configuration${projectInfo}`,
-      )
+      if (format === 'json') {
+        console.log(
+          JSON.stringify({
+            success: false,
+            service: serviceName,
+            project: targetProject.slug,
+            message: `Service "${serviceName}" not found in configuration${projectInfo}`,
+          }),
+        )
+      } else {
+        console.error(
+          `Service "${serviceName}" not found in configuration${projectInfo}`,
+        )
+      }
       return {
         success: false,
         message: `Service "${serviceName}" not found.`,
       }
+    }
+
+    if (format === 'json') {
+      const plistPath = manager.getPlistPath(serviceName)
+      console.log(
+        JSON.stringify({
+          success: true,
+          service: serviceName,
+          project: targetProject.slug,
+          running: status.running,
+          pid: status.pid || null,
+          command: status.command,
+          cwd: status.cwd,
+          logPath: status.logPath,
+          plistPath: existsSync(plistPath) ? plistPath : null,
+          lastExitCode: status.lastExitCode ?? null,
+          logs: status.logs || [],
+        }),
+      )
+      return { success: true, message: 'Status retrieved successfully.' }
     }
 
     const projectPrefix =
