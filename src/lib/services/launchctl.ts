@@ -6,7 +6,7 @@ const execAsync = promisify(exec)
 /**
  * Parsed output from launchctl print command.
  */
-export interface LaunchctlPrintOutput {
+export type LaunchctlPrintOutput = {
   pid?: number
   status: string
   label: string
@@ -17,7 +17,7 @@ export interface LaunchctlPrintOutput {
 /**
  * Item from launchctl list command.
  */
-export interface LaunchctlListItem {
+export type LaunchctlListItem = {
   pid: number | '-'
   status: number
   label: string

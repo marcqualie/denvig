@@ -2,7 +2,10 @@ import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
 import { getServiceContext } from '../../lib/services/identifier.ts'
-import { ServiceManager } from '../../lib/services/manager.ts'
+import {
+  ServiceManager,
+  type ServiceResponse,
+} from '../../lib/services/manager.ts'
 
 export const servicesRestartCommand = new Command({
   name: 'services:restart',
@@ -69,23 +72,16 @@ export const servicesRestartCommand = new Command({
       // Wait for service to start
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // Check if service is actually running
-      const status = await manager.getServiceStatus(serviceName)
-      if (status?.running) {
-        const url = manager.getServiceUrl(serviceName)
+      // Get service response
+      const response = await manager.getServiceResponse(serviceName, {
+        includeLogs: true,
+      })
+
+      if (response?.status === 'running') {
         if (format === 'json') {
-          console.log(
-            JSON.stringify({
-              success: true,
-              service: serviceName,
-              project: targetProject.slug,
-              running: true,
-              pid: status.pid,
-              url: url || null,
-            }),
-          )
+          console.log(JSON.stringify(response))
         } else {
-          const urlInfo = url ? ` → ${url}` : ''
+          const urlInfo = response.url ? ` → ${response.url}` : ''
           console.log(
             `✓ ${projectPrefix}${serviceName} restarted successfully${urlInfo}`,
           )
@@ -95,21 +91,13 @@ export const servicesRestartCommand = new Command({
 
       // Service failed to start
       if (format === 'json') {
-        console.log(
-          JSON.stringify({
-            success: false,
-            service: serviceName,
-            project: targetProject.slug,
-            running: false,
-            logs: status?.logs || [],
-          }),
-        )
+        console.log(JSON.stringify(response))
       } else {
         console.error(`✗ ${projectPrefix}${serviceName} failed to start`)
-        if (status?.logs && status.logs.length > 0) {
+        if (response?.logs && response.logs.length > 0) {
           console.error('')
           console.error('Recent logs:')
-          for (const line of status.logs) {
+          for (const line of response.logs) {
             console.error(`  ${line}`)
           }
         }
@@ -123,7 +111,13 @@ export const servicesRestartCommand = new Command({
 
     if (results.length === 0) {
       if (format === 'json') {
-        console.log(JSON.stringify({ success: true, services: [] }))
+        console.log(
+          JSON.stringify({
+            success: true,
+            project: project.slug,
+            services: [],
+          }),
+        )
       } else {
         console.log('No running services to restart.')
       }
@@ -133,64 +127,41 @@ export const servicesRestartCommand = new Command({
     // Wait for services to start
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    const serviceResults: Array<{
-      name: string
-      success: boolean
-      running: boolean
-      url: string | null
-      message?: string
-    }> = []
+    const serviceResponses: ServiceResponse[] = []
     let hasErrors = false
 
     for (const result of results) {
-      if (!result.success) {
-        serviceResults.push({
-          name: result.name,
-          success: false,
-          running: false,
-          url: null,
-          message: result.message,
-        })
-        if (format !== 'json') {
-          console.error(`Restarting ${result.name}... ✗`)
-          console.error(`  ${result.message}`)
-        }
-        hasErrors = true
+      const response = await manager.getServiceResponse(result.name, {
+        includeLogs: !result.success,
+      })
+
+      if (!response) {
         continue
       }
 
-      // Check if service is actually running
-      const status = await manager.getServiceStatus(result.name)
-      if (status?.running) {
-        const url = manager.getServiceUrl(result.name)
-        serviceResults.push({
-          name: result.name,
-          success: true,
-          running: true,
-          url: url || null,
-        })
+      serviceResponses.push(response)
+
+      if (!result.success || response.status !== 'running') {
+        hasErrors = true
         if (format !== 'json') {
-          const urlInfo = url ? ` → ${url}` : ''
-          console.log(`Restarting ${result.name}... ✓${urlInfo}`)
-        }
-      } else {
-        serviceResults.push({
-          name: result.name,
-          success: false,
-          running: false,
-          url: null,
-          message: 'Failed to start',
-        })
-        if (format !== 'json') {
-          console.error(`Restarting ${result.name}... ✗ (failed to start)`)
-          if (status?.logs && status.logs.length > 0) {
-            console.error('  Recent logs:')
-            for (const line of status.logs.slice(-3)) {
-              console.error(`    ${line}`)
+          if (!result.success) {
+            console.error(`Restarting ${result.name}... ✗`)
+            console.error(`  ${result.message}`)
+          } else {
+            console.error(`Restarting ${result.name}... ✗ (failed to start)`)
+            if (response.logs && response.logs.length > 0) {
+              console.error('  Recent logs:')
+              for (const line of response.logs.slice(-3)) {
+                console.error(`    ${line}`)
+              }
             }
           }
         }
-        hasErrors = true
+      } else {
+        if (format !== 'json') {
+          const urlInfo = response.url ? ` → ${response.url}` : ''
+          console.log(`Restarting ${result.name}... ✓${urlInfo}`)
+        }
       }
     }
 
@@ -199,7 +170,7 @@ export const servicesRestartCommand = new Command({
         JSON.stringify({
           success: !hasErrors,
           project: project.slug,
-          services: serviceResults,
+          services: serviceResponses,
         }),
       )
     } else {

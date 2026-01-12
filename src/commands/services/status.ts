@@ -37,9 +37,11 @@ export const servicesStatusCommand = new Command({
       project: targetProject,
     } = getServiceContext(serviceArg, project)
 
-    const status = await manager.getServiceStatus(serviceName)
+    const response = await manager.getServiceResponse(serviceName, {
+      includeLogs: true,
+    })
 
-    if (!status) {
+    if (!response) {
       const projectInfo =
         targetProject.slug !== project.slug
           ? ` in project "${targetProject.slug}"`
@@ -65,52 +67,48 @@ export const servicesStatusCommand = new Command({
     }
 
     if (format === 'json') {
-      const plistPath = manager.getPlistPath(serviceName)
-      console.log(
-        JSON.stringify({
-          success: true,
-          service: serviceName,
-          project: targetProject.slug,
-          running: status.running,
-          pid: status.pid || null,
-          command: status.command,
-          cwd: status.cwd,
-          logPath: status.logPath,
-          plistPath: existsSync(plistPath) ? plistPath : null,
-          lastExitCode: status.lastExitCode ?? null,
-          logs: status.logs || [],
-        }),
-      )
+      console.log(JSON.stringify(response))
       return { success: true, message: 'Status retrieved successfully.' }
     }
 
     const projectPrefix =
       targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
 
-    console.log(`Service: ${projectPrefix}${status.name}`)
-    console.log(`Status:  ${status.running ? 'Running' : 'Stopped'}`)
+    const statusText =
+      response.status === 'running'
+        ? 'Running'
+        : response.status === 'error'
+          ? 'Error'
+          : 'Stopped'
 
-    if (status.running && status.pid) {
-      console.log(`PID:     ${status.pid}`)
+    console.log(`Service: ${projectPrefix}${response.name}`)
+    console.log(`Status:  ${statusText}`)
+
+    if (response.status === 'running' && response.pid) {
+      console.log(`PID:     ${response.pid}`)
     }
 
-    console.log(`Command: ${status.command}`)
-    console.log(`CWD:     ${status.cwd.replace(homedir(), '~')}`)
-    console.log(`Logs:    ${status.logPath.replace(homedir(), '~')}`)
+    console.log(`Command: ${response.command}`)
+    console.log(`CWD:     ${response.cwd.replace(homedir(), '~')}`)
+    console.log(`Logs:    ${response.logPath.replace(homedir(), '~')}`)
 
     const plistPath = manager.getPlistPath(serviceName)
     if (existsSync(plistPath)) {
       console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
     }
 
-    if (status.lastExitCode !== undefined && !status.running) {
-      console.log(`Last exit code: ${status.lastExitCode}`)
+    if (
+      response.lastExitCode !== null &&
+      response.lastExitCode !== 0 &&
+      response.status !== 'running'
+    ) {
+      console.log(`Last exit code: ${response.lastExitCode}`)
     }
 
-    if (status.logs && status.logs.length > 0) {
+    if (response.logs && response.logs.length > 0) {
       console.log('')
       console.log('Recent logs (last 10 lines):')
-      for (const line of status.logs) {
+      for (const line of response.logs.slice(-10)) {
         console.log(`  ${line}`)
       }
     }

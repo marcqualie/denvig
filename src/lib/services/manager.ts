@@ -14,7 +14,7 @@ type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
 /**
  * Service information for display.
  */
-export interface ServiceInfo {
+export type ServiceInfo = {
   name: string
   cwd: string
   command: string
@@ -28,7 +28,7 @@ export interface ServiceInfo {
 /**
  * Result of a service operation.
  */
-export interface ServiceResult {
+export type ServiceResult = {
   name: string
   success: boolean
   message: string
@@ -37,7 +37,7 @@ export interface ServiceResult {
 /**
  * Status of a running service.
  */
-export interface ServiceStatus {
+export type ServiceStatus = {
   name: string
   running: boolean
   pid?: number
@@ -47,6 +47,23 @@ export interface ServiceStatus {
   logs?: string[]
   logPath: string
   lastExitCode?: number
+}
+
+/**
+ * Unified service response for all service commands.
+ * Used by list, status, start, stop, and restart commands.
+ */
+export type ServiceResponse = {
+  name: string
+  project: string
+  status: 'running' | 'error' | 'stopped'
+  pid: number | null
+  url: string | null
+  command: string
+  cwd: string
+  logPath: string
+  lastExitCode: number | null
+  logs?: string[]
 }
 
 /**
@@ -474,5 +491,61 @@ export class ServiceManager {
     }
 
     return null
+  }
+
+  /**
+   * Get a unified service response for a service.
+   * Returns null if the service is not found in configuration.
+   * @param name - Service name
+   * @param options.includeLogs - Whether to include recent logs (default: false)
+   * @param options.logLines - Number of log lines to include (default: 20)
+   */
+  async getServiceResponse(
+    name: string,
+    options?: { includeLogs?: boolean; logLines?: number },
+  ): Promise<ServiceResponse | null> {
+    const config = this.getServiceConfig(name)
+    if (!config) {
+      return null
+    }
+
+    const label = this.getServiceLabel(name)
+    const info = await launchctl.print(label)
+
+    let status: 'running' | 'error' | 'stopped' = 'stopped'
+    let pid: number | null = null
+    let lastExitCode: number | null = null
+
+    if (info) {
+      pid = info.pid ?? null
+      lastExitCode = info.lastExitCode ?? null
+
+      if (info.state === 'running') {
+        // Check for error state (running but with non-zero exit code)
+        if (lastExitCode !== null && lastExitCode !== 0) {
+          status = 'error'
+        } else {
+          status = 'running'
+        }
+      }
+    }
+
+    const response: ServiceResponse = {
+      name,
+      project: this.project.slug,
+      status,
+      pid,
+      url: this.getServiceUrl(name),
+      command: config.command,
+      cwd: this.resolveServiceCwd(config),
+      logPath: this.getLogPath(name, 'stdout'),
+      lastExitCode,
+    }
+
+    if (options?.includeLogs) {
+      response.logs = await this.getRecentLogs(name, options.logLines ?? 20)
+    }
+
+    return response
   }
 }
