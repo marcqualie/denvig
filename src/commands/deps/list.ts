@@ -2,13 +2,11 @@ import { Command } from '../../lib/command.ts'
 
 import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
 
-/**
- * Strip peer dependency qualifiers from version strings.
- * e.g., "tsup@8.5.0(typescript@5.9.3)" -> "tsup@8.5.0"
- */
-const stripPeerDeps = (ref: string): string => {
-  const parenIndex = ref.indexOf('(')
-  return parenIndex === -1 ? ref : ref.slice(0, parenIndex)
+// ANSI color codes
+const COLORS = {
+  reset: '\x1b[0m',
+  grey: '\x1b[90m',
+  bold: '\x1b[1m',
 }
 
 /**
@@ -43,37 +41,30 @@ const isDevDependenciesSource = (source: string): boolean => {
   return source.endsWith('#devDependencies')
 }
 
-/**
- * Extract parent reference from a lockfile source.
- * e.g., "pnpm-lock.yaml:tsup@8.5.0" -> "tsup@8.5.0"
- * e.g., "yarn.lock:react@18.2.0" -> "react@18.2.0"
- */
-const extractParentRef = (source: string): string => {
-  for (const prefix of LOCKFILE_PREFIXES) {
-    if (source.startsWith(prefix)) {
-      return stripPeerDeps(source.slice(prefix.length))
-    }
-  }
-  return source
+type DependencyEntry = {
+  name: string
+  version: string
+  ecosystem: string
+  isDevDependency: boolean
 }
 
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps:list [--depth <n>]',
-  example: 'denvig deps:list --depth 2',
+  usage: 'deps:list [--ecosystem <name>]',
+  example: 'denvig deps:list --ecosystem npm',
   args: [],
   flags: [
     {
-      name: 'depth',
-      description: 'Depth of transitive dependencies to show (default: 0)',
+      name: 'ecosystem',
+      description: 'Filter to a specific ecosystem (e.g., npm, rubygems, pypi)',
       required: false,
-      type: 'number',
-      defaultValue: 0,
+      type: 'string',
+      defaultValue: undefined,
     },
   ],
   handler: async ({ project, flags }) => {
-    const maxDepth = (flags.depth as number) ?? 0
+    const ecosystemFilter = flags.ecosystem as string | undefined
     const allDependencies = await project.dependencies()
 
     // Deduplicate dependencies by id
@@ -105,36 +96,27 @@ export const depsListCommand = new Command({
       return { success: true, message: 'No dependencies detected.' }
     }
 
-    console.log(`Dependencies for project: ${project.name}`)
-    console.log('')
-
-    // Build lookup maps
-    const depsByName = new Map<string, ProjectDependencySchema>()
-    for (const dep of dependencies) {
-      depsByName.set(dep.name, dep)
-    }
-
-    // Find direct dependencies (sources not from lockfile)
-    // Split into dependencies and devDependencies
-    const depsSet = new Set<string>()
-    const devDepsSet = new Set<string>()
-    const prodDeps: Array<{ name: string; version: string }> = []
-    const devDeps: Array<{ name: string; version: string }> = []
+    // Find direct dependencies only (sources not from lockfile)
+    let entries: DependencyEntry[] = []
+    const seenKeys = new Set<string>()
 
     for (const dep of dependencies) {
       for (const [version, sources] of Object.entries(dep.versions)) {
         for (const source of Object.keys(sources)) {
           if (!isLockfileSource(source)) {
-            const key = `${dep.name}@${version}`
-            if (isDependenciesSource(source)) {
-              if (!depsSet.has(key)) {
-                depsSet.add(key)
-                prodDeps.push({ name: dep.name, version })
-              }
-            } else if (isDevDependenciesSource(source)) {
-              if (!devDepsSet.has(key)) {
-                devDepsSet.add(key)
-                devDeps.push({ name: dep.name, version })
+            const isDevDependency = isDevDependenciesSource(source)
+            const isDependency = isDependenciesSource(source)
+
+            if (isDependency || isDevDependency) {
+              const key = `${dep.name}@${version}@${dep.ecosystem}`
+              if (!seenKeys.has(key)) {
+                seenKeys.add(key)
+                entries.push({
+                  name: dep.name,
+                  version,
+                  ecosystem: dep.ecosystem,
+                  isDevDependency,
+                })
               }
             }
           }
@@ -142,123 +124,84 @@ export const depsListCommand = new Command({
       }
     }
 
-    // Sort deps alphabetically
-    prodDeps.sort((a, b) => a.name.localeCompare(b.name))
-    devDeps.sort((a, b) => a.name.localeCompare(b.name))
-
-    // Combined list for transitive counting
-    const directDeps = [...prodDeps, ...devDeps]
-
-    // Build a map of parent -> children for transitive deps
-    // Key: "parentName@version", Value: array of {name, version}
-    const childrenMap = new Map<
-      string,
-      Array<{ name: string; version: string }>
-    >()
-
-    for (const dep of dependencies) {
-      for (const [version, sources] of Object.entries(dep.versions)) {
-        for (const source of Object.keys(sources)) {
-          if (isLockfileSource(source)) {
-            // Extract parent package from source like "pnpm-lock.yaml:tsup@8.5.0"
-            // or "yarn.lock:react@18.2.0"
-            const parentRef = extractParentRef(source)
-            const children = childrenMap.get(parentRef) || []
-            // Avoid duplicates
-            if (
-              !children.some(
-                (c) => c.name === dep.name && c.version === version,
-              )
-            ) {
-              children.push({ name: dep.name, version })
-            }
-            childrenMap.set(parentRef, children)
-          }
-        }
-      }
+    // Filter by ecosystem if specified
+    if (ecosystemFilter) {
+      entries = entries.filter((e) => e.ecosystem === ecosystemFilter)
     }
 
-    // Count all transitive dependencies (full depth)
-    const countAllTransitive = (
-      name: string,
-      version: string,
-      visited: Set<string>,
-    ): number => {
-      const key = `${name}@${version}`
-      if (visited.has(key)) return 0
-      visited.add(key)
+    // Sort entries by ecosystem first, then alphabetically by name
+    entries.sort((a, b) => {
+      const ecosystemCompare = a.ecosystem.localeCompare(b.ecosystem)
+      if (ecosystemCompare !== 0) return ecosystemCompare
+      return a.name.localeCompare(b.name)
+    })
 
-      const children = childrenMap.get(key) || []
-      let count = children.length
-      for (const child of children) {
-        count += countAllTransitive(child.name, child.version, visited)
-      }
-      return count
+    if (entries.length === 0) {
+      const message = ecosystemFilter
+        ? `No dependencies found for ecosystem "${ecosystemFilter}".`
+        : 'No direct dependencies detected in this project.'
+      console.log(message)
+      return { success: true, message }
     }
 
-    // Print tree recursively
-    const printTree = (
-      name: string,
-      version: string,
-      depth: number,
-      prefix: string,
-      isLast: boolean,
-    ) => {
-      const connector = depth === 0 ? '' : isLast ? '└─ ' : '├─ '
-      console.log(`${prefix}${connector}${name} ${version}`)
+    // Check if we have multiple ecosystems (hide column if filtered to one)
+    const ecosystems = new Set(entries.map((e) => e.ecosystem))
+    const showEcosystem = ecosystems.size > 1 && !ecosystemFilter
 
-      if (depth >= maxDepth) return
+    // Calculate column widths for nice formatting
+    // Account for "(dev)" suffix in name column
+    const maxNameLen = Math.max(
+      ...entries.map((e) =>
+        e.isDevDependency ? e.name.length + 6 : e.name.length,
+      ),
+      7, // "Package"
+    )
+    const maxVersionLen = Math.max(
+      ...entries.map((e) => e.version.length),
+      7, // "Current"
+    )
+    const maxEcosystemLen = showEcosystem
+      ? Math.max(...entries.map((e) => e.ecosystem.length), 9) // "Ecosystem"
+      : 0
 
-      // Find children of this package
-      const parentKey = `${name}@${version}`
-      const children = childrenMap.get(parentKey) || []
+    // Print header
+    if (showEcosystem) {
+      console.log(
+        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Ecosystem'.padEnd(maxEcosystemLen)}`,
+      )
+      console.log('-'.repeat(maxNameLen + maxVersionLen + maxEcosystemLen + 4))
+    } else {
+      console.log(
+        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}`,
+      )
+      console.log('-'.repeat(maxNameLen + maxVersionLen + 2))
+    }
 
-      // Sort children alphabetically
-      children.sort((a, b) => a.name.localeCompare(b.name))
+    // Print each dependency
+    for (const entry of entries) {
+      const devSuffix = entry.isDevDependency
+        ? `${COLORS.grey} (dev)${COLORS.reset}`
+        : ''
+      const displayName = entry.isDevDependency
+        ? entry.name.padEnd(maxNameLen - 6)
+        : entry.name.padEnd(maxNameLen)
 
-      const childPrefix = depth === 0 ? '' : prefix + (isLast ? '   ' : '│  ')
-
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i]
-        const isLastChild = i === children.length - 1
-        printTree(
-          child.name,
-          child.version,
-          depth + 1,
-          childPrefix,
-          isLastChild,
+      if (showEcosystem) {
+        console.log(
+          `${displayName}${devSuffix}  ${entry.version.padEnd(maxVersionLen)}  ${entry.ecosystem.padEnd(maxEcosystemLen)}`,
+        )
+      } else {
+        console.log(
+          `${displayName}${devSuffix}  ${entry.version.padEnd(maxVersionLen)}`,
         )
       }
     }
 
-    // Print dependencies section
-    if (prodDeps.length > 0) {
-      console.log('\x1b[1mdependencies:\x1b[0m')
-      for (const dep of prodDeps) {
-        printTree(dep.name, dep.version, 0, '', true)
-      }
-      console.log('')
-    }
-
-    // Print devDependencies section
-    if (devDeps.length > 0) {
-      console.log('\x1b[1mdevDependencies:\x1b[0m')
-      for (const dep of devDeps) {
-        printTree(dep.name, dep.version, 0, '', true)
-      }
-      console.log('')
-    }
-
-    // Calculate total transitive dependencies
-    const visited = new Set<string>()
-    let totalTransitive = 0
-    for (const dep of directDeps) {
-      totalTransitive += countAllTransitive(dep.name, dep.version, visited)
-    }
-
-    console.log(
-      `${prodDeps.length} dependencies, ${devDeps.length} devDependencies, ${totalTransitive} transitive`,
-    )
+    // Summary
+    const prodCount = entries.filter((e) => !e.isDevDependency).length
+    const devCount = entries.filter((e) => e.isDevDependency).length
+    console.log('')
+    console.log(`${prodCount} dependencies, ${devCount} devDependencies`)
 
     return { success: true, message: 'Dependencies listed successfully.' }
   },

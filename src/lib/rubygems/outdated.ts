@@ -208,6 +208,7 @@ export const rubygemsOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        ecosystem: 'rubygems',
       }
     }
   })

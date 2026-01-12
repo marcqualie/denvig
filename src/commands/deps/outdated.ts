@@ -100,7 +100,8 @@ const matchesSemverFilter = (
 export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
-  usage: 'deps:outdated [--no-cache] [--semver patch|minor]',
+  usage:
+    'deps:outdated [--no-cache] [--semver patch|minor] [--ecosystem <name>]',
   example: 'denvig deps:outdated --semver patch',
   args: [],
   flags: [
@@ -119,10 +120,18 @@ export const depsOutdatedCommand = new Command({
       type: 'string',
       defaultValue: undefined,
     },
+    {
+      name: 'ecosystem',
+      description: 'Filter to a specific ecosystem (e.g., npm, rubygems, pypi)',
+      required: false,
+      type: 'string',
+      defaultValue: undefined,
+    },
   ],
   handler: async ({ project, flags }) => {
     const cache = !(flags['no-cache'] as boolean)
     const semverFilter = flags.semver as 'patch' | 'minor' | undefined
+    const ecosystemFilter = flags.ecosystem as string | undefined
 
     // Validate semver flag
     if (semverFilter && semverFilter !== 'patch' && semverFilter !== 'minor') {
@@ -135,6 +144,11 @@ export const depsOutdatedCommand = new Command({
     const outdated = await project.outdatedDependencies({ cache })
     let entries = Object.entries(outdated)
 
+    // Filter by ecosystem if specified
+    if (ecosystemFilter) {
+      entries = entries.filter(([, info]) => info.ecosystem === ecosystemFilter)
+    }
+
     // Filter by semver level if specified
     if (semverFilter) {
       entries = entries.filter(([, info]) => {
@@ -144,15 +158,28 @@ export const depsOutdatedCommand = new Command({
     }
 
     if (entries.length === 0) {
-      const message = semverFilter
-        ? `No ${semverFilter}-level updates available.`
-        : 'All dependencies are up to date!'
+      let message = 'All dependencies are up to date!'
+      if (ecosystemFilter && semverFilter) {
+        message = `No ${semverFilter}-level updates available for ecosystem "${ecosystemFilter}".`
+      } else if (ecosystemFilter) {
+        message = `No outdated dependencies found for ecosystem "${ecosystemFilter}".`
+      } else if (semverFilter) {
+        message = `No ${semverFilter}-level updates available.`
+      }
       console.log(message)
       return { success: true, message }
     }
 
-    // Sort entries alphabetically
-    const sortedEntries = entries.sort((a, b) => a[0].localeCompare(b[0]))
+    // Sort entries by ecosystem first, then alphabetically by name
+    const sortedEntries = entries.sort((a, b) => {
+      const ecosystemCompare = a[1].ecosystem.localeCompare(b[1].ecosystem)
+      if (ecosystemCompare !== 0) return ecosystemCompare
+      return a[0].localeCompare(b[0])
+    })
+
+    // Check if we have multiple ecosystems (hide column if filtered to one)
+    const ecosystems = new Set(entries.map(([, info]) => info.ecosystem))
+    const showEcosystem = ecosystems.size > 1 && !ecosystemFilter
 
     // Calculate column widths for nice formatting
     // Account for "(dev)" suffix in name column
@@ -160,20 +187,32 @@ export const depsOutdatedCommand = new Command({
       ...entries.map(([name, info]) =>
         info.isDevDependency ? name.length + 6 : name.length,
       ),
-      10,
+      7, // "Package"
     )
     const maxVersionLen = Math.max(
       ...entries.map(([, info]) =>
         Math.max(info.current.length, info.wanted.length, info.latest.length),
       ),
-      7,
+      7, // "Current"
     )
+    const maxEcosystemLen = showEcosystem
+      ? Math.max(...entries.map(([, info]) => info.ecosystem.length), 9) // "Ecosystem"
+      : 0
 
     // Print header
-    console.log(
-      `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}`,
-    )
-    console.log('-'.repeat(maxNameLen + maxVersionLen * 3 + 6))
+    if (showEcosystem) {
+      console.log(
+        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}  ${'Ecosystem'.padEnd(maxEcosystemLen)}`,
+      )
+      console.log(
+        '-'.repeat(maxNameLen + maxVersionLen * 3 + maxEcosystemLen + 8),
+      )
+    } else {
+      console.log(
+        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}`,
+      )
+      console.log('-'.repeat(maxNameLen + maxVersionLen * 3 + 6))
+    }
 
     // Print each dependency
     for (const [name, info] of sortedEntries) {
@@ -187,9 +226,15 @@ export const depsOutdatedCommand = new Command({
         ? name.padEnd(maxNameLen - 6)
         : name.padEnd(maxNameLen)
 
-      console.log(
-        `${displayName}${devSuffix}  ${info.current.padEnd(maxVersionLen)}  ${wantedColor}${info.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${info.latest.padEnd(maxVersionLen)}${COLORS.reset}`,
-      )
+      if (showEcosystem) {
+        console.log(
+          `${displayName}${devSuffix}  ${info.current.padEnd(maxVersionLen)}  ${wantedColor}${info.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${info.latest.padEnd(maxVersionLen)}${COLORS.reset}  ${info.ecosystem.padEnd(maxEcosystemLen)}`,
+        )
+      } else {
+        console.log(
+          `${displayName}${devSuffix}  ${info.current.padEnd(maxVersionLen)}  ${wantedColor}${info.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${info.latest.padEnd(maxVersionLen)}${COLORS.reset}`,
+        )
+      }
     }
 
     return { success: true, message: 'Outdated dependencies listed.' }
