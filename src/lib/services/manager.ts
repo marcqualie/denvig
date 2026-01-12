@@ -62,6 +62,7 @@ export type ServiceResponse = {
   command: string
   cwd: string
   logPath: string
+  envFile: string | null
   lastExitCode: number | null
   logs?: string[]
 }
@@ -539,6 +540,9 @@ export class ServiceManager {
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name, 'stdout'),
+      envFile: config.envFile
+        ? resolve(this.project.path, config.envFile)
+        : null,
       lastExitCode,
     }
 
