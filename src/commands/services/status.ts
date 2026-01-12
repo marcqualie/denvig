@@ -2,14 +2,14 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { z } from 'zod'
 
-import { Command } from '../lib/command.ts'
-import { getServiceContext } from '../lib/services/identifier.ts'
+import { Command } from '../../lib/command.ts'
+import { getServiceContext } from '../../lib/services/identifier.ts'
 
-export const statusCommand = new Command({
-  name: 'status',
+export const servicesStatusCommand = new Command({
+  name: 'services:status',
   description: 'Show status of a specific service',
-  usage: 'status <name> [--format table|json]',
-  example: 'status api or status marcqualie/api/dev',
+  usage: 'services status <name> [--format table|json]',
+  example: 'services status api or services status marcqualie/api/dev',
   args: [
     {
       name: 'name',
