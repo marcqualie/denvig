@@ -183,6 +183,7 @@ export const npmOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        ecosystem: 'npm',
       }
     }
   })
