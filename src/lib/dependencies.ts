@@ -58,16 +58,41 @@ export const OutdatedDependencySchema = ProjectDependencySchema.extend({
 
 export type OutdatedDependencySchema = z.infer<typeof OutdatedDependencySchema>
 
+/**
+ * Deduplicate dependencies by id, merging versions arrays for duplicates.
+ */
+export const dedupeDependencies = (
+  dependencies: ProjectDependencySchema[],
+): ProjectDependencySchema[] => {
+  const depsMap = new Map<string, ProjectDependencySchema>()
+
+  for (const dep of dependencies) {
+    const existing = depsMap.get(dep.id)
+    if (!existing) {
+      depsMap.set(dep.id, dep)
+    } else {
+      // Merge versions arrays if the dependency already exists
+      depsMap.set(dep.id, {
+        ...existing,
+        versions: [...existing.versions, ...dep.versions],
+      })
+    }
+  }
+
+  return Array.from(depsMap.values())
+}
+
 export const detectDependencies = async (
   project: DenvigProject,
 ): Promise<ProjectDependencySchema[]> => {
-  const allDependencies = []
+  const allDependencies: ProjectDependencySchema[] = []
+
   for (const [_key, plugin] of Object.entries(plugins)) {
     const pluginDeps = plugin.dependencies
       ? await plugin.dependencies(project)
       : []
-    // console.log('pluginDeps', plugin.name, pluginDeps)
     allDependencies.push(...pluginDeps)
   }
-  return allDependencies
+
+  return dedupeDependencies(allDependencies)
 }

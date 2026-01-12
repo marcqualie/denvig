@@ -1,7 +1,5 @@
 import { Command } from '../../lib/command.ts'
 
-import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
-
 // ANSI color codes
 const COLORS = {
   reset: '\x1b[0m',
@@ -65,24 +63,7 @@ export const depsListCommand = new Command({
   ],
   handler: async ({ project, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
-    const allDependencies = await project.dependencies()
-
-    // Deduplicate dependencies by id
-    const depsMap = new Map<string, ProjectDependencySchema>()
-    for (const dep of allDependencies) {
-      const existing = depsMap.get(dep.id)
-      if (!existing) {
-        depsMap.set(dep.id, dep)
-      } else {
-        // Merge versions arrays if the dependency already exists
-        depsMap.set(dep.id, {
-          ...existing,
-          versions: [...existing.versions, ...dep.versions],
-        })
-      }
-    }
-
-    const dependencies = Array.from(depsMap.values())
+    const dependencies = await project.dependencies()
 
     if (dependencies.length === 0) {
       console.log('No dependencies detected in this project.')
