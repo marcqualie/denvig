@@ -46,13 +46,24 @@
             "type": "string",
             "description": "Shell command to execute"
           },
-          "port": {
-            "type": "number",
-            "description": "Port number the service listens on"
-          },
-          "domain": {
-            "type": "string",
-            "description": "Local domain for the service"
+          "http": {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "number",
+                "description": "Port number the service listens on"
+              },
+              "domain": {
+                "type": "string",
+                "description": "Domain to use for the service URL"
+              },
+              "secure": {
+                "type": "boolean",
+                "description": "Use HTTPS instead of HTTP"
+              }
+            },
+            "additionalProperties": false,
+            "description": "HTTP configuration for the service URL"
           },
           "envFile": {
             "type": "string",
