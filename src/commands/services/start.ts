@@ -1,14 +1,14 @@
 import { z } from 'zod'
 
-import { Command } from '../lib/command.ts'
-import { getServiceContext } from '../lib/services/identifier.ts'
-import { ServiceManager } from '../lib/services/manager.ts'
+import { Command } from '../../lib/command.ts'
+import { getServiceContext } from '../../lib/services/identifier.ts'
+import { ServiceManager } from '../../lib/services/manager.ts'
 
-export const startCommand = new Command({
-  name: 'start',
+export const servicesStartCommand = new Command({
+  name: 'services:start',
   description: 'Start all services or a specific service',
-  usage: 'start [name] [--format table|json]',
-  example: 'start api or start marcqualie/api/dev',
+  usage: 'services start [name] [--format table|json]',
+  example: 'services start api or services start marcqualie/api/dev',
   args: [
     {
       name: 'name',
