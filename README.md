@@ -49,6 +49,50 @@ denvig outdated
 ```
 
 
+### Dependencies
+
+Inspect and manage project dependencies across multiple ecosystems (npm, pnpm, yarn, Ruby/Bundler, Python/uv):
+
+```shell
+denvig deps:list                     # List all dependencies
+denvig deps:outdated                 # Show outdated dependencies
+denvig deps:outdated --semver patch  # Filter by semver level
+denvig deps:list --format json       # Output as JSON
+```
+
+
+### Services
+
+Manage background services defined in `.denvig.yml`. Services run via launchctl on macOS:
+
+```shell
+denvig services               # List services and their status
+denvig services start         # Start all services
+denvig services stop          # Stop all services
+denvig services restart       # Restart all services
+```
+
+Target a specific service by name:
+
+```shell
+denvig services start api     # Start only the 'api' service
+denvig services status api    # Start only the 'api' service
+denvig services stop api      # Stop only the 'api' service
+denvig services restart api   # Restart only the 'api' service
+```
+
+Manage services globally from any directory:
+
+```shell
+denvig services start marcqualie/denvig/hello   # Start 'api' in marcqualie/denvig project
+denvig services status marcqualie/denvig/hello  # Check status of 'api' service
+```
+
+See [docs/configuration.md](docs/configuration.md) for service configuration options.
+
+All services commands also accept `--format json` for programmatic output.
+
+
 
 ## Languages / Frameworks
 
@@ -58,11 +102,9 @@ can be supported by using the per project configs.
 - [x] Node.js (npm, pnpm, yarn)
 - [ ] Bun
 - [ ] Vite
-- [x] Deno
-- [ ] NextJS
-- [ ] Ruby
-- [ ] Rails
-- [x] Python
+- [ ] Deno
+- [x] Ruby (rubygems)
+- [x] Python (uv)
 
 
 
@@ -72,28 +114,28 @@ can be supported by using the per project configs.
 - [x] YAML configuration at ~/.denvig.yml
 - [x] Per project configuration via ./.denvig.yml
 - [x] Consistent API for all languages/frameworks
+- [x] Dependency management across multiple ecosystems
+- [x] Background service management
 
 
 
 ## Troubleshooting
 
-### Reset all services
-
-If you encounter issues with services (e.g., stale plist files or naming mismatches), you can fully reset all denvig-managed launchctl entries with:
-
-```shell
-launchctl list | awk '/denvig/ {print $3}' | xargs -I {} sh -c 'launchctl bootout gui/$(id -u)/{} 2>/dev/null; rm -f ~/Library/LaunchAgents/{}.plist'
-```
-
-This will stop and unload all services, then remove their plist files from `~/Library/LaunchAgents/`.
+For troubleshooting guides including service management, resource identification, and log browsing, see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 
 
 ## Building from source
 
-You can build a fresh binary from source instead of using the provided methods above
+You can build from source instead of using the provided methods above:
 
 ```shell
-deno task build
-cp dist/denvig /usr/local/bin/denvig
+pnpm install
+pnpm build
+```
+
+After building, the CLI will be available at `dist/cli.cjs`. You can link it globally:
+
+```shell
+npm link
 ```
