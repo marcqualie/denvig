@@ -28,8 +28,11 @@ const getServiceStatus = async (
 }
 
 const getServiceUrl = (service: ServiceInfo): string => {
-  if (service.domain) return `http://${service.domain}`
-  if (service.port) return `http://localhost:${service.port}`
+  if (service.http?.domain) {
+    const protocol = service.http.secure ? 'https' : 'http'
+    return `${protocol}://${service.http.domain}`
+  }
+  if (service.http?.port) return `http://localhost:${service.http.port}`
   return '-'
 }
 
