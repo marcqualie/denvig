@@ -91,7 +91,7 @@ export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
   usage:
-    'deps:outdated [--no-cache] [--semver patch|minor] [--ecosystem <name>]',
+    'deps:outdated [--no-cache] [--semver patch|minor] [--ecosystem <name>] [--format table|json]',
   example: 'denvig deps:outdated --semver patch',
   args: [],
   flags: [
@@ -117,11 +117,19 @@ export const depsOutdatedCommand = new Command({
       type: 'string',
       defaultValue: undefined,
     },
+    {
+      name: 'format',
+      description: 'Output format: table or json (default: table)',
+      required: false,
+      type: 'string',
+      defaultValue: 'table',
+    },
   ],
   handler: async ({ project, flags }) => {
     const cache = !(flags['no-cache'] as boolean)
     const semverFilter = flags.semver as 'patch' | 'minor' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
+    const format = flags.format as string
 
     // Validate semver flag
     if (semverFilter && semverFilter !== 'patch' && semverFilter !== 'minor') {
@@ -152,6 +160,19 @@ export const depsOutdatedCommand = new Command({
     }
 
     if (entries.length === 0) {
+      if (format === 'json') {
+        console.log(JSON.stringify([]))
+      } else {
+        let message = 'All dependencies are up to date!'
+        if (ecosystemFilter && semverFilter) {
+          message = `No ${semverFilter}-level updates available for ecosystem "${ecosystemFilter}".`
+        } else if (ecosystemFilter) {
+          message = `No outdated dependencies found for ecosystem "${ecosystemFilter}".`
+        } else if (semverFilter) {
+          message = `No ${semverFilter}-level updates available.`
+        }
+        console.log(message)
+      }
       let message = 'All dependencies are up to date!'
       if (ecosystemFilter && semverFilter) {
         message = `No ${semverFilter}-level updates available for ecosystem "${ecosystemFilter}".`
@@ -160,7 +181,6 @@ export const depsOutdatedCommand = new Command({
       } else if (semverFilter) {
         message = `No ${semverFilter}-level updates available.`
       }
-      console.log(message)
       return { success: true, message }
     }
 
@@ -170,6 +190,12 @@ export const depsOutdatedCommand = new Command({
       if (ecosystemCompare !== 0) return ecosystemCompare
       return a.name.localeCompare(b.name)
     })
+
+    // JSON output
+    if (format === 'json') {
+      console.log(JSON.stringify(sortedEntries))
+      return { success: true, message: 'Outdated dependencies listed.' }
+    }
 
     // Check if we have multiple ecosystems (hide column if filtered to one)
     const ecosystems = new Set(entries.map((dep) => dep.ecosystem))
