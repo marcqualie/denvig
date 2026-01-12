@@ -1,12 +1,12 @@
-import { Command } from '../lib/command.ts'
-import { getServiceContext } from '../lib/services/identifier.ts'
-import { ServiceManager } from '../lib/services/manager.ts'
+import { Command } from '../../lib/command.ts'
+import { getServiceContext } from '../../lib/services/identifier.ts'
+import { ServiceManager } from '../../lib/services/manager.ts'
 
-export const stopCommand = new Command({
-  name: 'stop',
+export const servicesStopCommand = new Command({
+  name: 'services:stop',
   description: 'Stop all services or a specific service',
-  usage: 'stop [name] [--format table|json]',
-  example: 'stop api or stop marcqualie/api/dev',
+  usage: 'services stop [name] [--format table|json]',
+  example: 'services stop api or services stop marcqualie/api/dev',
   args: [
     {
       name: 'name',

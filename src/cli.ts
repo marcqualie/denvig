@@ -46,6 +46,17 @@ async function main() {
     commandName = commandAliases[commandName]
   }
 
+  // Handle services subcommands (e.g., "services start" -> "services:start")
+  const servicesSubcommands = ['start', 'stop', 'restart', 'status']
+  if (commandName === 'services') {
+    const subcommand = process.argv[3]
+    if (subcommand && servicesSubcommands.includes(subcommand)) {
+      commandName = `services:${subcommand}`
+      // Remove the subcommand from args so it's not treated as an argument
+      args = [process.argv[2], ...process.argv.slice(4)]
+    }
+  }
+
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions || []),
@@ -63,10 +74,14 @@ async function main() {
   const { versionCommand } = await import('./commands/version.ts')
   const { infoCommand } = await import('./commands/info.ts')
   const { servicesCommand } = await import('./commands/services.ts')
-  const { startCommand } = await import('./commands/start.ts')
-  const { stopCommand } = await import('./commands/stop.ts')
-  const { restartCommand } = await import('./commands/restart.ts')
-  const { statusCommand } = await import('./commands/status.ts')
+  const { servicesStartCommand } = await import('./commands/services/start.ts')
+  const { servicesStopCommand } = await import('./commands/services/stop.ts')
+  const { servicesRestartCommand } = await import(
+    './commands/services/restart.ts'
+  )
+  const { servicesStatusCommand } = await import(
+    './commands/services/status.ts'
+  )
   const { logsCommand } = await import('./commands/logs.ts')
   const { internalsResourceHashCommand, internalsResourceIdCommand } =
     await import('./commands/internals.ts')
@@ -81,10 +96,10 @@ async function main() {
     version: versionCommand,
     info: infoCommand,
     services: servicesCommand,
-    start: startCommand,
-    stop: stopCommand,
-    restart: restartCommand,
-    status: statusCommand,
+    'services:start': servicesStartCommand,
+    'services:stop': servicesStopCommand,
+    'services:restart': servicesRestartCommand,
+    'services:status': servicesStatusCommand,
     logs: logsCommand,
     'deps:list': depsListCommand,
     'deps:outdated': depsOutdatedCommand,

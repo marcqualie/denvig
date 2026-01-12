@@ -1,14 +1,14 @@
 import { z } from 'zod'
 
-import { Command } from '../lib/command.ts'
-import { getServiceContext } from '../lib/services/identifier.ts'
-import { ServiceManager } from '../lib/services/manager.ts'
+import { Command } from '../../lib/command.ts'
+import { getServiceContext } from '../../lib/services/identifier.ts'
+import { ServiceManager } from '../../lib/services/manager.ts'
 
-export const restartCommand = new Command({
-  name: 'restart',
+export const servicesRestartCommand = new Command({
+  name: 'services:restart',
   description: 'Restart all services or a specific service',
-  usage: 'restart [name]',
-  example: 'restart api or restart marcqualie/api/dev',
+  usage: 'services restart [name]',
+  example: 'services restart api or services restart marcqualie/api/dev',
   args: [
     {
       name: 'name',
