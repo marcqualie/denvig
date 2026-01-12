@@ -41,10 +41,10 @@ const plugin = definePlugin({
   outdatedDependencies: async (project, options) => {
     const hasPyProject = project.rootFiles.includes('pyproject.toml')
     if (!hasPyProject) {
-      return {}
+      return []
     }
     const dependencies = await plugin.dependencies?.(project)
-    if (!dependencies) return {}
+    if (!dependencies) return []
     return uvOutdated(dependencies, options)
   },
 })

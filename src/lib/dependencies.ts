@@ -19,6 +19,17 @@ export const ProjectDependencySchema = z.object({
 
 export type ProjectDependencySchema = z.infer<typeof ProjectDependencySchema>
 
+export const OutdatedDependencySchema = ProjectDependencySchema.extend({
+  wanted: z
+    .string()
+    .describe('Latest version compatible with the specifier (semver)'),
+  latest: z.string().describe('Absolute latest version available'),
+  specifier: z.string().describe('The version specifier from package manifest'),
+  isDevDependency: z.boolean().describe('Whether this is a dev dependency'),
+})
+
+export type OutdatedDependencySchema = z.infer<typeof OutdatedDependencySchema>
+
 export const detectDependencies = async (
   project: DenvigProject,
 ): Promise<ProjectDependencySchema[]> => {

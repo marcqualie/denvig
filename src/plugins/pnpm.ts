@@ -192,10 +192,10 @@ const plugin = definePlugin({
 
   outdatedDependencies: async (project: DenvigProject, options) => {
     if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
-      return {}
+      return []
     }
     const dependencies = await plugin.dependencies?.(project)
-    if (!dependencies) return {}
+    if (!dependencies) return []
     return npmOutdated(dependencies, options)
   },
 })

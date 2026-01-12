@@ -1,10 +1,10 @@
 import { fetchPyPIPackageInfo } from './info.ts'
 
-import type { ProjectDependencySchema } from '../dependencies.ts'
 import type {
-  OutdatedDependencies,
-  OutdatedDependenciesOptions,
-} from '../plugin.ts'
+  OutdatedDependencySchema,
+  ProjectDependencySchema,
+} from '../dependencies.ts'
+import type { OutdatedDependenciesOptions } from '../plugin.ts'
 
 /**
  * Parse a PEP 440 version string into components.
@@ -181,11 +181,11 @@ const extractDepInfo = (
  * Takes a list of dependencies and returns info about which are outdated.
  */
 export const uvOutdated = async (
-  dependencies: Array<Pick<ProjectDependencySchema, 'name' | 'versions'>>,
+  dependencies: ProjectDependencySchema[],
   options: OutdatedDependenciesOptions = {},
-): Promise<OutdatedDependencies> => {
+): Promise<OutdatedDependencySchema[]> => {
   const useCache = options.cache ?? true
-  const result: OutdatedDependencies = {}
+  const result: OutdatedDependencySchema[] = []
 
   // Filter to only direct dependencies
   const directDeps = dependencies.filter((dep) => {
@@ -210,14 +210,13 @@ export const uvOutdated = async (
     const hasLatestUpdate = latest && latest !== info.current
 
     if (hasWantedUpdate || hasLatestUpdate) {
-      result[dep.name] = {
-        current: info.current,
+      result.push({
+        ...dep,
         wanted: wanted || info.current,
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
-        ecosystem: 'pypi',
-      }
+      })
     }
   })
 

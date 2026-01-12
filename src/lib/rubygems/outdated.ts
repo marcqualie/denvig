@@ -1,10 +1,10 @@
 import { fetchRubygemInfo } from './info.ts'
 
-import type { ProjectDependencySchema } from '../dependencies.ts'
 import type {
-  OutdatedDependencies,
-  OutdatedDependenciesOptions,
-} from '../plugin.ts'
+  OutdatedDependencySchema,
+  ProjectDependencySchema,
+} from '../dependencies.ts'
+import type { OutdatedDependenciesOptions } from '../plugin.ts'
 
 /**
  * Parse a semver version string into components.
@@ -171,11 +171,11 @@ const extractDepInfo = (
  * Takes a list of dependencies and returns info about which are outdated.
  */
 export const rubygemsOutdated = async (
-  dependencies: Array<Pick<ProjectDependencySchema, 'name' | 'versions'>>,
+  dependencies: ProjectDependencySchema[],
   options: OutdatedDependenciesOptions = {},
-): Promise<OutdatedDependencies> => {
+): Promise<OutdatedDependencySchema[]> => {
   const useCache = options.cache ?? true
-  const result: OutdatedDependencies = {}
+  const result: OutdatedDependencySchema[] = []
 
   // Filter to only direct dependencies (those with sources, not transitive)
   const directDeps = dependencies.filter((dep) => {
@@ -202,14 +202,13 @@ export const rubygemsOutdated = async (
     const hasLatestUpdate = latest && latest !== info.current
 
     if (hasWantedUpdate || hasLatestUpdate) {
-      result[dep.name] = {
-        current: info.current,
+      result.push({
+        ...dep,
         wanted: wanted || info.current,
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
-        ecosystem: 'rubygems',
-      }
+      })
     }
   })
 
