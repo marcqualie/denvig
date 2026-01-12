@@ -18,6 +18,39 @@ const stripAnsi = (str: string): string => {
 }
 
 /**
+ * Tree metadata for a row.
+ */
+export type TreeMeta = {
+  depth: number
+  isLast: boolean
+  hasChildren: boolean
+  parentPath: boolean[] // Track which ancestors are "last" for proper prefix rendering
+}
+
+/**
+ * Generate the tree prefix for a row based on its tree metadata.
+ */
+const getTreePrefix = (meta: TreeMeta): string => {
+  if (meta.depth === 0) return ''
+
+  let prefix = ''
+
+  // Build prefix based on parent path
+  for (let i = 0; i < meta.parentPath.length - 1; i++) {
+    prefix += meta.parentPath[i] ? '    ' : '│ '
+  }
+
+  // Add the branch character
+  if (meta.hasChildren) {
+    prefix += meta.isLast ? '└─┬ ' : '├─┬ '
+  } else {
+    prefix += meta.isLast ? '└── ' : '├── '
+  }
+
+  return prefix
+}
+
+/**
  * Column definition for the table formatter.
  */
 export type ColumnDefinition<T> = {
@@ -32,6 +65,20 @@ export type ColumnDefinition<T> = {
 }
 
 /**
+ * Tree options for rendering hierarchical data.
+ */
+export type TreeOptions<T> = {
+  /** Get the depth of a row (0 = root level) */
+  getDepth: (row: T) => number
+  /** Get whether this row is the last sibling at its level */
+  getIsLast: (row: T) => boolean
+  /** Get whether this row has children */
+  getHasChildren: (row: T) => boolean
+  /** Get the parent path (array of isLast values for ancestors) */
+  getParentPath: (row: T) => boolean[]
+}
+
+/**
  * Options for the table formatter.
  */
 export type TableOptions<T> = {
@@ -39,6 +86,8 @@ export type TableOptions<T> = {
   columns: ColumnDefinition<T>[]
   /** Data rows to display */
   data: T[]
+  /** Optional tree rendering options - enables tree prefixes on first column */
+  tree?: TreeOptions<T>
 }
 
 /**
@@ -46,7 +95,7 @@ export type TableOptions<T> = {
  * Returns an array of strings (header, separator, rows).
  */
 export const formatTable = <T>(options: TableOptions<T>): string[] => {
-  const { columns, data } = options
+  const { columns, data, tree } = options
 
   // Filter to visible columns only
   const visibleColumns = columns.filter((col) => col.visible !== false)
@@ -56,10 +105,26 @@ export const formatTable = <T>(options: TableOptions<T>): string[] => {
   }
 
   // Calculate column widths (strip ANSI codes for accurate width)
-  const columnWidths = visibleColumns.map((col) => {
+  const columnWidths = visibleColumns.map((col, colIndex) => {
     const headerLen = col.header.length
     const maxDataLen = Math.max(
-      ...data.map((row) => stripAnsi(col.accessor(row)).length),
+      ...data.map((row) => {
+        let value = col.accessor(row)
+
+        // For first column with tree enabled, include prefix in width calculation
+        if (tree && colIndex === 0) {
+          const meta: TreeMeta = {
+            depth: tree.getDepth(row),
+            isLast: tree.getIsLast(row),
+            hasChildren: tree.getHasChildren(row),
+            parentPath: tree.getParentPath(row),
+          }
+          const prefix = getTreePrefix(meta)
+          value = prefix + stripAnsi(value)
+        }
+
+        return stripAnsi(value).length
+      }),
     )
     return Math.max(headerLen, maxDataLen)
   })
@@ -80,9 +145,35 @@ export const formatTable = <T>(options: TableOptions<T>): string[] => {
 
   // Build data rows
   for (const row of data) {
+    const depth = tree ? tree.getDepth(row) : 0
+    const isSubRow = depth > 0
+
     const rowParts = visibleColumns.map((col, colIndex) => {
-      const rawValue = col.accessor(row)
+      let rawValue = col.accessor(row)
       const width = columnWidths[colIndex]
+
+      // For first column with tree enabled, add prefix and apply grey color
+      if (tree && colIndex === 0) {
+        const meta: TreeMeta = {
+          depth: tree.getDepth(row),
+          isLast: tree.getIsLast(row),
+          hasChildren: tree.getHasChildren(row),
+          parentPath: tree.getParentPath(row),
+        }
+        const prefix = getTreePrefix(meta)
+        const name = isSubRow
+          ? `${COLORS.grey}${stripAnsi(rawValue)}${COLORS.reset}`
+          : rawValue
+        rawValue = prefix + name
+      } else if (isSubRow && !col.format) {
+        // Apply grey color to sub-row values (unless they have custom formatting)
+        // Skip colorizing whitespace-only values
+        const strippedValue = stripAnsi(rawValue)
+        if (strippedValue.trim()) {
+          rawValue = `${COLORS.grey}${strippedValue}${COLORS.reset}`
+        }
+      }
+
       const displayLen = stripAnsi(rawValue).length
       const padding = width - displayLen
 
