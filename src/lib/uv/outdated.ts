@@ -216,6 +216,7 @@ export const uvOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        ecosystem: 'pypi',
       }
     }
   })

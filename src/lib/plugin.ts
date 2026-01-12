@@ -15,6 +15,8 @@ export type OutdatedDependency = {
   specifier: string
   /** Whether this is a dev dependency */
   isDevDependency: boolean
+  /** The ecosystem this dependency belongs to (e.g., npm, rubygems, pypi) */
+  ecosystem: string
 }
 
 /**
