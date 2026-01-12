@@ -4,11 +4,39 @@ import plugins from './plugins.ts'
 
 import type { DenvigProject } from './project.ts'
 
+/**
+ * Schema representing a dependency version with its resolved version string.
+ *
+ * @example
+ * ```json
+ * {
+ *   "resolved": "18.1.1",
+ *   "specifier": "^18.1",
+ *   "source": "package.json#dependencies",
+ *   "latest": "19.2.5",
+ *   "wanted": "18.2.3",
+ * }
+ * ```
+ */
+export const ProjectDependencyVersion = z.object({
+  resolved: z.string().describe('The resolved version of the dependency'),
+  specifier: z.string().describe('The version constraint/specifier used'),
+  source: z.string().describe('The source file/path of the dependency'),
+  wanted: z
+    .string()
+    .describe('The wanted version based on semver rules')
+    .optional(),
+  latest: z
+    .string()
+    .describe('The latest available version of the dependency')
+    .optional(),
+})
+
 export const ProjectDependencySchema = z.object({
   id: z.string().describe('Unique identifier for the ecosystem / dependency'),
   name: z.string().describe('Name of the dependency'),
   versions: z
-    .record(z.string(), z.record(z.string(), z.string()))
+    .array(ProjectDependencyVersion)
     .describe(
       'Map of resolved versions to sources. Each source maps a package path to its version specifier.',
     ),

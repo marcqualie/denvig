@@ -144,9 +144,9 @@ export const depsOutdatedCommand = new Command({
     const outdated = await project.outdatedDependencies({ cache })
     let entries = outdated
 
-    // Helper to get current version from versions map
+    // Helper to get current version from versions array
     const getCurrent = (dep: (typeof entries)[0]) =>
-      Object.keys(dep.versions)[0] || ''
+      dep.versions[0]?.resolved || ''
 
     // Filter by ecosystem if specified
     if (ecosystemFilter) {

@@ -74,18 +74,11 @@ export const depsListCommand = new Command({
       if (!existing) {
         depsMap.set(dep.id, dep)
       } else {
-        // Merge versions records if the dependency already exists
-        const mergedVersions: Record<string, Record<string, string>> = {
-          ...existing.versions,
-        }
-        for (const [resolvedVersion, sources] of Object.entries(dep.versions)) {
-          const existingSources = mergedVersions[resolvedVersion] || {}
-          mergedVersions[resolvedVersion] = {
-            ...existingSources,
-            ...sources,
-          }
-        }
-        depsMap.set(dep.id, { ...existing, versions: mergedVersions })
+        // Merge versions arrays if the dependency already exists
+        depsMap.set(dep.id, {
+          ...existing,
+          versions: [...existing.versions, ...dep.versions],
+        })
       }
     }
 
@@ -101,23 +94,21 @@ export const depsListCommand = new Command({
     const seenKeys = new Set<string>()
 
     for (const dep of dependencies) {
-      for (const [version, sources] of Object.entries(dep.versions)) {
-        for (const source of Object.keys(sources)) {
-          if (!isLockfileSource(source)) {
-            const isDevDependency = isDevDependenciesSource(source)
-            const isDependency = isDependenciesSource(source)
+      for (const v of dep.versions) {
+        if (!isLockfileSource(v.source)) {
+          const isDevDependency = isDevDependenciesSource(v.source)
+          const isDependency = isDependenciesSource(v.source)
 
-            if (isDependency || isDevDependency) {
-              const key = `${dep.name}@${version}@${dep.ecosystem}`
-              if (!seenKeys.has(key)) {
-                seenKeys.add(key)
-                entries.push({
-                  name: dep.name,
-                  version,
-                  ecosystem: dep.ecosystem,
-                  isDevDependency,
-                })
-              }
+          if (isDependency || isDevDependency) {
+            const key = `${dep.name}@${v.resolved}@${dep.ecosystem}`
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key)
+              entries.push({
+                name: dep.name,
+                version: v.resolved,
+                ecosystem: dep.ecosystem,
+                isDevDependency,
+              })
             }
           }
         }

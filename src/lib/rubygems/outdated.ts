@@ -64,7 +64,7 @@ const satisfiesRange = (version: string, specifier: string): boolean => {
   // Normalize specifier - remove extra spaces
   const spec = specifier.trim()
 
-  // Handle pessimistic version constraint (~>)
+  // Handle pessimistic version specifier (~>)
   if (spec.startsWith('~>')) {
     const baseStr = spec.slice(2).trim()
     const base = parseVersion(baseStr)
@@ -150,20 +150,16 @@ const extractDepInfo = (
   dep: Pick<ProjectDependencySchema, 'versions'>,
 ): { current: string; specifier: string; isDevDependency: boolean } | null => {
   // Get the first version entry (there should typically be one for direct deps)
-  const versionEntries = Object.entries(dep.versions)
-  if (versionEntries.length === 0) return null
+  if (dep.versions.length === 0) return null
 
-  // Use the first version as current
-  const [current, sources] = versionEntries[0]
+  const firstVersion = dep.versions[0]
+  const isDevDependency = firstVersion.source.includes('#devDependencies')
 
-  // Get the first source to determine specifier and dev status
-  const sourceEntries = Object.entries(sources)
-  if (sourceEntries.length === 0) return null
-
-  const [source, specifier] = sourceEntries[0]
-  const isDevDependency = source.includes('#devDependencies')
-
-  return { current, specifier, isDevDependency }
+  return {
+    current: firstVersion.resolved,
+    specifier: firstVersion.specifier,
+    isDevDependency,
+  }
 }
 
 /**
@@ -179,11 +175,12 @@ export const rubygemsOutdated = async (
 
   // Filter to only direct dependencies (those with sources, not transitive)
   const directDeps = dependencies.filter((dep) => {
-    const sources = Object.values(dep.versions).flatMap((s) => Object.keys(s))
     // Direct deps have sources like ".#dependencies" or ".#devDependencies"
     // Transitive deps have sources like "Gemfile.lock:package@version"
-    return sources.some(
-      (s) => s.includes('#dependencies') || s.includes('#devDependencies'),
+    return dep.versions.some(
+      (v) =>
+        v.source.includes('#dependencies') ||
+        v.source.includes('#devDependencies'),
     )
   })
 
