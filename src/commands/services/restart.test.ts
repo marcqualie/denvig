@@ -10,6 +10,17 @@ describe('servicesRestartCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(servicesRestartCommand.usage === 'services restart [name]')
+    ok(
+      servicesRestartCommand.usage ===
+        'services restart [name] [--format table|json]',
+    )
+  })
+
+  it('should have format flag', () => {
+    const formatFlag = servicesRestartCommand.flags.find(
+      (f) => f.name === 'format',
+    )
+    ok(formatFlag)
+    ok(formatFlag.defaultValue === 'table')
   })
 })
