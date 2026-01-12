@@ -5,7 +5,7 @@ import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps:list [--depth <n>] [--ecosystem <name>]',
+  usage: 'deps:list [--depth <n>] [--ecosystem <name>] [--format table|json]',
   example: 'denvig deps:list --depth 1',
   args: [],
   flags: [
@@ -23,25 +23,52 @@ export const depsListCommand = new Command({
       type: 'string',
       defaultValue: undefined,
     },
+    {
+      name: 'format',
+      description: 'Output format: table or json (default: table)',
+      required: false,
+      type: 'string',
+      defaultValue: 'table',
+    },
   ],
   handler: async ({ project, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
     const maxDepth = (flags.depth as number) ?? 0
+    const format = flags.format as string
     const dependencies = await project.dependencies()
 
     if (dependencies.length === 0) {
-      console.log('No dependencies detected in this project.')
+      if (format === 'json') {
+        console.log(JSON.stringify([]))
+      } else {
+        console.log('No dependencies detected in this project.')
+      }
       return { success: true, message: 'No dependencies detected.' }
     }
 
     const entries = buildDependencyTree(dependencies, maxDepth, ecosystemFilter)
 
     if (entries.length === 0) {
-      const message = ecosystemFilter
-        ? `No dependencies found for ecosystem "${ecosystemFilter}".`
-        : 'No direct dependencies detected in this project.'
-      console.log(message)
-      return { success: true, message }
+      if (format === 'json') {
+        console.log(JSON.stringify([]))
+      } else {
+        const message = ecosystemFilter
+          ? `No dependencies found for ecosystem "${ecosystemFilter}".`
+          : 'No direct dependencies detected in this project.'
+        console.log(message)
+      }
+      return {
+        success: true,
+        message: ecosystemFilter
+          ? `No dependencies found for ecosystem "${ecosystemFilter}".`
+          : 'No direct dependencies detected in this project.',
+      }
+    }
+
+    // JSON output
+    if (format === 'json') {
+      console.log(JSON.stringify(dependencies))
+      return { success: true, message: 'Dependencies listed successfully.' }
     }
 
     // Check if we have multiple ecosystems (hide column if filtered to one)
