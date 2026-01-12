@@ -10,6 +10,6 @@ describe('statusCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(statusCommand.usage === 'status <name>')
+    ok(statusCommand.usage === 'status <name> [--format table|json]')
   })
 })

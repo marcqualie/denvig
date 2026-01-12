@@ -3,36 +3,91 @@ import { homedir } from 'node:os'
 import { z } from 'zod'
 
 import { Command } from '../lib/command.ts'
-import { ServiceManager } from '../lib/services/manager.ts'
+import { getServiceContext } from '../lib/services/identifier.ts'
 
 export const statusCommand = new Command({
   name: 'status',
   description: 'Show status of a specific service',
-  usage: 'status <name>',
-  example: 'status api',
+  usage: 'status <name> [--format table|json]',
+  example: 'status api or status marcqualie/api/dev',
   args: [
     {
       name: 'name',
-      description: 'Name of the service',
+      description:
+        'Service name or project/service path (e.g., hello or marcqualie/api/dev)',
       required: true,
       type: 'string',
     },
   ],
-  flags: [],
-  handler: async ({ project, args }) => {
-    const manager = new ServiceManager(project)
-    const serviceName = z.string().parse(args.name)
+  flags: [
+    {
+      name: 'format',
+      description: 'Output format: table or json (default: table)',
+      required: false,
+      type: 'string',
+      defaultValue: 'table',
+    },
+  ],
+  handler: async ({ project, args, flags }) => {
+    const serviceArg = z.string().parse(args.name)
+    const format = flags.format as string
+    const {
+      manager,
+      serviceName,
+      project: targetProject,
+    } = getServiceContext(serviceArg, project)
+
     const status = await manager.getServiceStatus(serviceName)
 
     if (!status) {
-      console.error(`Service "${serviceName}" not found in configuration`)
+      const projectInfo =
+        targetProject.slug !== project.slug
+          ? ` in project "${targetProject.slug}"`
+          : ''
+      if (format === 'json') {
+        console.log(
+          JSON.stringify({
+            success: false,
+            service: serviceName,
+            project: targetProject.slug,
+            message: `Service "${serviceName}" not found in configuration${projectInfo}`,
+          }),
+        )
+      } else {
+        console.error(
+          `Service "${serviceName}" not found in configuration${projectInfo}`,
+        )
+      }
       return {
         success: false,
         message: `Service "${serviceName}" not found.`,
       }
     }
 
-    console.log(`Service: ${status.name}`)
+    if (format === 'json') {
+      const plistPath = manager.getPlistPath(serviceName)
+      console.log(
+        JSON.stringify({
+          success: true,
+          service: serviceName,
+          project: targetProject.slug,
+          running: status.running,
+          pid: status.pid || null,
+          command: status.command,
+          cwd: status.cwd,
+          logPath: status.logPath,
+          plistPath: existsSync(plistPath) ? plistPath : null,
+          lastExitCode: status.lastExitCode ?? null,
+          logs: status.logs || [],
+        }),
+      )
+      return { success: true, message: 'Status retrieved successfully.' }
+    }
+
+    const projectPrefix =
+      targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
+
+    console.log(`Service: ${projectPrefix}${status.name}`)
     console.log(`Status:  ${status.running ? 'Running' : 'Stopped'}`)
 
     if (status.running && status.pid) {
