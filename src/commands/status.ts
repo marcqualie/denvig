@@ -3,36 +3,51 @@ import { homedir } from 'node:os'
 import { z } from 'zod'
 
 import { Command } from '../lib/command.ts'
-import { ServiceManager } from '../lib/services/manager.ts'
+import { getServiceContext } from '../lib/services/identifier.ts'
 
 export const statusCommand = new Command({
   name: 'status',
   description: 'Show status of a specific service',
   usage: 'status <name>',
-  example: 'status api',
+  example: 'status api or status marcqualie/api/dev',
   args: [
     {
       name: 'name',
-      description: 'Name of the service',
+      description:
+        'Service name or project/service path (e.g., hello or marcqualie/api/dev)',
       required: true,
       type: 'string',
     },
   ],
   flags: [],
   handler: async ({ project, args }) => {
-    const manager = new ServiceManager(project)
-    const serviceName = z.string().parse(args.name)
+    const serviceArg = z.string().parse(args.name)
+    const {
+      manager,
+      serviceName,
+      project: targetProject,
+    } = getServiceContext(serviceArg, project)
+
     const status = await manager.getServiceStatus(serviceName)
 
     if (!status) {
-      console.error(`Service "${serviceName}" not found in configuration`)
+      const projectInfo =
+        targetProject.slug !== project.slug
+          ? ` in project "${targetProject.slug}"`
+          : ''
+      console.error(
+        `Service "${serviceName}" not found in configuration${projectInfo}`,
+      )
       return {
         success: false,
         message: `Service "${serviceName}" not found.`,
       }
     }
 
-    console.log(`Service: ${status.name}`)
+    const projectPrefix =
+      targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
+
+    console.log(`Service: ${projectPrefix}${status.name}`)
     console.log(`Status:  ${status.running ? 'Running' : 'Stopped'}`)
 
     if (status.running && status.pid) {

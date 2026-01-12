@@ -1,39 +1,51 @@
 import { Command } from '../lib/command.ts'
+import { getServiceContext } from '../lib/services/identifier.ts'
 import { ServiceManager } from '../lib/services/manager.ts'
 
 export const stopCommand = new Command({
   name: 'stop',
   description: 'Stop all services or a specific service',
   usage: 'stop [name]',
-  example: 'stop api',
+  example: 'stop api or stop marcqualie/api/dev',
   args: [
     {
       name: 'name',
-      description: 'Name of the service to stop (optional)',
+      description:
+        'Service name or project/service path (e.g., hello or marcqualie/api/dev)',
       required: false,
       type: 'string',
     },
   ],
   flags: [],
   handler: async ({ project, args }) => {
-    const manager = new ServiceManager(project)
-
     // Stop specific service or all services
     if (typeof args.name === 'string' && args.name) {
-      console.log(`Stopping ${args.name}...`)
-      const result = await manager.stopService(args.name)
+      const {
+        manager,
+        serviceName,
+        project: targetProject,
+      } = getServiceContext(args.name, project)
+
+      const projectPrefix =
+        targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
+
+      console.log(`Stopping ${projectPrefix}${serviceName}...`)
+      const result = await manager.stopService(serviceName)
 
       if (result.success) {
-        console.log(`✓ ${args.name} stopped successfully`)
+        console.log(`✓ ${projectPrefix}${serviceName} stopped successfully`)
       } else {
-        console.error(`✗ Failed to stop ${args.name}: ${result.message}`)
+        console.error(
+          `✗ Failed to stop ${projectPrefix}${serviceName}: ${result.message}`,
+        )
         return { success: false, message: result.message }
       }
 
       return { success: true, message: 'Service stopped successfully.' }
     }
 
-    // Stop all services
+    // Stop all services in current project
+    const manager = new ServiceManager(project)
     const results = await manager.stopAll()
 
     if (results.length === 0) {
