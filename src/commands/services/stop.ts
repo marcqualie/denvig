@@ -1,6 +1,9 @@
 import { Command } from '../../lib/command.ts'
 import { getServiceContext } from '../../lib/services/identifier.ts'
-import { ServiceManager } from '../../lib/services/manager.ts'
+import {
+  ServiceManager,
+  type ServiceResponse,
+} from '../../lib/services/manager.ts'
 
 export const servicesStopCommand = new Command({
   name: 'services:stop',
@@ -45,36 +48,33 @@ export const servicesStopCommand = new Command({
 
       const result = await manager.stopService(serviceName)
 
-      if (result.success) {
+      if (!result.success) {
         if (format === 'json') {
           console.log(
             JSON.stringify({
-              success: true,
+              success: false,
               service: serviceName,
               project: targetProject.slug,
+              message: result.message,
             }),
           )
         } else {
-          console.log(`✓ ${projectPrefix}${serviceName} stopped successfully`)
+          console.error(
+            `✗ Failed to stop ${projectPrefix}${serviceName}: ${result.message}`,
+          )
         }
-        return { success: true, message: 'Service stopped successfully.' }
+        return { success: false, message: result.message }
       }
 
+      // Get service response after stopping
+      const response = await manager.getServiceResponse(serviceName)
+
       if (format === 'json') {
-        console.log(
-          JSON.stringify({
-            success: false,
-            service: serviceName,
-            project: targetProject.slug,
-            message: result.message,
-          }),
-        )
+        console.log(JSON.stringify(response))
       } else {
-        console.error(
-          `✗ Failed to stop ${projectPrefix}${serviceName}: ${result.message}`,
-        )
+        console.log(`✓ ${projectPrefix}${serviceName} stopped successfully`)
       }
-      return { success: false, message: result.message }
+      return { success: true, message: 'Service stopped successfully.' }
     }
 
     // Stop all services in current project
@@ -83,37 +83,41 @@ export const servicesStopCommand = new Command({
 
     if (results.length === 0) {
       if (format === 'json') {
-        console.log(JSON.stringify({ success: true, services: [] }))
+        console.log(
+          JSON.stringify({
+            success: true,
+            project: project.slug,
+            services: [],
+          }),
+        )
       } else {
         console.log('No running services to stop.')
       }
       return { success: true, message: 'No services to stop.' }
     }
 
-    const serviceResults: Array<{
-      name: string
-      success: boolean
-      message?: string
-    }> = []
+    const serviceResponses: ServiceResponse[] = []
     let hasErrors = false
 
     for (const result of results) {
-      if (result.success) {
-        serviceResults.push({ name: result.name, success: true })
-        if (format !== 'json') {
-          console.log(`Stopping ${result.name}... ✓`)
-        }
-      } else {
-        serviceResults.push({
-          name: result.name,
-          success: false,
-          message: result.message,
-        })
+      const response = await manager.getServiceResponse(result.name)
+
+      if (!response) {
+        continue
+      }
+
+      serviceResponses.push(response)
+
+      if (!result.success) {
+        hasErrors = true
         if (format !== 'json') {
           console.error(`Stopping ${result.name}... ✗`)
           console.error(`  ${result.message}`)
         }
-        hasErrors = true
+      } else {
+        if (format !== 'json') {
+          console.log(`Stopping ${result.name}... ✓`)
+        }
       }
     }
 
@@ -122,7 +126,7 @@ export const servicesStopCommand = new Command({
         JSON.stringify({
           success: !hasErrors,
           project: project.slug,
-          services: serviceResults,
+          services: serviceResponses,
         }),
       )
     } else {

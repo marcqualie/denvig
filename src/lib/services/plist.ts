@@ -1,7 +1,7 @@
 /**
  * Options for generating a launchd plist file.
  */
-export interface PlistOptions {
+export type PlistOptions = {
   label: string
   command: string
   workingDirectory: string
