@@ -7,14 +7,25 @@
 
 - `deps:list` command to list project dependencies (#45)
 - `deps:outdated` command to show outdated dependencies (#47)
+- `--semver` flag to filter `deps:outdated` results by semver level (major, minor, patch) (#53)
+- `--format` flag for `deps:list` and `deps:outdated` commands to output JSON (#61)
 - NPM registry caching for `deps:outdated` command (#48)
+- RubyGems dependency support via Ruby plugin (#57)
+- Python/uv dependency support via uv plugin (#58)
+- Multi-ecosystem support for `deps:list` and `deps:outdated` commands (#59)
 - JSON schema generation from zod schema for IDE validation and autocompletion (#34)
 - Support for services in `.denvig.yml` to launch alongside projects (#37)
+- Services commands: `services:start`, `services:stop`, `services:restart`, `services:status` (#64)
+- `--global` flag for services command to show all denvig-managed services (#55)
+- `--format` flag for services commands to output JSON (#62, #65)
+- `http` config block in services schema (#63)
+- Human-readable plist and log filenames instead of hashes (#56)
 - CI testing against multiple Node.js versions (#50)
 
 ### Changed
 
 - Improved services and logs output (#44)
+- Refactored dependency outputs for consistency (#60)
 - Split out npm outdated helpers for plugin reuse (#49)
 - Cleaned up config schemas (#38)
 - Upgraded dependencies (#33)
