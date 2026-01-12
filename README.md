@@ -54,10 +54,11 @@ denvig outdated
 Inspect and manage project dependencies across multiple ecosystems (npm, pnpm, yarn, Ruby/Bundler, Python/uv):
 
 ```shell
-denvig deps:list                     # List all dependencies
-denvig deps:outdated                 # Show outdated dependencies
-denvig deps:outdated --semver patch  # Filter by semver level
-denvig deps:list --format json       # Output as JSON
+denvig deps                          # List all dependencies
+denvig deps list                     # List all dependencies (explicit)
+denvig deps outdated                 # Show outdated dependencies
+denvig deps outdated --semver patch  # Filter by semver level
+denvig deps --format json            # Output as JSON
 ```
 
 

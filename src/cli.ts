@@ -39,7 +39,6 @@ async function main() {
 
   // Command aliases - map shortcuts to their full commands
   const commandAliases: Record<string, string> = {
-    deps: 'deps:list',
     outdated: 'deps:outdated',
   }
   if (commandAliases[commandName]) {
@@ -52,6 +51,17 @@ async function main() {
     const subcommand = process.argv[3]
     if (subcommand && servicesSubcommands.includes(subcommand)) {
       commandName = `services:${subcommand}`
+      // Remove the subcommand from args so it's not treated as an argument
+      args = [process.argv[2], ...process.argv.slice(4)]
+    }
+  }
+
+  // Handle deps subcommands (e.g., "deps list" -> "deps:list")
+  const depsSubcommands = ['list', 'outdated', 'why']
+  if (commandName === 'deps') {
+    const subcommand = process.argv[3]
+    if (subcommand && depsSubcommands.includes(subcommand)) {
+      commandName = `deps:${subcommand}`
       // Remove the subcommand from args so it's not treated as an argument
       args = [process.argv[2], ...process.argv.slice(4)]
     }
@@ -101,6 +111,7 @@ async function main() {
     'services:restart': servicesRestartCommand,
     'services:status': servicesStatusCommand,
     logs: logsCommand,
+    deps: depsListCommand,
     'deps:list': depsListCommand,
     'deps:outdated': depsOutdatedCommand,
     'deps:why': depsWhyCommand,
