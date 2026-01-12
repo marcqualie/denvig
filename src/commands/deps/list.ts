@@ -82,16 +82,12 @@ export const depsListCommand = new Command({
     const rootEntries = entries.filter((e) => e.depth === 0)
     const prodCount = rootEntries.filter((e) => !e.isDevDependency).length
     const devCount = rootEntries.filter((e) => e.isDevDependency).length
-    const subDepCount = entries.length - rootEntries.length
+    const subDepCount = dependencies.length - rootEntries.length
 
     console.log('')
-    if (subDepCount > 0) {
-      console.log(
-        `${prodCount} dependencies, ${devCount} devDependencies, ${subDepCount} subdependencies`,
-      )
-    } else {
-      console.log(`${prodCount} dependencies, ${devCount} devDependencies`)
-    }
+    console.log(
+      `${dependencies.length} total (${prodCount} dependencies, ${devCount} devDependencies, ${subDepCount} subdependencies)`,
+    )
 
     return { success: true, message: 'Dependencies listed successfully.' }
   },
