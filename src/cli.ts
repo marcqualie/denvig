@@ -39,6 +39,7 @@ async function main() {
 
   // Command aliases - map shortcuts to their full commands
   const commandAliases: Record<string, string> = {
+    deps: 'deps:list',
     outdated: 'deps:outdated',
   }
   if (commandAliases[commandName]) {

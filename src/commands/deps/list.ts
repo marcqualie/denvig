@@ -1,60 +1,21 @@
 import { Command } from '../../lib/command.ts'
-
-import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
-
-// ANSI color codes
-const COLORS = {
-  reset: '\x1b[0m',
-  grey: '\x1b[90m',
-  bold: '\x1b[1m',
-}
-
-/**
- * Lockfile source prefixes for different package managers.
- * Sources starting with these are transitive dependencies.
- */
-const LOCKFILE_PREFIXES = [
-  'pnpm-lock.yaml:',
-  'yarn.lock:',
-  'Gemfile.lock:',
-  'uv.lock:',
-]
-
-/**
- * Check if a source is from a lockfile (transitive dependency).
- */
-const isLockfileSource = (source: string): boolean => {
-  return LOCKFILE_PREFIXES.some((prefix) => source.startsWith(prefix))
-}
-
-/**
- * Check if a source is from dependencies section.
- */
-const isDependenciesSource = (source: string): boolean => {
-  return source.endsWith('#dependencies')
-}
-
-/**
- * Check if a source is from devDependencies section.
- */
-const isDevDependenciesSource = (source: string): boolean => {
-  return source.endsWith('#devDependencies')
-}
-
-type DependencyEntry = {
-  name: string
-  version: string
-  ecosystem: string
-  isDevDependency: boolean
-}
+import { buildDependencyTree } from '../../lib/deps/tree.ts'
+import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps:list [--ecosystem <name>]',
-  example: 'denvig deps:list --ecosystem npm',
+  usage: 'deps:list [--depth <n>] [--ecosystem <name>]',
+  example: 'denvig deps:list --depth 1',
   args: [],
   flags: [
+    {
+      name: 'depth',
+      description: 'Show subdependencies up to N levels deep (default: 0)',
+      required: false,
+      type: 'number',
+      defaultValue: 0,
+    },
     {
       name: 'ecosystem',
       description: 'Filter to a specific ecosystem (e.g., npm, rubygems, pypi)',
@@ -65,76 +26,15 @@ export const depsListCommand = new Command({
   ],
   handler: async ({ project, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
-    const allDependencies = await project.dependencies()
-
-    // Deduplicate dependencies by id
-    const depsMap = new Map<string, ProjectDependencySchema>()
-    for (const dep of allDependencies) {
-      const existing = depsMap.get(dep.id)
-      if (!existing) {
-        depsMap.set(dep.id, dep)
-      } else {
-        // Merge versions records if the dependency already exists
-        const mergedVersions: Record<string, Record<string, string>> = {
-          ...existing.versions,
-        }
-        for (const [resolvedVersion, sources] of Object.entries(dep.versions)) {
-          const existingSources = mergedVersions[resolvedVersion] || {}
-          mergedVersions[resolvedVersion] = {
-            ...existingSources,
-            ...sources,
-          }
-        }
-        depsMap.set(dep.id, { ...existing, versions: mergedVersions })
-      }
-    }
-
-    const dependencies = Array.from(depsMap.values())
+    const maxDepth = (flags.depth as number) ?? 0
+    const dependencies = await project.dependencies()
 
     if (dependencies.length === 0) {
       console.log('No dependencies detected in this project.')
       return { success: true, message: 'No dependencies detected.' }
     }
 
-    // Find direct dependencies only (sources not from lockfile)
-    let entries: DependencyEntry[] = []
-    const seenKeys = new Set<string>()
-
-    for (const dep of dependencies) {
-      for (const [version, sources] of Object.entries(dep.versions)) {
-        for (const source of Object.keys(sources)) {
-          if (!isLockfileSource(source)) {
-            const isDevDependency = isDevDependenciesSource(source)
-            const isDependency = isDependenciesSource(source)
-
-            if (isDependency || isDevDependency) {
-              const key = `${dep.name}@${version}@${dep.ecosystem}`
-              if (!seenKeys.has(key)) {
-                seenKeys.add(key)
-                entries.push({
-                  name: dep.name,
-                  version,
-                  ecosystem: dep.ecosystem,
-                  isDevDependency,
-                })
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Filter by ecosystem if specified
-    if (ecosystemFilter) {
-      entries = entries.filter((e) => e.ecosystem === ecosystemFilter)
-    }
-
-    // Sort entries by ecosystem first, then alphabetically by name
-    entries.sort((a, b) => {
-      const ecosystemCompare = a.ecosystem.localeCompare(b.ecosystem)
-      if (ecosystemCompare !== 0) return ecosystemCompare
-      return a.name.localeCompare(b.name)
-    })
+    const entries = buildDependencyTree(dependencies, maxDepth, ecosystemFilter)
 
     if (entries.length === 0) {
       const message = ecosystemFilter
@@ -148,60 +48,46 @@ export const depsListCommand = new Command({
     const ecosystems = new Set(entries.map((e) => e.ecosystem))
     const showEcosystem = ecosystems.size > 1 && !ecosystemFilter
 
-    // Calculate column widths for nice formatting
-    // Account for "(dev)" suffix in name column
-    const maxNameLen = Math.max(
-      ...entries.map((e) =>
-        e.isDevDependency ? e.name.length + 6 : e.name.length,
-      ),
-      7, // "Package"
-    )
-    const maxVersionLen = Math.max(
-      ...entries.map((e) => e.version.length),
-      7, // "Current"
-    )
-    const maxEcosystemLen = showEcosystem
-      ? Math.max(...entries.map((e) => e.ecosystem.length), 9) // "Ecosystem"
-      : 0
+    const lines = formatTable({
+      columns: [
+        { header: 'Package', accessor: (e) => e.name },
+        {
+          header: '',
+          accessor: (e) =>
+            e.depth === 0 && e.isDevDependency
+              ? `${COLORS.grey}(dev)${COLORS.reset}`
+              : '    ',
+        },
+        { header: 'Current', accessor: (e) => e.version },
+        {
+          header: 'Ecosystem',
+          accessor: (e) => e.ecosystem,
+          visible: showEcosystem,
+        },
+      ],
+      data: entries,
+      tree: {
+        getDepth: (e) => e.depth,
+        getIsLast: (e) => e.isLast,
+        getHasChildren: (e) => e.hasChildren,
+        getParentPath: (e) => e.parentPath,
+      },
+    })
 
-    // Print header
-    if (showEcosystem) {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Ecosystem'.padEnd(maxEcosystemLen)}`,
-      )
-      console.log('-'.repeat(maxNameLen + maxVersionLen + maxEcosystemLen + 4))
-    } else {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}`,
-      )
-      console.log('-'.repeat(maxNameLen + maxVersionLen + 2))
-    }
-
-    // Print each dependency
-    for (const entry of entries) {
-      const devSuffix = entry.isDevDependency
-        ? `${COLORS.grey} (dev)${COLORS.reset}`
-        : ''
-      const displayName = entry.isDevDependency
-        ? entry.name.padEnd(maxNameLen - 6)
-        : entry.name.padEnd(maxNameLen)
-
-      if (showEcosystem) {
-        console.log(
-          `${displayName}${devSuffix}  ${entry.version.padEnd(maxVersionLen)}  ${entry.ecosystem.padEnd(maxEcosystemLen)}`,
-        )
-      } else {
-        console.log(
-          `${displayName}${devSuffix}  ${entry.version.padEnd(maxVersionLen)}`,
-        )
-      }
+    for (const line of lines) {
+      console.log(line)
     }
 
     // Summary
-    const prodCount = entries.filter((e) => !e.isDevDependency).length
-    const devCount = entries.filter((e) => e.isDevDependency).length
+    const rootEntries = entries.filter((e) => e.depth === 0)
+    const prodCount = rootEntries.filter((e) => !e.isDevDependency).length
+    const devCount = rootEntries.filter((e) => e.isDevDependency).length
+    const subDepCount = dependencies.length - rootEntries.length
+
     console.log('')
-    console.log(`${prodCount} dependencies, ${devCount} devDependencies`)
+    console.log(
+      `${dependencies.length} total (${prodCount} dependencies, ${devCount} devDependencies, ${subDepCount} subdependencies)`,
+    )
 
     return { success: true, message: 'Dependencies listed successfully.' }
   },

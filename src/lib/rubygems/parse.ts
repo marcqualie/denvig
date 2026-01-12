@@ -205,7 +205,7 @@ export const parseRubyDependencies = async (
   const gemfileContent = readFileSync(gemfilePath, 'utf-8')
   const gemfileDeps = parseGemfile(gemfileContent)
 
-  // Helper to add or update a dependency
+  // Helper to add a dependency version entry
   const addDependency = (
     id: string,
     name: string,
@@ -216,15 +216,17 @@ export const parseRubyDependencies = async (
   ) => {
     const existing = data.get(id)
     if (existing) {
-      const sources = existing.versions[resolvedVersion] || {}
-      sources[source] = specifier
-      existing.versions[resolvedVersion] = sources
+      existing.versions.push({
+        resolved: resolvedVersion,
+        specifier,
+        source,
+      })
     } else {
       data.set(id, {
         id,
         name,
         ecosystem,
-        versions: { [resolvedVersion]: { [source]: specifier } },
+        versions: [{ resolved: resolvedVersion, specifier, source }],
       })
     }
   }
@@ -234,7 +236,7 @@ export const parseRubyDependencies = async (
     id: 'rubygems:bundler',
     name: 'bundler',
     ecosystem: 'system',
-    versions: {},
+    versions: [],
   })
 
   for (const dep of gemfileDeps) {

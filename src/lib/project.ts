@@ -8,15 +8,13 @@ import {
 } from './config.ts'
 import {
   detectDependencies,
+  type OutdatedDependencySchema,
   type ProjectDependencySchema,
 } from './dependencies.ts'
 import plugins from './plugins.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
-import type {
-  OutdatedDependencies,
-  OutdatedDependenciesOptions,
-} from './plugin.ts'
+import type { OutdatedDependenciesOptions } from './plugin.ts'
 
 export class DenvigProject {
   slug: string
@@ -67,12 +65,12 @@ export class DenvigProject {
 
   async outdatedDependencies(
     options?: OutdatedDependenciesOptions,
-  ): Promise<OutdatedDependencies> {
-    const allOutdated: OutdatedDependencies = {}
+  ): Promise<OutdatedDependencySchema[]> {
+    const allOutdated: OutdatedDependencySchema[] = []
     for (const plugin of Object.values(plugins)) {
       if (plugin.outdatedDependencies) {
         const pluginOutdated = await plugin.outdatedDependencies(this, options)
-        Object.assign(allOutdated, pluginOutdated)
+        allOutdated.push(...pluginOutdated)
       }
     }
     return allOutdated

@@ -1,15 +1,5 @@
 import { Command } from '../../lib/command.ts'
-
-// ANSI color codes
-const COLORS = {
-  reset: '\x1b[0m',
-  white: '\x1b[37m',
-  grey: '\x1b[90m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  bold: '\x1b[1m',
-}
+import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 /**
  * Parse a semver version string into components.
@@ -142,17 +132,21 @@ export const depsOutdatedCommand = new Command({
     }
 
     const outdated = await project.outdatedDependencies({ cache })
-    let entries = Object.entries(outdated)
+    let entries = outdated
+
+    // Helper to get current version from versions array
+    const getCurrent = (dep: (typeof entries)[0]) =>
+      dep.versions[0]?.resolved || ''
 
     // Filter by ecosystem if specified
     if (ecosystemFilter) {
-      entries = entries.filter(([, info]) => info.ecosystem === ecosystemFilter)
+      entries = entries.filter((dep) => dep.ecosystem === ecosystemFilter)
     }
 
     // Filter by semver level if specified
     if (semverFilter) {
-      entries = entries.filter(([, info]) => {
-        const level = getSemverLevel(info.current, info.wanted)
+      entries = entries.filter((dep) => {
+        const level = getSemverLevel(getCurrent(dep), dep.wanted)
         return matchesSemverFilter(level, semverFilter)
       })
     }
@@ -172,69 +166,55 @@ export const depsOutdatedCommand = new Command({
 
     // Sort entries by ecosystem first, then alphabetically by name
     const sortedEntries = entries.sort((a, b) => {
-      const ecosystemCompare = a[1].ecosystem.localeCompare(b[1].ecosystem)
+      const ecosystemCompare = a.ecosystem.localeCompare(b.ecosystem)
       if (ecosystemCompare !== 0) return ecosystemCompare
-      return a[0].localeCompare(b[0])
+      return a.name.localeCompare(b.name)
     })
 
     // Check if we have multiple ecosystems (hide column if filtered to one)
-    const ecosystems = new Set(entries.map(([, info]) => info.ecosystem))
+    const ecosystems = new Set(entries.map((dep) => dep.ecosystem))
     const showEcosystem = ecosystems.size > 1 && !ecosystemFilter
 
-    // Calculate column widths for nice formatting
-    // Account for "(dev)" suffix in name column
-    const maxNameLen = Math.max(
-      ...entries.map(([name, info]) =>
-        info.isDevDependency ? name.length + 6 : name.length,
-      ),
-      7, // "Package"
-    )
-    const maxVersionLen = Math.max(
-      ...entries.map(([, info]) =>
-        Math.max(info.current.length, info.wanted.length, info.latest.length),
-      ),
-      7, // "Current"
-    )
-    const maxEcosystemLen = showEcosystem
-      ? Math.max(...entries.map(([, info]) => info.ecosystem.length), 9) // "Ecosystem"
-      : 0
+    // Format and print table
+    const lines = formatTable({
+      columns: [
+        {
+          header: 'Package',
+          accessor: (e) => e.name,
+        },
+        {
+          header: '',
+          accessor: (e) =>
+            e.isDevDependency ? `${COLORS.grey}(dev)${COLORS.reset}` : '    ',
+        },
+        { header: 'Current', accessor: (dep) => getCurrent(dep) },
+        {
+          header: 'Wanted',
+          accessor: (dep) => dep.wanted,
+          format: (value, dep) => {
+            const color = getVersionColor(getCurrent(dep), dep.wanted)
+            return `${color}${value}${COLORS.reset}`
+          },
+        },
+        {
+          header: 'Latest',
+          accessor: (dep) => dep.latest,
+          format: (value, dep) => {
+            const color = getVersionColor(getCurrent(dep), dep.latest)
+            return `${color}${value}${COLORS.reset}`
+          },
+        },
+        {
+          header: 'Ecosystem',
+          accessor: (dep) => dep.ecosystem,
+          visible: showEcosystem,
+        },
+      ],
+      data: sortedEntries,
+    })
 
-    // Print header
-    if (showEcosystem) {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}  ${'Ecosystem'.padEnd(maxEcosystemLen)}`,
-      )
-      console.log(
-        '-'.repeat(maxNameLen + maxVersionLen * 3 + maxEcosystemLen + 8),
-      )
-    } else {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}`,
-      )
-      console.log('-'.repeat(maxNameLen + maxVersionLen * 3 + 6))
-    }
-
-    // Print each dependency
-    for (const [name, info] of sortedEntries) {
-      const wantedColor = getVersionColor(info.current, info.wanted)
-      const latestColor = getVersionColor(info.current, info.latest)
-
-      const devSuffix = info.isDevDependency
-        ? `${COLORS.grey} (dev)${COLORS.reset}`
-        : ''
-      const displayName = info.isDevDependency
-        ? name.padEnd(maxNameLen - 6)
-        : name.padEnd(maxNameLen)
-
-      if (showEcosystem) {
-        console.log(
-          `${displayName}${devSuffix}  ${info.current.padEnd(maxVersionLen)}  ${wantedColor}${info.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${info.latest.padEnd(maxVersionLen)}${COLORS.reset}  ${info.ecosystem.padEnd(maxEcosystemLen)}`,
-        )
-      } else {
-        console.log(
-          `${displayName}${devSuffix}  ${info.current.padEnd(maxVersionLen)}  ${wantedColor}${info.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${info.latest.padEnd(maxVersionLen)}${COLORS.reset}`,
-        )
-      }
+    for (const line of lines) {
+      console.log(line)
     }
 
     return { success: true, message: 'Outdated dependencies listed.' }

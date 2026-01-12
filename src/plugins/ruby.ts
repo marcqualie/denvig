@@ -56,10 +56,10 @@ const plugin = definePlugin({
   outdatedDependencies: async (project, options) => {
     const hasGemfile = project.rootFiles.includes('Gemfile')
     if (!hasGemfile) {
-      return {}
+      return []
     }
     const dependencies = await plugin.dependencies?.(project)
-    if (!dependencies) return {}
+    if (!dependencies) return []
     return rubygemsOutdated(dependencies, options)
   },
 })
