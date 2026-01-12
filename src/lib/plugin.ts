@@ -1,28 +1,8 @@
-import type { ProjectDependencySchema } from './dependencies'
+import type {
+  OutdatedDependencySchema,
+  ProjectDependencySchema,
+} from './dependencies'
 import type { DenvigProject } from './project'
-
-/**
- * Information about an outdated dependency
- */
-export type OutdatedDependency = {
-  /** Current installed version */
-  current: string
-  /** Latest version compatible with the specifier (semver) */
-  wanted: string
-  /** Absolute latest version available */
-  latest: string
-  /** The version specifier from package.json */
-  specifier: string
-  /** Whether this is a dev dependency */
-  isDevDependency: boolean
-  /** The ecosystem this dependency belongs to (e.g., npm, rubygems, pypi) */
-  ecosystem: string
-}
-
-/**
- * Map of package name to outdated dependency info
- */
-export type OutdatedDependencies = Record<string, OutdatedDependency>
 
 /**
  * Options for outdatedDependencies method
@@ -41,12 +21,12 @@ type PluginOptions = {
 
   /**
    * Get outdated dependencies for the project.
-   * Returns a map of package name to version info.
+   * Returns an array of outdated dependencies with version info.
    */
   outdatedDependencies?: (
     project: DenvigProject,
     options?: OutdatedDependenciesOptions,
-  ) => Promise<OutdatedDependencies>
+  ) => Promise<OutdatedDependencySchema[]>
 }
 
 export const definePlugin = (options: PluginOptions) => {

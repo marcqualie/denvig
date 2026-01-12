@@ -1,10 +1,10 @@
 import { fetchNpmPackageInfo } from './info.ts'
 
-import type { ProjectDependencySchema } from '../dependencies.ts'
 import type {
-  OutdatedDependencies,
-  OutdatedDependenciesOptions,
-} from '../plugin.ts'
+  OutdatedDependencySchema,
+  ProjectDependencySchema,
+} from '../dependencies.ts'
+import type { OutdatedDependenciesOptions } from '../plugin.ts'
 
 /**
  * Parse a semver version string into components.
@@ -125,20 +125,16 @@ const extractDepInfo = (
   dep: Pick<ProjectDependencySchema, 'versions'>,
 ): { current: string; specifier: string; isDevDependency: boolean } | null => {
   // Get the first version entry (there should typically be one for direct deps)
-  const versionEntries = Object.entries(dep.versions)
-  if (versionEntries.length === 0) return null
+  if (dep.versions.length === 0) return null
 
-  // Use the first version as current
-  const [current, sources] = versionEntries[0]
+  const firstVersion = dep.versions[0]
+  const isDevDependency = firstVersion.source.includes('#devDependencies')
 
-  // Get the first source to determine specifier and dev status
-  const sourceEntries = Object.entries(sources)
-  if (sourceEntries.length === 0) return null
-
-  const [source, specifier] = sourceEntries[0]
-  const isDevDependency = source.includes('#devDependencies')
-
-  return { current, specifier, isDevDependency }
+  return {
+    current: firstVersion.resolved,
+    specifier: firstVersion.specifier,
+    isDevDependency,
+  }
 }
 
 /**
@@ -146,19 +142,20 @@ const extractDepInfo = (
  * Takes a list of dependencies and returns info about which are outdated.
  */
 export const npmOutdated = async (
-  dependencies: Array<Pick<ProjectDependencySchema, 'name' | 'versions'>>,
+  dependencies: ProjectDependencySchema[],
   options: OutdatedDependenciesOptions = {},
-): Promise<OutdatedDependencies> => {
+): Promise<OutdatedDependencySchema[]> => {
   const useCache = options.cache ?? true
-  const result: OutdatedDependencies = {}
+  const result: OutdatedDependencySchema[] = []
 
   // Filter to only direct dependencies (those with sources, not transitive)
   const directDeps = dependencies.filter((dep) => {
-    const sources = Object.values(dep.versions).flatMap((s) => Object.keys(s))
     // Direct deps have sources like ".#dependencies" or "packages/foo#dependencies"
     // Transitive deps have sources like "pnpm-lock.yaml:package@version"
-    return sources.some(
-      (s) => s.includes('#dependencies') || s.includes('#devDependencies'),
+    return dep.versions.some(
+      (v) =>
+        v.source.includes('#dependencies') ||
+        v.source.includes('#devDependencies'),
     )
   })
 
@@ -177,14 +174,13 @@ export const npmOutdated = async (
     const hasLatestUpdate = latest && latest !== info.current
 
     if (hasWantedUpdate || hasLatestUpdate) {
-      result[dep.name] = {
-        current: info.current,
+      result.push({
+        ...dep,
         wanted: wanted || info.current,
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
-        ecosystem: 'npm',
-      }
+      })
     }
   })
 

@@ -171,7 +171,7 @@ export const parseUvDependencies = async (
   const data: Map<string, ProjectDependencySchema> = new Map()
   const directDependencyNames: Set<string> = new Set()
 
-  // Helper to add or update a dependency
+  // Helper to add a dependency version entry
   const addDependency = (
     id: string,
     name: string,
@@ -182,15 +182,17 @@ export const parseUvDependencies = async (
   ) => {
     const existing = data.get(id)
     if (existing) {
-      const sources = existing.versions[resolvedVersion] || {}
-      sources[source] = specifier
-      existing.versions[resolvedVersion] = sources
+      existing.versions.push({
+        resolved: resolvedVersion,
+        specifier,
+        source,
+      })
     } else {
       data.set(id, {
         id,
         name,
         ecosystem,
-        versions: { [resolvedVersion]: { [source]: specifier } },
+        versions: [{ resolved: resolvedVersion, specifier, source }],
       })
     }
   }
@@ -200,7 +202,7 @@ export const parseUvDependencies = async (
     id: 'pypi:uv',
     name: 'uv',
     ecosystem: 'system',
-    versions: {},
+    versions: [],
   })
 
   // Parse pyproject.toml for direct dependencies

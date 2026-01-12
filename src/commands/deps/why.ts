@@ -1,4 +1,13 @@
 import { Command } from '../../lib/command.ts'
+import {
+  buildReverseChain,
+  isDevDependenciesSource,
+} from '../../lib/deps/tree.ts'
+import {
+  formatTree,
+  mergeTreeNode,
+  type TreeNode,
+} from '../../lib/formatters/tree.ts'
 
 import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
 
@@ -34,118 +43,71 @@ export const depsWhyCommand = new Command({
       depsMap.set(d.name, d)
     }
 
-    console.log(`${project.name}`)
+    console.log(`${project.name} ${project.path}`)
     console.log('')
 
-    const versionEntries = Object.entries(dep.versions)
+    // Group chains by source type (dependencies vs devDependencies)
+    const depChains: TreeNode[] = []
+    const devDepChains: TreeNode[] = []
 
-    if (versionEntries.length === 0) {
-      console.log(`${dependencyName} (no versions resolved)`)
-      return { success: true, message: 'Dependency found but no versions.' }
-    }
+    // For each version of the target dependency, build the chain back to root
+    for (const v of dep.versions) {
+      const chain = buildReverseChain(dep.name, v.resolved, v.source, depsMap)
+      if (chain) {
+        // Determine if this is a dev dependency chain
+        const rootDep = depsMap.get(chain.name)
+        const isDevChain = rootDep?.versions.some((rv) =>
+          isDevDependenciesSource(rv.source),
+        )
 
-    for (const [version, sources] of versionEntries) {
-      for (const [source, specifier] of Object.entries(sources)) {
-        if (source === '.' || !source.startsWith('pnpm-lock.yaml:')) {
-          // Direct dependency from a package.json
-          const location = source === '.' ? 'dependencies' : source
-          console.log(`${location}:`)
-          console.log(`${dependencyName} ${version} (${specifier})`)
-          console.log('')
+        if (isDevChain) {
+          mergeTreeNode(devDepChains, chain)
         } else {
-          // Transitive dependency - build the chain
-          const parentRef = source.replace('pnpm-lock.yaml:', '')
-          const chain = buildDependencyChain(parentRef, depsMap)
-
-          if (chain.length > 0) {
-            // Find which package.json the root of the chain comes from
-            const rootDep = chain[0]
-            const rootSources = Object.keys(
-              Object.values(rootDep.versions)[0] || {},
-            )
-            const rootSource = rootSources.find(
-              (s) => !s.startsWith('pnpm-lock.yaml:'),
-            )
-            const location =
-              rootSource === '.' ? 'dependencies' : rootSource || 'dependencies'
-
-            console.log(`${location}:`)
-
-            // Print the chain as a tree
-            for (let i = 0; i < chain.length; i++) {
-              const chainDep = chain[i]
-              const chainVersion = Object.keys(chainDep.versions)[0] || ''
-              const indent = i === 0 ? '' : `${'  '.repeat(i - 1)}└─ `
-              console.log(`${indent}${chainDep.name} ${chainVersion}`)
-            }
-
-            // Print the target dependency at the end
-            const finalIndent = `${'  '.repeat(chain.length - 1)}└─ `
-            console.log(`${finalIndent}${dependencyName} ${version}`)
-            console.log('')
-          } else {
-            // Couldn't resolve the chain, just show what we have
-            console.log(`via ${parentRef}:`)
-            console.log(`└─ ${dependencyName} ${version}`)
-            console.log('')
-          }
+          mergeTreeNode(depChains, chain)
         }
       }
+    }
+
+    // Print dependencies chains
+    if (depChains.length > 0) {
+      console.log('dependencies:')
+      for (let i = 0; i < depChains.length; i++) {
+        const lines = formatTree(
+          depChains[i],
+          '',
+          i === depChains.length - 1,
+          true,
+        )
+        for (const line of lines) {
+          console.log(line)
+        }
+      }
+      console.log('')
+    }
+
+    // Print devDependencies chains
+    if (devDepChains.length > 0) {
+      console.log('devDependencies:')
+      for (let i = 0; i < devDepChains.length; i++) {
+        const lines = formatTree(
+          devDepChains[i],
+          '',
+          i === devDepChains.length - 1,
+          true,
+        )
+        for (const line of lines) {
+          console.log(line)
+        }
+      }
+      console.log('')
+    }
+
+    if (depChains.length === 0 && devDepChains.length === 0) {
+      console.log(
+        `Could not determine dependency chain for "${dependencyName}".`,
+      )
     }
 
     return { success: true, message: 'Dependency chain shown.' }
   },
 })
-
-/**
- * Build the dependency chain from a parent reference back to a direct dependency
- */
-function buildDependencyChain(
-  parentRef: string,
-  depsMap: Map<string, ProjectDependencySchema>,
-): ProjectDependencySchema[] {
-  const chain: ProjectDependencySchema[] = []
-  let currentRef = parentRef
-
-  // Limit iterations to prevent infinite loops
-  const maxDepth = 20
-  let depth = 0
-
-  while (depth < maxDepth) {
-    // Parse the parent reference (e.g., "tsup@8.5.0(typescript@5.9.3)(yaml@2.8.1)")
-    const match = currentRef.match(/^([^@]+)@/)
-    if (!match) break
-
-    const depName = match[1]
-    const dep = depsMap.get(depName)
-
-    if (!dep) break
-
-    chain.unshift(dep)
-
-    // Find where this dependency comes from
-    const versionEntries = Object.entries(dep.versions)
-    if (versionEntries.length === 0) break
-
-    // Look for a source that points to the parent
-    let foundParent = false
-    for (const [, sources] of versionEntries) {
-      for (const source of Object.keys(sources)) {
-        if (source === '.' || !source.startsWith('pnpm-lock.yaml:')) {
-          // Found a direct dependency - we're done
-          return chain
-        }
-        if (!foundParent) {
-          // Follow this chain up
-          currentRef = source.replace('pnpm-lock.yaml:', '')
-          foundParent = true
-        }
-      }
-    }
-
-    if (!foundParent) break
-    depth++
-  }
-
-  return chain
-}
