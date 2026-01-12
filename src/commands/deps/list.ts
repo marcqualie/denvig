@@ -1,11 +1,5 @@
 import { Command } from '../../lib/command.ts'
-
-// ANSI color codes
-const COLORS = {
-  reset: '\x1b[0m',
-  grey: '\x1b[90m',
-  bold: '\x1b[1m',
-}
+import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 /**
  * Lockfile source prefixes for different package managers.
@@ -120,53 +114,30 @@ export const depsListCommand = new Command({
     const ecosystems = new Set(entries.map((e) => e.ecosystem))
     const showEcosystem = ecosystems.size > 1 && !ecosystemFilter
 
-    // Calculate column widths for nice formatting
-    // Account for "(dev)" suffix in name column
-    const maxNameLen = Math.max(
-      ...entries.map((e) =>
-        e.isDevDependency ? e.name.length + 6 : e.name.length,
-      ),
-      7, // "Package"
-    )
-    const maxVersionLen = Math.max(
-      ...entries.map((e) => e.version.length),
-      7, // "Current"
-    )
-    const maxEcosystemLen = showEcosystem
-      ? Math.max(...entries.map((e) => e.ecosystem.length), 9) // "Ecosystem"
-      : 0
+    // Format and print table
+    const lines = formatTable({
+      columns: [
+        {
+          header: 'Package',
+          accessor: (e) => e.name,
+        },
+        {
+          header: '',
+          accessor: (e) =>
+            e.isDevDependency ? `${COLORS.grey}(dev)${COLORS.reset}` : '    ',
+        },
+        { header: 'Current', accessor: (e) => e.version },
+        {
+          header: 'Ecosystem',
+          accessor: (e) => e.ecosystem,
+          visible: showEcosystem,
+        },
+      ],
+      data: entries,
+    })
 
-    // Print header
-    if (showEcosystem) {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Ecosystem'.padEnd(maxEcosystemLen)}`,
-      )
-      console.log('-'.repeat(maxNameLen + maxVersionLen + maxEcosystemLen + 4))
-    } else {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}`,
-      )
-      console.log('-'.repeat(maxNameLen + maxVersionLen + 2))
-    }
-
-    // Print each dependency
-    for (const entry of entries) {
-      const devSuffix = entry.isDevDependency
-        ? `${COLORS.grey} (dev)${COLORS.reset}`
-        : ''
-      const displayName = entry.isDevDependency
-        ? entry.name.padEnd(maxNameLen - 6)
-        : entry.name.padEnd(maxNameLen)
-
-      if (showEcosystem) {
-        console.log(
-          `${displayName}${devSuffix}  ${entry.version.padEnd(maxVersionLen)}  ${entry.ecosystem.padEnd(maxEcosystemLen)}`,
-        )
-      } else {
-        console.log(
-          `${displayName}${devSuffix}  ${entry.version.padEnd(maxVersionLen)}`,
-        )
-      }
+    for (const line of lines) {
+      console.log(line)
     }
 
     // Summary

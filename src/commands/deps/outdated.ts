@@ -1,15 +1,5 @@
 import { Command } from '../../lib/command.ts'
-
-// ANSI color codes
-const COLORS = {
-  reset: '\x1b[0m',
-  white: '\x1b[37m',
-  grey: '\x1b[90m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  bold: '\x1b[1m',
-}
+import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 /**
  * Parse a semver version string into components.
@@ -185,61 +175,46 @@ export const depsOutdatedCommand = new Command({
     const ecosystems = new Set(entries.map((dep) => dep.ecosystem))
     const showEcosystem = ecosystems.size > 1 && !ecosystemFilter
 
-    // Calculate column widths for nice formatting
-    // Account for "(dev)" suffix in name column
-    const maxNameLen = Math.max(
-      ...entries.map((dep) =>
-        dep.isDevDependency ? dep.name.length + 6 : dep.name.length,
-      ),
-      7, // "Package"
-    )
-    const maxVersionLen = Math.max(
-      ...entries.map((dep) =>
-        Math.max(getCurrent(dep).length, dep.wanted.length, dep.latest.length),
-      ),
-      7, // "Current"
-    )
-    const maxEcosystemLen = showEcosystem
-      ? Math.max(...entries.map((dep) => dep.ecosystem.length), 9) // "Ecosystem"
-      : 0
+    // Format and print table
+    const lines = formatTable({
+      columns: [
+        {
+          header: 'Package',
+          accessor: (e) => e.name,
+        },
+        {
+          header: '',
+          accessor: (e) =>
+            e.isDevDependency ? `${COLORS.grey}(dev)${COLORS.reset}` : '    ',
+        },
+        { header: 'Current', accessor: (dep) => getCurrent(dep) },
+        {
+          header: 'Wanted',
+          accessor: (dep) => dep.wanted,
+          format: (value, dep) => {
+            const color = getVersionColor(getCurrent(dep), dep.wanted)
+            return `${color}${value}${COLORS.reset}`
+          },
+        },
+        {
+          header: 'Latest',
+          accessor: (dep) => dep.latest,
+          format: (value, dep) => {
+            const color = getVersionColor(getCurrent(dep), dep.latest)
+            return `${color}${value}${COLORS.reset}`
+          },
+        },
+        {
+          header: 'Ecosystem',
+          accessor: (dep) => dep.ecosystem,
+          visible: showEcosystem,
+        },
+      ],
+      data: sortedEntries,
+    })
 
-    // Print header
-    if (showEcosystem) {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}  ${'Ecosystem'.padEnd(maxEcosystemLen)}`,
-      )
-      console.log(
-        '-'.repeat(maxNameLen + maxVersionLen * 3 + maxEcosystemLen + 8),
-      )
-    } else {
-      console.log(
-        `${'Package'.padEnd(maxNameLen)}  ${'Current'.padEnd(maxVersionLen)}  ${'Wanted'.padEnd(maxVersionLen)}  ${'Latest'.padEnd(maxVersionLen)}`,
-      )
-      console.log('-'.repeat(maxNameLen + maxVersionLen * 3 + 6))
-    }
-
-    // Print each dependency
-    for (const dep of sortedEntries) {
-      const current = getCurrent(dep)
-      const wantedColor = getVersionColor(current, dep.wanted)
-      const latestColor = getVersionColor(current, dep.latest)
-
-      const devSuffix = dep.isDevDependency
-        ? `${COLORS.grey} (dev)${COLORS.reset}`
-        : ''
-      const displayName = dep.isDevDependency
-        ? dep.name.padEnd(maxNameLen - 6)
-        : dep.name.padEnd(maxNameLen)
-
-      if (showEcosystem) {
-        console.log(
-          `${displayName}${devSuffix}  ${current.padEnd(maxVersionLen)}  ${wantedColor}${dep.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${dep.latest.padEnd(maxVersionLen)}${COLORS.reset}  ${dep.ecosystem.padEnd(maxEcosystemLen)}`,
-        )
-      } else {
-        console.log(
-          `${displayName}${devSuffix}  ${current.padEnd(maxVersionLen)}  ${wantedColor}${dep.wanted.padEnd(maxVersionLen)}${COLORS.reset}  ${latestColor}${dep.latest.padEnd(maxVersionLen)}${COLORS.reset}`,
-        )
-      }
+    for (const line of lines) {
+      console.log(line)
     }
 
     return { success: true, message: 'Outdated dependencies listed.' }
