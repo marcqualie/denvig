@@ -93,8 +93,10 @@ describe('ProjectConfigSchema - services', () => {
         api: {
           cwd: 'apps/api',
           command: 'pnpm run dev',
-          port: 3000,
-          domain: 'api.denvig.local',
+          http: {
+            port: 3000,
+            domain: 'api.denvig.local',
+          },
           keepAlive: true,
         },
       },
@@ -189,7 +191,9 @@ describe('ProjectConfigSchema - services', () => {
       name: 'my-project',
       services: {
         api: {
-          port: 3000,
+          http: {
+            port: 3000,
+          },
         },
       },
     }
@@ -205,7 +209,9 @@ describe('ProjectConfigSchema - services', () => {
         api: {
           cwd: 'apps/api',
           command: 'pnpm run dev',
-          port: 'not-a-number',
+          http: {
+            port: 'not-a-number',
+          },
         },
       },
     }
@@ -221,12 +227,16 @@ describe('ProjectConfigSchema - services', () => {
         api: {
           cwd: 'apps/api',
           command: 'pnpm run dev',
-          port: 3000,
+          http: {
+            port: 3000,
+          },
         },
         frontend: {
           cwd: 'apps/frontend',
           command: 'pnpm run dev',
-          port: 3001,
+          http: {
+            port: 3001,
+          },
         },
       },
     }

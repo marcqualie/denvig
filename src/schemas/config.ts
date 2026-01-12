@@ -71,11 +71,23 @@ export const ProjectConfigSchema = z.object({
             'Working directory for the service (relative to project root)',
           ),
         command: z.string().describe('Shell command to execute'),
-        port: z
-          .number()
+        http: z
+          .object({
+            port: z
+              .number()
+              .optional()
+              .describe('Port number the service listens on'),
+            domain: z
+              .string()
+              .optional()
+              .describe('Domain to use for the service URL'),
+            secure: z
+              .boolean()
+              .optional()
+              .describe('Use HTTPS instead of HTTP'),
+          })
           .optional()
-          .describe('Port number the service listens on'),
-        domain: z.string().optional().describe('Local domain for the service'),
+          .describe('HTTP configuration for the service URL'),
         envFile: z
           .string()
           .optional()

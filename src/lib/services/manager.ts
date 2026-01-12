@@ -18,8 +18,11 @@ export interface ServiceInfo {
   name: string
   cwd: string
   command: string
-  port?: number
-  domain?: string
+  http?: {
+    port?: number
+    domain?: string
+    secure?: boolean
+  }
 }
 
 /**
@@ -66,8 +69,7 @@ export class ServiceManager {
       name,
       cwd: config.cwd || '.',
       command: config.command,
-      port: config.port,
-      domain: config.domain,
+      http: config.http,
     }))
   }
 
@@ -123,8 +125,8 @@ export class ServiceManager {
     }
 
     // Add PORT environment variable if port is configured
-    if (config.port !== undefined) {
-      environmentVariables.PORT = config.port.toString()
+    if (config.http?.port !== undefined) {
+      environmentVariables.PORT = config.http.port.toString()
     }
 
     const plistContent = generatePlist({
@@ -462,12 +464,13 @@ export class ServiceManager {
       return null
     }
 
-    if (config.domain) {
-      return `http://${config.domain}`
+    if (config.http?.domain) {
+      const protocol = config.http.secure ? 'https' : 'http'
+      return `${protocol}://${config.http.domain}`
     }
 
-    if (config.port) {
-      return `http://localhost:${config.port}`
+    if (config.http?.port) {
+      return `http://localhost:${config.http.port}`
     }
 
     return null
