@@ -2,39 +2,10 @@ import { Command } from '../lib/command.ts'
 import { formatTable } from '../lib/formatters/table.ts'
 import { DenvigProject } from '../lib/project.ts'
 import { listProjects } from '../lib/projects.ts'
-import { type ServiceInfo, ServiceManager } from '../lib/services/manager.ts'
-
-interface ServiceRow extends ServiceInfo {
-  projectSlug: string
-  status: 'running' | 'error' | 'stopped'
-  url: string
-}
-
-const getServiceStatus = async (
-  service: ServiceInfo,
-  projectSlug: string,
-): Promise<'running' | 'error' | 'stopped'> => {
-  const tempProject = new DenvigProject(projectSlug)
-  const manager = new ServiceManager(tempProject)
-
-  const status = await manager.getServiceStatus(service.name)
-  if (status?.running) {
-    if (status.lastExitCode !== undefined && status.lastExitCode !== 0) {
-      return 'error'
-    }
-    return 'running'
-  }
-  return 'stopped'
-}
-
-const getServiceUrl = (service: ServiceInfo): string => {
-  if (service.http?.domain) {
-    const protocol = service.http.secure ? 'https' : 'http'
-    return `${protocol}://${service.http.domain}`
-  }
-  if (service.http?.port) return `http://localhost:${service.http.port}`
-  return '-'
-}
+import {
+  ServiceManager,
+  type ServiceResponse,
+} from '../lib/services/manager.ts'
 
 const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   switch (status) {
@@ -76,7 +47,7 @@ export const servicesCommand = new Command({
       return { success: true, message: 'No projects found.' }
     }
 
-    const allServices: ServiceRow[] = []
+    const allServices: ServiceResponse[] = []
 
     for (const projectSlug of projects) {
       const proj = new DenvigProject(projectSlug)
@@ -84,13 +55,10 @@ export const servicesCommand = new Command({
       const services = await manager.listServices()
 
       for (const service of services) {
-        const status = await getServiceStatus(service, projectSlug)
-        allServices.push({
-          ...service,
-          projectSlug,
-          status,
-          url: getServiceUrl(service),
-        })
+        const response = await manager.getServiceResponse(service.name)
+        if (response) {
+          allServices.push(response)
+        }
       }
     }
 
@@ -105,13 +73,13 @@ export const servicesCommand = new Command({
 
     // Sort: current project first, then alphabetically by project slug
     const sortedServices = allServices.sort((a, b) => {
-      const aIsCurrent = a.projectSlug === currentProjectSlug
-      const bIsCurrent = b.projectSlug === currentProjectSlug
+      const aIsCurrent = a.project === currentProjectSlug
+      const bIsCurrent = b.project === currentProjectSlug
 
       if (aIsCurrent && !bIsCurrent) return -1
       if (!aIsCurrent && bIsCurrent) return 1
 
-      const projectCompare = a.projectSlug.localeCompare(b.projectSlug)
+      const projectCompare = a.project.localeCompare(b.project)
       if (projectCompare !== 0) return projectCompare
 
       return a.name.localeCompare(b.name)
@@ -129,9 +97,9 @@ export const servicesCommand = new Command({
           header: '',
           accessor: (s) => getStatusIcon(s.status),
         },
-        { header: 'Project', accessor: (s) => s.projectSlug },
+        { header: 'Project', accessor: (s) => s.project },
         { header: 'Name', accessor: (s) => s.name },
-        { header: 'URL', accessor: (s) => s.url },
+        { header: 'URL', accessor: (s) => s.url || '-' },
       ],
       data: sortedServices,
     })

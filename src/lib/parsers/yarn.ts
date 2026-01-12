@@ -13,7 +13,7 @@ type Source = string
  */
 export type VersionMap = Record<Version, Record<Source, Specifier>>
 
-interface Dependency {
+type Dependency = {
   versions: VersionMap
 }
 
@@ -39,11 +39,11 @@ interface Dependency {
  * }
  * ```
  */
-export interface ParsedYarnLock {
+export type ParsedYarnLock = {
   dependencies: Record<string, Dependency>
 }
 
-interface ParsedNativeDependency {
+type ParsedNativeDependency = {
   version: string
   resolved: string
   integrity?: string
@@ -54,7 +54,7 @@ interface ParsedNativeDependency {
  * Native format used by Yarn parser.
  * https://github.com/yarnpkg/yarn/tree/master/packages/lockfile
  */
-interface ParsedNativeLockfile {
+type ParsedNativeLockfile = {
   type: string
   object: Record<string, ParsedNativeDependency>
 }
