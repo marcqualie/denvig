@@ -1,6 +1,13 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- Timestamps on every line of service log output for easier debugging
+
+
 ## [0.4.0] - 2026-01-13
 
 ### Added

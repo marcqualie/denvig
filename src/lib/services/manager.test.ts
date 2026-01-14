@@ -70,6 +70,8 @@ describe('ServiceManager', () => {
       ok(path.includes('workspace__my-app__api.log'))
     })
 
+    // Note: stderr is now merged with stdout via the timestamp wrapper,
+    // but getLogPath still supports 'stderr' for backwards compatibility
     it('should generate correct stderr log path', () => {
       const project = new DenvigProject('workspace/my-app')
       const manager = new ServiceManager(project)

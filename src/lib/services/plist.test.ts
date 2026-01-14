@@ -1,7 +1,11 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import plist, { escapeXml, generatePlist } from './plist.ts'
+import plist, {
+  escapeXml,
+  generatePlist,
+  wrapCommandWithTimestamp,
+} from './plist.ts'
 
 describe('plist', () => {
   describe('generatePlist()', () => {
@@ -15,7 +19,6 @@ describe('plist', () => {
           DEBUG: 'true',
         },
         standardOutPath: '/tmp/denvig-test-project-api.log',
-        standardErrorPath: '/tmp/denvig-test-project-api.error.log',
         keepAlive: true,
       })
 
@@ -26,13 +29,17 @@ describe('plist', () => {
       ok(plistXml.includes('<string>/bin/zsh</string>'))
       ok(plistXml.includes('<string>-l</string>'))
       ok(plistXml.includes('<string>-c</string>'))
-      ok(plistXml.includes('<string>pnpm run dev</string>'))
+      // Command should be wrapped with timestamp injection
+      ok(plistXml.includes('pnpm run dev'))
+      ok(plistXml.includes('while IFS='))
+      ok(plistXml.includes('date -u'))
       ok(plistXml.includes('<key>WorkingDirectory</key>'))
       ok(plistXml.includes('<key>EnvironmentVariables</key>'))
       ok(plistXml.includes('<key>NODE_ENV</key>'))
       ok(plistXml.includes('<string>development</string>'))
       ok(plistXml.includes('<key>StandardOutPath</key>'))
-      ok(plistXml.includes('<key>StandardErrorPath</key>'))
+      // StandardErrorPath should not be present (stderr is merged via 2>&1)
+      ok(!plistXml.includes('<key>StandardErrorPath</key>'))
       ok(plistXml.includes('<key>KeepAlive</key>'))
       ok(plistXml.includes('<true/>'))
       ok(plistXml.includes('<key>RunAtLoad</key>'))
@@ -45,7 +52,6 @@ describe('plist', () => {
         command: 'node server.js',
         workingDirectory: '/tmp/test',
         standardOutPath: '/tmp/test.log',
-        standardErrorPath: '/tmp/test.error.log',
         keepAlive: false,
       })
 
@@ -63,7 +69,6 @@ describe('plist', () => {
           TEST: 'value with & < > " \' chars',
         },
         standardOutPath: '/tmp/test.log',
-        standardErrorPath: '/tmp/test.error.log',
         keepAlive: true,
       })
 
@@ -84,7 +89,6 @@ describe('plist', () => {
           NODE_ENV: 'development',
         },
         standardOutPath: '/tmp/test.log',
-        standardErrorPath: '/tmp/test.error.log',
         keepAlive: true,
       })
 
@@ -98,11 +102,35 @@ describe('plist', () => {
         command: 'node app.js',
         workingDirectory: '/tmp/test',
         standardOutPath: '/tmp/test.log',
-        standardErrorPath: '/tmp/test.error.log',
         keepAlive: true,
       })
 
       ok(plistXml.includes('com.denvig.test.export'))
+    })
+  })
+
+  describe('wrapCommandWithTimestamp()', () => {
+    it('should wrap command with timestamp injection', () => {
+      const wrapped = wrapCommandWithTimestamp('pnpm run dev')
+
+      ok(wrapped.includes('{ pnpm run dev; }'))
+      ok(wrapped.includes('2>&1'))
+      ok(wrapped.includes('while IFS= read -r line'))
+      ok(wrapped.includes('date -u +%Y-%m-%dT%H:%M:%SZ'))
+    })
+
+    it('should trim whitespace from command', () => {
+      const wrapped = wrapCommandWithTimestamp('  node server.js  ')
+
+      ok(wrapped.includes('{ node server.js; }'))
+      ok(!wrapped.includes('  node'))
+    })
+
+    it('should work via default export', () => {
+      const wrapped = plist.wrapCommandWithTimestamp('echo test')
+
+      ok(wrapped.includes('{ echo test; }'))
+      ok(wrapped.includes('while IFS= read -r line'))
     })
   })
 
