@@ -1,9 +1,15 @@
-import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import {
+  access,
+  appendFile,
+  mkdir,
+  readFile,
+  writeFile,
+} from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
 import { parseEnvFile } from './env.ts'
-import launchctl from './launchctl.ts'
+import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist } from './plist.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
@@ -494,15 +500,32 @@ export class ServiceManager {
   }
 
   /**
+   * Check if a plist file exists for a service.
+   */
+  async plistExists(name: string): Promise<boolean> {
+    try {
+      await access(this.getPlistPath(name))
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Get a unified service response for a service.
    * Returns null if the service is not found in configuration.
    * @param name - Service name
    * @param options.includeLogs - Whether to include recent logs (default: false)
    * @param options.logLines - Number of log lines to include (default: 20)
+   * @param options.launchctlList - Pre-fetched launchctl list for batch operations (avoids N shell calls)
    */
   async getServiceResponse(
     name: string,
-    options?: { includeLogs?: boolean; logLines?: number },
+    options?: {
+      includeLogs?: boolean
+      logLines?: number
+      launchctlList?: LaunchctlListItem[]
+    },
   ): Promise<ServiceResponse | null> {
     const config = this.getServiceConfig(name)
     if (!config) {
@@ -510,22 +533,47 @@ export class ServiceManager {
     }
 
     const label = this.getServiceLabel(name)
-    const info = await launchctl.print(label)
 
     let status: 'running' | 'error' | 'stopped' = 'stopped'
     let pid: number | null = null
     let lastExitCode: number | null = null
 
-    if (info) {
-      pid = info.pid ?? null
-      lastExitCode = info.lastExitCode ?? null
+    // If launchctlList is provided, use it for fast batch lookup
+    if (options?.launchctlList) {
+      const listItem = options.launchctlList.find(
+        (item) => item.label === label,
+      )
+      if (listItem) {
+        pid = listItem.pid === '-' ? null : listItem.pid
+        lastExitCode = listItem.status
 
-      if (info.state === 'running') {
-        // Check for error state (running but with non-zero exit code)
-        if (lastExitCode !== null && lastExitCode !== 0) {
-          status = 'error'
+        if (pid !== null) {
+          // Has a PID, so it's running
+          status = lastExitCode !== 0 ? 'error' : 'running'
         } else {
-          status = 'running'
+          // No PID but in list - check exit code
+          status = lastExitCode !== 0 ? 'error' : 'stopped'
+        }
+      }
+      // If not in list, status remains 'stopped'
+    } else {
+      // Fallback to individual launchctl.print call (slower)
+      // First check if plist exists to avoid unnecessary shell calls
+      const hasPlist = await this.plistExists(name)
+      if (hasPlist) {
+        const info = await launchctl.print(label)
+        if (info) {
+          pid = info.pid ?? null
+          lastExitCode = info.lastExitCode ?? null
+
+          if (info.state === 'running') {
+            // Check for error state (running but with non-zero exit code)
+            if (lastExitCode !== null && lastExitCode !== 0) {
+              status = 'error'
+            } else {
+              status = 'running'
+            }
+          }
         }
       }
     }
