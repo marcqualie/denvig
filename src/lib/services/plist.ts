@@ -7,7 +7,6 @@ export type PlistOptions = {
   workingDirectory: string
   environmentVariables?: Record<string, string>
   standardOutPath: string
-  standardErrorPath: string
   keepAlive: boolean
 }
 
@@ -27,6 +26,18 @@ export function escapeXml(str: string): string {
 }
 
 /**
+ * Wrap a command to add timestamps to each line and merge stderr into stdout.
+ * Uses pure shell (zsh) for maximum compatibility with macOS.
+ *
+ * @param command - The original command to wrap
+ * @returns The wrapped command with timestamp injection
+ */
+export function wrapCommandWithTimestamp(command: string): string {
+  const trimmedCommand = command.trim()
+  return `{ ${trimmedCommand}; } 2>&1 | while IFS= read -r line; do printf '[%s] %s\\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$line"; done`
+}
+
+/**
  * Generate a plist XML string from the given options.
  *
  * @param options - Plist configuration options
@@ -39,9 +50,11 @@ export function generatePlist(options: PlistOptions): string {
     workingDirectory,
     environmentVariables = {},
     standardOutPath,
-    standardErrorPath,
     keepAlive,
   } = options
+
+  // Wrap command with timestamp injection (also merges stderr into stdout)
+  const wrappedCommand = wrapCommandWithTimestamp(command)
 
   // Build environment variables section
   const envVarsXml = Object.entries(environmentVariables)
@@ -63,7 +76,7 @@ export function generatePlist(options: PlistOptions): string {
     <string>/bin/zsh</string>
     <string>-l</string>
     <string>-c</string>
-    <string>${escapeXml(command.trim())}</string>
+    <string>${escapeXml(wrappedCommand)}</string>
   </array>
 
   <key>WorkingDirectory</key>
@@ -76,9 +89,6 @@ ${envVarsXml}
 
   <key>StandardOutPath</key>
   <string>${escapeXml(standardOutPath)}</string>
-
-  <key>StandardErrorPath</key>
-  <string>${escapeXml(standardErrorPath)}</string>
 
   <key>KeepAlive</key>
   <${keepAlive ? 'true' : 'false'}/>
@@ -94,4 +104,5 @@ ${envVarsXml}
 export default {
   generatePlist,
   escapeXml,
+  wrapCommandWithTimestamp,
 }
