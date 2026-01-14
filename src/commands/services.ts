@@ -2,6 +2,7 @@ import { Command } from '../lib/command.ts'
 import { formatTable } from '../lib/formatters/table.ts'
 import { DenvigProject } from '../lib/project.ts'
 import { listProjects } from '../lib/projects.ts'
+import launchctl from '../lib/services/launchctl.ts'
 import {
   ServiceManager,
   type ServiceResponse,
@@ -47,6 +48,9 @@ export const servicesCommand = new Command({
       return { success: true, message: 'No projects found.' }
     }
 
+    // Pre-fetch launchctl list once to avoid N shell calls
+    const launchctlList = await launchctl.list('denvig.')
+
     const allServices: ServiceResponse[] = []
 
     for (const projectSlug of projects) {
@@ -55,7 +59,9 @@ export const servicesCommand = new Command({
       const services = await manager.listServices()
 
       for (const service of services) {
-        const response = await manager.getServiceResponse(service.name)
+        const response = await manager.getServiceResponse(service.name, {
+          launchctlList,
+        })
         if (response) {
           allServices.push(response)
         }

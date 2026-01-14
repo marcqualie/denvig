@@ -7,6 +7,10 @@
 
 - Timestamps on every line of service log output for easier debugging
 
+### Changed
+
+- Optimized `services` command performance by batching launchctl calls (O(n) to O(1))
+
 
 ## [0.4.0] - 2026-01-13
 
