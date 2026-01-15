@@ -5,6 +5,9 @@
 
 ### Added
 
+- Programmatic SDK for TypeScript projects (`import { DenvigSDK } from 'denvig'`)
+- SDK exports typed response types from shared `types/responses.ts` (single source of truth for CLI and SDK)
+- SDK methods for services (list, status, start, stop, restart) and deps (list, outdated) commands
 - Timestamps on every line of service log output for easier debugging
 
 ### Changed
