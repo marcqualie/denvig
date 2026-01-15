@@ -7,6 +7,9 @@ import { parseRubyDependencies } from '../lib/rubygems/parse.ts'
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
 
+// Cache for parsed dependencies by project path
+const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
+
 const plugin = definePlugin({
   name: 'ruby',
 
@@ -50,7 +53,19 @@ const plugin = definePlugin({
     if (!hasGemfile) {
       return []
     }
-    return parseRubyDependencies(project)
+
+    // Return cached result if available
+    const cached = dependenciesCache.get(project.path)
+    if (cached) {
+      return cached
+    }
+
+    const result = await parseRubyDependencies(project)
+
+    // Cache the result for subsequent calls
+    dependenciesCache.set(project.path, result)
+
+    return result
   },
 
   outdatedDependencies: async (project, options) => {

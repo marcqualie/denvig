@@ -19,6 +19,7 @@ import type { OutdatedDependenciesOptions } from './plugin.ts'
 export class DenvigProject {
   slug: string
   config: ConfigWithSourcePaths<ProjectConfigSchema>
+  private _rootFilesCache: string[] | null = null
 
   constructor(slug: string) {
     this.slug = slug
@@ -66,14 +67,17 @@ export class DenvigProject {
   async outdatedDependencies(
     options?: OutdatedDependenciesOptions,
   ): Promise<OutdatedDependencySchema[]> {
-    const allOutdated: OutdatedDependencySchema[] = []
-    for (const plugin of Object.values(plugins)) {
-      if (plugin.outdatedDependencies) {
-        const pluginOutdated = await plugin.outdatedDependencies(this, options)
-        allOutdated.push(...pluginOutdated)
-      }
-    }
-    return allOutdated
+    // Run all plugin outdated checks in parallel
+    const pluginResults = await Promise.all(
+      Object.values(plugins).map((plugin) =>
+        plugin.outdatedDependencies
+          ? plugin.outdatedDependencies(this, options)
+          : Promise.resolve([]),
+      ),
+    )
+
+    // Flatten all results into a single array
+    return pluginResults.flat()
   }
 
   /**
@@ -85,9 +89,13 @@ export class DenvigProject {
 
   /**
    * List all files in the root of a project.
+   * Cached on first access to avoid repeated filesystem calls.
    */
   get rootFiles(): string[] {
-    return fs.readdirSync(this.path)
+    if (this._rootFilesCache === null) {
+      this._rootFilesCache = fs.readdirSync(this.path)
+    }
+    return this._rootFilesCache
   }
 
   /**

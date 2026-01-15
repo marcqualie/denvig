@@ -8,6 +8,9 @@ import { definePlugin } from '../lib/plugin.ts'
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
 
+// Cache for parsed dependencies by project path
+const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
+
 type PnpmLockfileDep = {
   specifier: string
   version: string
@@ -74,6 +77,12 @@ const plugin = definePlugin({
   ): Promise<ProjectDependencySchema[]> => {
     if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
       return []
+    }
+
+    // Return cached result if available
+    const cached = dependenciesCache.get(project.path)
+    if (cached) {
+      return cached
     }
 
     const data: Map<string, ProjectDependencySchema> = new Map()
@@ -187,9 +196,14 @@ const plugin = definePlugin({
       }
     }
 
-    return Array.from(data.values()).sort((a, b) =>
+    const result = Array.from(data.values()).sort((a, b) =>
       a.name.localeCompare(b.name),
     )
+
+    // Cache the result for subsequent calls
+    dependenciesCache.set(project.path, result)
+
+    return result
   },
 
   outdatedDependencies: async (project: DenvigProject, options) => {
