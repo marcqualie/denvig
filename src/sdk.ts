@@ -25,15 +25,6 @@ import type {
 const execAsync = promisify(exec)
 
 /**
- * Response when starting/stopping/restarting all services in a project.
- */
-export type ServiceBulkResponse = {
-  success: boolean
-  project: string
-  services: ServiceResponse[]
-}
-
-/**
  * Response when a service operation fails.
  */
 export type ServiceOperationError = {
@@ -262,47 +253,40 @@ export class DenvigSDK {
     },
 
     /**
-     * Start a service or all services.
-     * @param name - Service name to start, or omit to start all services in the project
+     * Start a service.
+     * @param name - Service name to start
      */
     start: async (
-      name?: string,
+      name: string,
       options?: ServiceOperationOptions,
-    ): Promise<ServiceResponse | ServiceBulkResponse> => {
+    ): Promise<ServiceResponse> => {
       const flags = options ? this.buildFlags(options) : ''
-      const nameArg = name ?? ''
-      return this.run<ServiceResponse | ServiceBulkResponse>(
-        `services start ${nameArg} ${flags}`.trim(),
-      )
+      return this.run<ServiceResponse>(`services start ${name} ${flags}`.trim())
     },
 
     /**
-     * Stop a service or all services.
-     * @param name - Service name to stop, or omit to stop all services in the project
+     * Stop a service.
+     * @param name - Service name to stop
      */
     stop: async (
-      name?: string,
+      name: string,
       options?: ServiceOperationOptions,
-    ): Promise<ServiceResponse | ServiceBulkResponse> => {
+    ): Promise<ServiceResponse> => {
       const flags = options ? this.buildFlags(options) : ''
-      const nameArg = name ?? ''
-      return this.run<ServiceResponse | ServiceBulkResponse>(
-        `services stop ${nameArg} ${flags}`.trim(),
-      )
+      return this.run<ServiceResponse>(`services stop ${name} ${flags}`.trim())
     },
 
     /**
-     * Restart a service or all services.
-     * @param name - Service name to restart, or omit to restart all services in the project
+     * Restart a service.
+     * @param name - Service name to restart
      */
     restart: async (
-      name?: string,
+      name: string,
       options?: ServiceOperationOptions,
-    ): Promise<ServiceResponse | ServiceBulkResponse> => {
+    ): Promise<ServiceResponse> => {
       const flags = options ? this.buildFlags(options) : ''
-      const nameArg = name ?? ''
-      return this.run<ServiceResponse | ServiceBulkResponse>(
-        `services restart ${nameArg} ${flags}`.trim(),
+      return this.run<ServiceResponse>(
+        `services restart ${name} ${flags}`.trim(),
       )
     },
   }

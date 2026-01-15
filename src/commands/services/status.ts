@@ -9,12 +9,12 @@ export const servicesStatusCommand = new Command({
   name: 'services:status',
   description: 'Show status of a specific service',
   usage: 'services status <name> [--format table|json]',
-  example: 'services status api or services status marcqualie/api/dev',
+  example: 'services status api or services status marcqualie/denvig/hello',
   args: [
     {
       name: 'name',
       description:
-        'Service name or project/service path (e.g., hello or marcqualie/api/dev)',
+        'Service name or project/service path (e.g., hello or marcqualie/denvig/hello)',
       required: true,
       type: 'string',
     },
