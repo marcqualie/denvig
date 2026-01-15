@@ -4,21 +4,22 @@ import plugins from './plugins.ts'
 
 import type { DenvigProject } from './project.ts'
 
+// Re-export dependency types from shared types file
+export type {
+  Dependency as ProjectDependencySchema,
+  DependencyVersion as ProjectDependencyVersion,
+  OutdatedDependency as OutdatedDependencySchema,
+} from '../types/responses.ts'
+
+import type {
+  OutdatedDependency as OutdatedDependencySchema,
+  Dependency as ProjectDependencySchema,
+} from '../types/responses.ts'
+
 /**
- * Schema representing a dependency version with its resolved version string.
- *
- * @example
- * ```json
- * {
- *   "resolved": "18.1.1",
- *   "specifier": "^18.1",
- *   "source": "package.json#dependencies",
- *   "latest": "19.2.5",
- *   "wanted": "18.2.3",
- * }
- * ```
+ * Zod schema for dependency version validation.
  */
-export const ProjectDependencyVersion = z.object({
+export const ProjectDependencyVersionSchema = z.object({
   resolved: z.string().describe('The resolved version of the dependency'),
   specifier: z.string().describe('The version constraint/specifier used'),
   source: z.string().describe('The source file/path of the dependency'),
@@ -32,11 +33,14 @@ export const ProjectDependencyVersion = z.object({
     .optional(),
 })
 
-export const ProjectDependencySchema = z.object({
+/**
+ * Zod schema for project dependency validation.
+ */
+export const ProjectDependencyZodSchema = z.object({
   id: z.string().describe('Unique identifier for the ecosystem / dependency'),
   name: z.string().describe('Name of the dependency'),
   versions: z
-    .array(ProjectDependencyVersion)
+    .array(ProjectDependencyVersionSchema)
     .describe(
       'Map of resolved versions to sources. Each source maps a package path to its version specifier.',
     ),
@@ -45,9 +49,10 @@ export const ProjectDependencySchema = z.object({
     .describe('Ecosystem of the dependency (e.g., npm, rubygems, pip)'),
 })
 
-export type ProjectDependencySchema = z.infer<typeof ProjectDependencySchema>
-
-export const OutdatedDependencySchema = ProjectDependencySchema.extend({
+/**
+ * Zod schema for outdated dependency validation.
+ */
+export const OutdatedDependencyZodSchema = ProjectDependencyZodSchema.extend({
   wanted: z
     .string()
     .describe('Latest version compatible with the specifier (semver)'),
@@ -55,8 +60,6 @@ export const OutdatedDependencySchema = ProjectDependencySchema.extend({
   specifier: z.string().describe('The version specifier from package manifest'),
   isDevDependency: z.boolean().describe('Whether this is a dev dependency'),
 })
-
-export type OutdatedDependencySchema = z.infer<typeof OutdatedDependencySchema>
 
 /**
  * Deduplicate dependencies by id, merging versions arrays for duplicates.
