@@ -2,7 +2,9 @@ import {
   access,
   appendFile,
   mkdir,
+  readdir,
   readFile,
+  unlink,
   writeFile,
 } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -355,6 +357,79 @@ export class ServiceManager {
     return await Promise.all(
       bootstrappedServices.map((name) => this.restartService(name)),
     )
+  }
+
+  /**
+   * Teardown all services for this project.
+   * Stops all services, removes them from launchctl, and deletes plist files.
+   * @param options.removeLogs - Also remove log files (default: false)
+   */
+  async teardownAll(options?: {
+    removeLogs?: boolean
+  }): Promise<ServiceResult[]> {
+    const results: ServiceResult[] = []
+    const normalizedSlug = this.normalizeForLabel(this.project.slug)
+    const labelPrefix = `denvig.${normalizedSlug}__`
+    const successfullyRemovedLabels: string[] = []
+
+    // Get all denvig services for this project from launchctl
+    const allServices = await launchctl.list(labelPrefix)
+
+    // Bootout all services from launchctl
+    for (const service of allServices) {
+      const bootoutResult = await launchctl.bootout(service.label)
+      const serviceName = service.label.replace(labelPrefix, '')
+
+      if (!bootoutResult.success) {
+        results.push({
+          name: serviceName,
+          success: false,
+          message: `Failed to bootout: ${bootoutResult.output}`,
+        })
+      } else {
+        successfullyRemovedLabels.push(service.label)
+        results.push({
+          name: serviceName,
+          success: true,
+          message: 'Service removed from launchctl',
+        })
+      }
+    }
+
+    // Only remove plist files for services that were successfully booted out
+    const launchAgentsDir = resolve(homedir(), 'Library', 'LaunchAgents')
+    await Promise.all(
+      successfullyRemovedLabels.map(async (label) => {
+        try {
+          await unlink(resolve(launchAgentsDir, `${label}.plist`))
+        } catch {
+          // Ignore errors removing individual plist files
+        }
+      }),
+    )
+
+    // Optionally remove log files for successfully removed services
+    if (options?.removeLogs && successfullyRemovedLabels.length > 0) {
+      const logsDir = resolve(this.getDenvigHomeDir(), 'logs')
+
+      // Extract service names from labels (format: denvig.{slug}__{serviceName})
+      const serviceLogPrefixes = successfullyRemovedLabels.map((label) => {
+        // Label format: denvig.{normalizedSlug}__{serviceName}
+        // Log format: {normalizedSlug}__{serviceName}.log
+        return label.replace('denvig.', '')
+      })
+
+      await Promise.all(
+        serviceLogPrefixes.flatMap((prefix) => [
+          // Remove stdout log
+          unlink(resolve(logsDir, `${prefix}.log`)).catch(() => {}),
+          // Remove stderr log
+          unlink(resolve(logsDir, `${prefix}.error.log`)).catch(() => {}),
+        ]),
+      )
+    }
+
+    return results
   }
 
   /**

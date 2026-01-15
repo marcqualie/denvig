@@ -46,7 +46,14 @@ async function main() {
   }
 
   // Handle services subcommands (e.g., "services start" -> "services:start")
-  const servicesSubcommands = ['start', 'stop', 'restart', 'status', 'logs']
+  const servicesSubcommands = [
+    'start',
+    'stop',
+    'restart',
+    'status',
+    'logs',
+    'teardown',
+  ]
   if (commandName === 'services') {
     const subcommand = process.argv[3]
     if (subcommand && servicesSubcommands.includes(subcommand)) {
@@ -104,6 +111,9 @@ async function main() {
     './commands/services/status.ts'
   )
   const { logsCommand } = await import('./commands/services/logs.ts')
+  const { servicesTeardownCommand } = await import(
+    './commands/services/teardown.ts'
+  )
   const { internalsResourceHashCommand, internalsResourceIdCommand } =
     await import('./commands/internals.ts')
   const { depsListCommand } = await import('./commands/deps/list.ts')
@@ -124,6 +134,7 @@ async function main() {
     'services:restart': servicesRestartCommand,
     'services:status': servicesStatusCommand,
     'services:logs': logsCommand,
+    'services:teardown': servicesTeardownCommand,
     deps: depsListCommand,
     'deps:list': depsListCommand,
     'deps:outdated': depsOutdatedCommand,
