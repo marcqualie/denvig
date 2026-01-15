@@ -67,31 +67,24 @@ denvig deps --format json            # Output as JSON
 Manage background services defined in `.denvig.yml`. Services run via launchctl on macOS:
 
 ```shell
-denvig services               # List services and their status
-denvig services start         # Start all services
-denvig services stop          # Stop all services
-denvig services restart       # Restart all services
+denvig services               # List all services and their status
+denvig services start api     # Start a service
+denvig services stop api      # Stop a service
+denvig services restart api   # Restart a service
+denvig services status api    # Check status of a service
+denvig services logs api      # View service logs
 ```
 
-Target a specific service by name:
+Manage services from other projects using the full path:
 
 ```shell
-denvig services start api     # Start only the 'api' service
-denvig services status api    # Start only the 'api' service
-denvig services stop api      # Stop only the 'api' service
-denvig services restart api   # Restart only the 'api' service
-```
-
-Manage services globally from any directory:
-
-```shell
-denvig services start marcqualie/denvig/hello   # Start 'api' in marcqualie/denvig project
-denvig services status marcqualie/denvig/hello  # Check status of 'api' service
+denvig services start marcqualie/denvig/dev    # Start 'dev' service in marcqualie/denvig project
+denvig services status marcqualie/denvig/hello # Check status of 'hello' in marcqualie/denvig project
 ```
 
 See [docs/configuration.md](docs/configuration.md) for service configuration options.
 
-All services commands also accept `--format json` for programmatic output.
+All services commands accept `--format json` for programmatic output.
 
 
 
@@ -123,6 +116,36 @@ can be supported by using the per project configs.
 ## Troubleshooting
 
 For troubleshooting guides including service management, resource identification, and log browsing, see [docs/troubleshooting.md](docs/troubleshooting.md).
+
+
+
+## SDK
+
+Denvig can be used programmatically in TypeScript projects:
+
+```ts
+import { DenvigSDK } from 'denvig'
+
+const denvig = new DenvigSDK()
+
+// Services
+const services = await denvig.services.list()
+await denvig.services.start('api')
+await denvig.services.stop('api')
+
+// Dependencies
+const deps = await denvig.deps.list()
+const outdated = await denvig.deps.outdated({ semver: 'minor' })
+
+// Execute in context of another project
+await denvig.deps.outdated({ project: 'marcqualie/denvig' })
+```
+
+All response types are exported for TypeScript consumers:
+
+```ts
+import type { ServiceResponse, Dependency, OutdatedDependency } from 'denvig'
+```
 
 
 

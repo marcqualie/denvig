@@ -12,6 +12,7 @@
 
 ### Changed
 
+- **Breaking:** `services start`, `services stop`, `services restart` now require a service name (removed bulk operations)
 - Moved `logs` command to `services logs` for consistency with other services subcommands
 - Optimized `services` command performance by batching launchctl calls (O(n) to O(1))
 
