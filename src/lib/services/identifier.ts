@@ -10,8 +10,8 @@ export type ServiceIdentifier = {
  * Parse a service identifier string into project slug and service name.
  *
  * If the identifier contains a `/`, it's treated as `project/service` format
- * where project can be multi-level (e.g., `marcqualie/api/dev` means project
- * `marcqualie/api` and service `dev`).
+ * where project can be multi-level (e.g., `marcqualie/denvig/hello` means project
+ * `marcqualie/denvig` and service `hello`).
  *
  * If no `/`, uses the current project.
  */
