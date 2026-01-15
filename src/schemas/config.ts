@@ -45,65 +45,70 @@ export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
  *   clean:
  *     command: rf -rf dist
  */
-export const ProjectConfigSchema = z.object({
-  name: z.string().describe('Unique identifier for the project'),
-  actions: z
-    .record(
-      z.string().describe('Name of the action'),
-      z.object({
-        command: z.string().describe('Shell command to run for the action'),
-      }),
-    )
-    .optional()
-    .describe('Actions that can be run against the project'),
-  quickActions: z
-    .array(z.string())
-    .optional()
-    .describe('Actions that are available on the CLI root for quick access'),
-  services: z
-    .record(
-      z.string(),
-      z.object({
-        cwd: z
-          .string()
-          .optional()
-          .describe(
-            'Working directory for the service (relative to project root)',
-          ),
-        command: z.string().describe('Shell command to execute'),
-        http: z
+export const ProjectConfigSchema = z
+  .object({
+    name: z.string().describe('Unique identifier for the project'),
+    actions: z
+      .record(
+        z.string().describe('Name of the action'),
+        z.object({
+          command: z.string().describe('Shell command to run for the action'),
+        }),
+      )
+      .optional()
+      .describe('Actions that can be run against the project'),
+    quickActions: z
+      .array(z.string())
+      .optional()
+      .describe('Actions that are available on the CLI root for quick access'),
+    services: z
+      .record(
+        z.string(),
+        z
           .object({
-            port: z
-              .number()
-              .optional()
-              .describe('Port number the service listens on'),
-            domain: z
+            cwd: z
               .string()
               .optional()
-              .describe('Domain to use for the service URL'),
-            secure: z
+              .describe(
+                'Working directory for the service (relative to project root)',
+              ),
+            command: z.string().describe('Shell command to execute'),
+            http: z
+              .object({
+                port: z
+                  .number()
+                  .optional()
+                  .describe('Port number the service listens on'),
+                domain: z
+                  .string()
+                  .optional()
+                  .describe('Domain to use for the service URL'),
+                secure: z
+                  .boolean()
+                  .optional()
+                  .describe('Use HTTPS instead of HTTP'),
+              })
+              .strict()
+              .optional()
+              .describe('HTTP configuration for the service URL'),
+            envFile: z
+              .string()
+              .optional()
+              .describe('Path to .env file (relative to project root)'),
+            env: z
+              .record(z.string(), z.string())
+              .optional()
+              .describe('Environment variables'),
+            keepAlive: z
               .boolean()
               .optional()
-              .describe('Use HTTPS instead of HTTP'),
+              .describe('Restart service if it exits'),
           })
-          .optional()
-          .describe('HTTP configuration for the service URL'),
-        envFile: z
-          .string()
-          .optional()
-          .describe('Path to .env file (relative to project root)'),
-        env: z
-          .record(z.string(), z.string())
-          .optional()
-          .describe('Environment variables'),
-        keepAlive: z
-          .boolean()
-          .optional()
-          .describe('Restart service if it exits'),
-      }),
-    )
-    .optional()
-    .describe('Service that can be managed for this project'),
-})
+          .strict(),
+      )
+      .optional()
+      .describe('Service that can be managed for this project'),
+  })
+  .strict()
 
 export type ProjectConfigSchema = z.infer<typeof ProjectConfigSchema>

@@ -61,6 +61,9 @@ jobs:
       - name: Check version
         run: denvig version
 
+      - name: Verify config
+        run: denvig config verify
+
       - uses: oven-sh/setup-bun@v2
       - name: Compile binaries for all platforms
         run: denvig run compile

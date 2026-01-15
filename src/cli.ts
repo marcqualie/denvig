@@ -67,6 +67,17 @@ async function main() {
     }
   }
 
+  // Handle config subcommands (e.g., "config verify" -> "config:verify")
+  const configSubcommands = ['verify']
+  if (commandName === 'config') {
+    const subcommand = process.argv[3]
+    if (subcommand && configSubcommands.includes(subcommand)) {
+      commandName = `config:${subcommand}`
+      // Remove the subcommand from args so it's not treated as an argument
+      args = [process.argv[2], ...process.argv.slice(4)]
+    }
+  }
+
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions || []),
@@ -98,10 +109,12 @@ async function main() {
   const { depsListCommand } = await import('./commands/deps/list.ts')
   const { depsOutdatedCommand } = await import('./commands/deps/outdated.ts')
   const { depsWhyCommand } = await import('./commands/deps/why.ts')
+  const { configVerifyCommand } = await import('./commands/config/verify.ts')
 
   const commands = {
     run: runCommand,
     config: configCommand,
+    'config:verify': configVerifyCommand,
     plugins: pluginsCommand,
     version: versionCommand,
     info: infoCommand,
