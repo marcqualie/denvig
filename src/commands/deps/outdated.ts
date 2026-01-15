@@ -1,20 +1,6 @@
 import { Command } from '../../lib/command.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
-
-/**
- * Parse a semver version string into components.
- */
-const parseVersion = (
-  version: string,
-): { major: number; minor: number; patch: number } | null => {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/)
-  if (!match) return null
-  return {
-    major: Number.parseInt(match[1], 10),
-    minor: Number.parseInt(match[2], 10),
-    patch: Number.parseInt(match[3], 10),
-  }
-}
+import { getSemverLevel, matchesSemverFilter } from '../../lib/semver.ts'
 
 /**
  * Get the color for a version update based on semver difference.
@@ -26,65 +12,14 @@ const parseVersion = (
 const getVersionColor = (current: string, target: string): string => {
   if (current === target) return COLORS.white
 
-  const currentParsed = parseVersion(current)
-  const targetParsed = parseVersion(target)
+  const level = getSemverLevel(current, target)
+  if (!level) return COLORS.white
 
-  if (!currentParsed || !targetParsed) return COLORS.white
-
-  if (targetParsed.major !== currentParsed.major) {
-    return COLORS.red
-  }
-  if (targetParsed.minor !== currentParsed.minor) {
-    return COLORS.yellow
-  }
-  if (targetParsed.patch !== currentParsed.patch) {
-    return COLORS.green
-  }
+  if (level === 'major') return COLORS.red
+  if (level === 'minor') return COLORS.yellow
+  if (level === 'patch') return COLORS.green
 
   return COLORS.white
-}
-
-/**
- * Get the semver update level between two versions.
- * Returns 'major', 'minor', 'patch', or null if versions match or can't be parsed.
- */
-const getSemverLevel = (
-  current: string,
-  target: string,
-): 'major' | 'minor' | 'patch' | null => {
-  if (current === target) return null
-
-  const currentParsed = parseVersion(current)
-  const targetParsed = parseVersion(target)
-
-  if (!currentParsed || !targetParsed) return null
-
-  if (targetParsed.major !== currentParsed.major) {
-    return 'major'
-  }
-  if (targetParsed.minor !== currentParsed.minor) {
-    return 'minor'
-  }
-  if (targetParsed.patch !== currentParsed.patch) {
-    return 'patch'
-  }
-
-  return null
-}
-
-/**
- * Check if a semver level matches the filter.
- * - 'patch': only patch updates match
- * - 'minor': minor and patch updates match
- */
-const matchesSemverFilter = (
-  level: 'major' | 'minor' | 'patch' | null,
-  filter: 'patch' | 'minor',
-): boolean => {
-  if (level === null) return false
-  if (filter === 'patch') return level === 'patch'
-  if (filter === 'minor') return level === 'patch' || level === 'minor'
-  return false
 }
 
 export const depsOutdatedCommand = new Command({
@@ -151,10 +86,10 @@ export const depsOutdatedCommand = new Command({
       entries = entries.filter((dep) => dep.ecosystem === ecosystemFilter)
     }
 
-    // Filter by semver level if specified
+    // Filter by semver level if specified (compare against latest version)
     if (semverFilter) {
       entries = entries.filter((dep) => {
-        const level = getSemverLevel(getCurrent(dep), dep.wanted)
+        const level = getSemverLevel(getCurrent(dep), dep.latest)
         return matchesSemverFilter(level, semverFilter)
       })
     }
