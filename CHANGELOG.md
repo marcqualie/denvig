@@ -11,6 +11,11 @@
 
 - Optimized `services` command performance by batching launchctl calls (O(n) to O(1))
 
+### Fixed
+
+- Fixed `--semver` filter in `deps:outdated` comparing against `wanted` instead of `latest` version
+- Replaced custom semver parsing with `semver` npm package for more robust version comparison
+
 
 ## [0.4.0] - 2026-01-13
 
