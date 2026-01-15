@@ -80,6 +80,8 @@ export type ServiceOperationOptions = {
 }
 
 export type DepsListOptions = {
+  /** Execute in the context of a specific project */
+  project?: string
   /** Show subdependencies up to N levels deep */
   depth?: number
   /** Filter to a specific ecosystem (e.g., npm, rubygems, pypi) */
@@ -87,6 +89,8 @@ export type DepsListOptions = {
 }
 
 export type DepsOutdatedOptions = {
+  /** Execute in the context of a specific project */
+  project?: string
   /** Skip cache and fetch fresh data from registry */
   noCache?: boolean
   /** Filter by semver level: "patch" for patch updates only, "minor" for minor and patch updates */
