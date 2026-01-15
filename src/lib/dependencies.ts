@@ -85,14 +85,15 @@ export const dedupeDependencies = (
 export const detectDependencies = async (
   project: DenvigProject,
 ): Promise<ProjectDependencySchema[]> => {
-  const allDependencies: ProjectDependencySchema[] = []
+  // Run all plugin dependency detections in parallel
+  const pluginResults = await Promise.all(
+    Object.values(plugins).map((plugin) =>
+      plugin.dependencies ? plugin.dependencies(project) : Promise.resolve([]),
+    ),
+  )
 
-  for (const [_key, plugin] of Object.entries(plugins)) {
-    const pluginDeps = plugin.dependencies
-      ? await plugin.dependencies(project)
-      : []
-    allDependencies.push(...pluginDeps)
-  }
+  // Flatten all results into a single array
+  const allDependencies = pluginResults.flat()
 
   return dedupeDependencies(allDependencies)
 }
