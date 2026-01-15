@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Moved `logs` command to `services logs` for consistency with other services subcommands
 - Optimized `services` command performance by batching launchctl calls (O(n) to O(1))
 
 ### Fixed

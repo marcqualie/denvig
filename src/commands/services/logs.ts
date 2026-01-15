@@ -1,14 +1,14 @@
 import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
-import { Command } from '../lib/command.ts'
-import { ServiceManager } from '../lib/services/manager.ts'
+import { Command } from '../../lib/command.ts'
+import { ServiceManager } from '../../lib/services/manager.ts'
 
 export const logsCommand = new Command({
-  name: 'logs',
+  name: 'services:logs',
   description: 'Show logs for a service',
-  usage: 'logs <name> [-n <lines>] [--follow]',
-  example: 'logs api -n 50 --follow',
+  usage: 'services logs <name> [-n <lines>] [--follow]',
+  example: 'services logs api -n 50 --follow',
   args: [
     {
       name: 'name',

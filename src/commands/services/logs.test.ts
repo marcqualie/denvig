@@ -1,7 +1,7 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { DenvigProject } from '../lib/project.ts'
+import { DenvigProject } from '../../lib/project.ts'
 import { logsCommand } from './logs.ts'
 
 describe('logsCommand', () => {
