@@ -1,6 +1,14 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- `services teardown` command to stop all services and remove them from launchctl (factory reset)
+- `--global` flag for `services teardown` to teardown all denvig services across all projects
+
+
 ## [v0.4.1] - 2026-01-15
 
 ### Added
