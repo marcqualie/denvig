@@ -1,5 +1,6 @@
 import { Command } from '../../lib/command.ts'
 import { getServiceContext } from '../../lib/services/identifier.ts'
+import launchctl from '../../lib/services/launchctl.ts'
 import {
   ServiceManager,
   type ServiceResponse,
@@ -99,8 +100,13 @@ export const servicesStopCommand = new Command({
     const serviceResponses: ServiceResponse[] = []
     let hasErrors = false
 
+    // Pre-fetch launchctl list once for batch lookup
+    const launchctlList = await launchctl.list('denvig.')
+
     for (const result of results) {
-      const response = await manager.getServiceResponse(result.name)
+      const response = await manager.getServiceResponse(result.name, {
+        launchctlList,
+      })
 
       if (!response) {
         continue

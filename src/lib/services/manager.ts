@@ -339,13 +339,11 @@ export class ServiceManager {
    */
   async startAll(): Promise<ServiceResult[]> {
     const services = this.project.config.services || {}
-    const results: ServiceResult[] = []
+    const serviceNames = Object.keys(services)
 
-    for (const name of Object.keys(services)) {
-      results.push(await this.startService(name))
-    }
-
-    return results
+    return await Promise.all(
+      serviceNames.map((name) => this.startService(name)),
+    )
   }
 
   /**
@@ -353,16 +351,25 @@ export class ServiceManager {
    */
   async stopAll(): Promise<ServiceResult[]> {
     const services = this.project.config.services || {}
-    const results: ServiceResult[] = []
+    const serviceNames = Object.keys(services)
 
-    for (const name of Object.keys(services)) {
-      const isBootstrapped = await this.isServiceBootstrapped(name)
-      if (isBootstrapped) {
-        results.push(await this.stopService(name))
-      }
-    }
+    // First, check which services are bootstrapped (in parallel)
+    const bootstrapChecks = await Promise.all(
+      serviceNames.map(async (name) => ({
+        name,
+        isBootstrapped: await this.isServiceBootstrapped(name),
+      })),
+    )
 
-    return results
+    // Filter to only bootstrapped services
+    const bootstrappedServices = bootstrapChecks
+      .filter((check) => check.isBootstrapped)
+      .map((check) => check.name)
+
+    // Stop all bootstrapped services in parallel
+    return await Promise.all(
+      bootstrappedServices.map((name) => this.stopService(name)),
+    )
   }
 
   /**
@@ -370,16 +377,25 @@ export class ServiceManager {
    */
   async restartAll(): Promise<ServiceResult[]> {
     const services = this.project.config.services || {}
-    const results: ServiceResult[] = []
+    const serviceNames = Object.keys(services)
 
-    for (const name of Object.keys(services)) {
-      const isBootstrapped = await this.isServiceBootstrapped(name)
-      if (isBootstrapped) {
-        results.push(await this.restartService(name))
-      }
-    }
+    // First, check which services are bootstrapped (in parallel)
+    const bootstrapChecks = await Promise.all(
+      serviceNames.map(async (name) => ({
+        name,
+        isBootstrapped: await this.isServiceBootstrapped(name),
+      })),
+    )
 
-    return results
+    // Filter to only bootstrapped services
+    const bootstrappedServices = bootstrapChecks
+      .filter((check) => check.isBootstrapped)
+      .map((check) => check.name)
+
+    // Restart all bootstrapped services in parallel
+    return await Promise.all(
+      bootstrappedServices.map((name) => this.restartService(name)),
+    )
   }
 
   /**

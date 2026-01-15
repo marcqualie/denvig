@@ -7,6 +7,9 @@ import { parseUvDependencies } from '../lib/uv/parse.ts'
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
 
+// Cache for parsed dependencies by project path
+const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
+
 const plugin = definePlugin({
   name: 'uv',
 
@@ -35,7 +38,19 @@ const plugin = definePlugin({
     if (!hasPyProject && !hasUvLock) {
       return []
     }
-    return parseUvDependencies(project)
+
+    // Return cached result if available
+    const cached = dependenciesCache.get(project.path)
+    if (cached) {
+      return cached
+    }
+
+    const result = await parseUvDependencies(project)
+
+    // Cache the result for subsequent calls
+    dependenciesCache.set(project.path, result)
+
+    return result
   },
 
   outdatedDependencies: async (project, options) => {
