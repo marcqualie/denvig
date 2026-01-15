@@ -15,63 +15,22 @@ import { generatePlist } from './plist.ts'
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
 import type { DenvigProject } from '../project.ts'
 
+// Re-export service types from shared types file
+export type {
+  ServiceInfo,
+  ServiceResponse,
+  ServiceResult,
+  ServiceStatus,
+} from '../../types/responses.ts'
+
+import type {
+  ServiceInfo,
+  ServiceResponse,
+  ServiceResult,
+  ServiceStatus,
+} from '../../types/responses.ts'
+
 type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
-
-/**
- * Service information for display.
- */
-export type ServiceInfo = {
-  name: string
-  cwd: string
-  command: string
-  http?: {
-    port?: number
-    domain?: string
-    secure?: boolean
-  }
-}
-
-/**
- * Result of a service operation.
- */
-export type ServiceResult = {
-  name: string
-  success: boolean
-  message: string
-}
-
-/**
- * Status of a running service.
- */
-export type ServiceStatus = {
-  name: string
-  running: boolean
-  pid?: number
-  uptime?: string
-  command: string
-  cwd: string
-  logs?: string[]
-  logPath: string
-  lastExitCode?: number
-}
-
-/**
- * Unified service response for all service commands.
- * Used by list, status, start, stop, and restart commands.
- */
-export type ServiceResponse = {
-  name: string
-  project: string
-  status: 'running' | 'error' | 'stopped'
-  pid: number | null
-  url: string | null
-  command: string
-  cwd: string
-  logPath: string
-  envFile: string | null
-  lastExitCode: number | null
-  logs?: string[]
-}
 
 /**
  * Manager for project services.

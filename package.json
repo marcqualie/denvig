@@ -7,6 +7,21 @@
     "denvig": "./dist/cli.cjs"
   },
   "type": "module",
+  "main": "./dist/sdk.cjs",
+  "module": "./dist/sdk.js",
+  "types": "./dist/sdk.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.js"
+      },
+      "require": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.cjs"
+      }
+    }
+  },
   "files": [
     "dist/",
     "LICENSE",
