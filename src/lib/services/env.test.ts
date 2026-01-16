@@ -112,6 +112,88 @@ describe('parseEnvContent()', () => {
       KEY2: 'value2',
     })
   })
+
+  it('should strip inline comments from unquoted values', () => {
+    const content = 'KEY=VALUE # this is a comment'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY: 'VALUE',
+    })
+  })
+
+  it('should strip inline comments without space before #', () => {
+    const content = 'KEY=VALUE#comment'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY: 'VALUE',
+    })
+  })
+
+  it('should preserve # in double quoted values', () => {
+    const content = 'KEY="VALUE # not a comment"'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY: 'VALUE # not a comment',
+    })
+  })
+
+  it('should preserve # in single quoted values', () => {
+    const content = "KEY='VALUE # not a comment'"
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY: 'VALUE # not a comment',
+    })
+  })
+
+  it('should handle URL with fragment in quoted value', () => {
+    const content = 'URL="https://example.com/path#fragment"'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      URL: 'https://example.com/path#fragment',
+    })
+  })
+
+  it('should strip comment from URL without quotes', () => {
+    const content = 'URL=https://example.com/path # API endpoint'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      URL: 'https://example.com/path',
+    })
+  })
+
+  it('should handle multiple inline comments', () => {
+    const content = 'KEY1=value1 # comment1\nKEY2=value2 # comment2'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY1: 'value1',
+      KEY2: 'value2',
+    })
+  })
+
+  it('should strip comment after double quoted value', () => {
+    const content = 'KEY="value" # this is a comment'
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY: 'value',
+    })
+  })
+
+  it('should strip comment after single quoted value', () => {
+    const content = "KEY='value' # this is a comment"
+    const result = parseEnvContent(content)
+
+    deepStrictEqual(result, {
+      KEY: 'value',
+    })
+  })
 })
 
 describe('parseEnvFile()', () => {

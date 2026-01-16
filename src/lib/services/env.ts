@@ -34,12 +34,29 @@ export function parseEnvContent(content: string): Record<string, string> {
     const key = line.slice(0, separatorIndex).trim()
     let value = line.slice(separatorIndex + 1).trim()
 
-    // Handle quoted values
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1)
+    // Handle quoted values - preserve # inside quotes
+    const startsWithDouble = value.startsWith('"')
+    const startsWithSingle = value.startsWith("'")
+
+    if (startsWithDouble || startsWithSingle) {
+      const quoteChar = startsWithDouble ? '"' : "'"
+      const closingQuoteIndex = value.indexOf(quoteChar, 1)
+      if (closingQuoteIndex !== -1) {
+        // Extract content between quotes
+        value = value.slice(1, closingQuoteIndex)
+      } else {
+        // No closing quote - treat as unquoted, strip comments
+        const commentIndex = value.indexOf('#')
+        if (commentIndex !== -1) {
+          value = value.slice(0, commentIndex).trim()
+        }
+      }
+    } else {
+      // Strip inline comments from unquoted values
+      const commentIndex = value.indexOf('#')
+      if (commentIndex !== -1) {
+        value = value.slice(0, commentIndex).trim()
+      }
     }
 
     if (key) {
