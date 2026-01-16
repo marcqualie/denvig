@@ -8,6 +8,10 @@
 - `services teardown` command to stop all services and remove them from launchctl (factory reset)
 - `--global` flag for `services teardown` to teardown all denvig services across all projects
 
+### Fixed
+
+- Fixed env file parsing to strip inline comments (e.g., `KEY=VALUE # comment` now correctly parses as `VALUE`)
+
 
 ## [v0.4.1] - 2026-01-15
 
