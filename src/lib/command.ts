@@ -11,6 +11,10 @@ type CommandOptions<
   args: ArgDefinitions
   flags: FlagDefinitions
   handler: CommandHandler<ArgDefinitions, FlagDefinitions>
+  completions?: (
+    context: { project: DenvigProject },
+    inputs: string[],
+  ) => string[] | Promise<string[]>
 }
 
 type ArgDefinition = {
@@ -67,6 +71,10 @@ export class Command<
   args: ArgDefinitions
   flags: FlagDefinitions
   handler: CommandHandler<ArgDefinitions, FlagDefinition[]>
+  completions?: (
+    context: { project: DenvigProject },
+    inputs: string[],
+  ) => string[] | Promise<string[]>
 
   constructor(options: CommandOptions<ArgDefinitions, FlagDefinitions>) {
     this.name = options.name
@@ -76,6 +84,7 @@ export class Command<
     this.args = options.args
     this.flags = options.flags
     this.handler = options.handler
+    this.completions = options.completions
   }
 
   async run(

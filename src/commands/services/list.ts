@@ -34,6 +34,9 @@ export const servicesCommand = new Command({
       defaultValue: 'table',
     },
   ],
+  completions: ({ project }, inputs) => {
+    return []
+  },
   handler: async ({ project, flags }) => {
     const format = flags.format as string
     const currentProjectSlug = project.slug
