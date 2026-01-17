@@ -34,8 +34,8 @@
     "prepublishOnly": "npm run build",
     "lint": "biome check",
     "lint:fix": "biome check --fix",
-    "test": "node --test --test-skip-pattern='node_modules' src/**/*.test.ts",
-    "test:ci": "node --test --test-skip-pattern='node_modules' src/**/*.test.ts --reporter=default",
+    "test": "node --test --test-skip-pattern='node_modules' 'src/**/*.test.ts'",
+    "test:ci": "node --test --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default",
     "dev": "tsc --watch"
   },
   "dependencies": {
