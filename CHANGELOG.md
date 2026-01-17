@@ -1,7 +1,7 @@
 # Denvig Changelog
 
 
-## [Unreleased]
+## [v0.4.2] - 2026-01-17
 
 ### Added
 
