@@ -12,7 +12,7 @@ export const zshCompleteCommand = new Command({
   example: 'denvig zsh __complete__ -- denvig services',
   args: [],
   flags: [],
-  handler: async ({ project, extraArgs }) => {
+  handler: async ({ project, extraArgs = [] }) => {
     // Get the words passed after --
     const words = extraArgs
 
