@@ -2,16 +2,23 @@ import fs from 'node:fs'
 
 import { getGlobalConfig } from './config.ts'
 
+export type ListProjectsOptions = {
+  /** Only include projects with a .denvig.yml configuration file */
+  withConfig?: boolean
+}
+
 /**
- * List all projects that have a .denvig.yml configuration file.
+ * List all projects in the codeRootDir.
  * Projects are detected at [codeRootDir]/[workspace]/[repo].
  *
+ * @param options - Optional filters for project listing
  * @returns Array of project slugs in the format "workspace/repo"
  */
-export const listProjects = (): string[] => {
+export const listProjects = (options?: ListProjectsOptions): string[] => {
   const globalConfig = getGlobalConfig()
   const codeRootDir = globalConfig.codeRootDir
   const projects: string[] = []
+  const withConfig = options?.withConfig ?? false
 
   // Check if codeRootDir exists
   if (!fs.existsSync(codeRootDir)) {
@@ -35,12 +42,15 @@ export const listProjects = (): string[] => {
       if (repo.name.startsWith('.')) continue
 
       const repoPath = `${workspacePath}/${repo.name}`
-      const configPath = `${repoPath}/.denvig.yml`
 
-      // Only include projects with a .denvig.yml file
-      if (fs.existsSync(configPath)) {
-        projects.push(`${workspace.name}/${repo.name}`)
+      if (withConfig) {
+        const configPath = `${repoPath}/.denvig.yml`
+        if (!fs.existsSync(configPath)) {
+          continue
+        }
       }
+
+      projects.push(`${workspace.name}/${repo.name}`)
     }
   }
 

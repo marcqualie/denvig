@@ -5,6 +5,7 @@
 
 ### Added
 
+- `projects list` command to list all projects on the system with optional `--format json` and `--with-config` flags
 - `services teardown` command to stop all services and remove them from launchctl (factory reset)
 - `--global` flag for `services teardown` to teardown all denvig services across all projects
 

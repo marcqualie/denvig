@@ -85,6 +85,17 @@ async function main() {
     }
   }
 
+  // Handle projects subcommands (e.g., "projects list" -> "projects:list")
+  const projectsSubcommands = ['list']
+  if (commandName === 'projects') {
+    const subcommand = process.argv[3]
+    if (subcommand && projectsSubcommands.includes(subcommand)) {
+      commandName = `projects:${subcommand}`
+      // Remove the subcommand from args so it's not treated as an argument
+      args = [process.argv[2], ...process.argv.slice(4)]
+    }
+  }
+
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions || []),
@@ -120,6 +131,7 @@ async function main() {
   const { depsOutdatedCommand } = await import('./commands/deps/outdated.ts')
   const { depsWhyCommand } = await import('./commands/deps/why.ts')
   const { configVerifyCommand } = await import('./commands/config/verify.ts')
+  const { projectsListCommand } = await import('./commands/projects/list.ts')
 
   const commands = {
     run: runCommand,
@@ -141,6 +153,8 @@ async function main() {
     'deps:why': depsWhyCommand,
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
+    projects: projectsListCommand,
+    'projects:list': projectsListCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]
