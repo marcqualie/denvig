@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: bin/prepare-release <tag>"
+  echo "Example: bin/prepare-release v0.4.2"
+  exit 1
+fi
+
+TAG="$1"
+
+# Validate tag format (must start with 'v' followed by semver)
+if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Error: Tag must be in format vX.Y.Z (e.g., v0.4.2)"
+  exit 1
+fi
+
+# Extract version without 'v' prefix
+VERSION="${TAG#v}"
+
+# Get today's date in YYYY-MM-DD format
+DATE=$(date +%Y-%m-%d)
+
+echo "Preparing release $TAG ($DATE)"
+
+# Update package.json version
+# Using node for cross-platform JSON manipulation
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+pkg.version = '$VERSION';
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+"
+echo "Updated package.json version to $VERSION"
+
+# Update CHANGELOG.md - replace [Unreleased] with [tag] - date
+sed -i.bak "s/## \[Unreleased\]/## [$TAG] - $DATE/" CHANGELOG.md && rm CHANGELOG.md.bak
+echo "Updated CHANGELOG.md [Unreleased] to [$TAG] - $DATE"
+
+echo "Done! Review changes and commit when ready."
