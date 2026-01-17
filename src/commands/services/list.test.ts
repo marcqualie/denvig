@@ -1,7 +1,7 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { servicesCommand } from './services.ts'
+import { servicesCommand } from './list.ts'
 
 describe('servicesCommand', () => {
   it('should be defined', () => {
