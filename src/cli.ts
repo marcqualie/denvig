@@ -96,6 +96,17 @@ async function main() {
     }
   }
 
+  // Handle zsh subcommands (e.g., "zsh completions" -> "zsh:completions")
+  const zshSubcommands = ['completions', '__complete__']
+  if (commandName === 'zsh') {
+    const subcommand = process.argv[3]
+    if (subcommand && zshSubcommands.includes(subcommand)) {
+      commandName = `zsh:${subcommand}`
+      // Remove the subcommand from args so it's not treated as an argument
+      args = [process.argv[2], ...process.argv.slice(4)]
+    }
+  }
+
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions || []),
@@ -132,6 +143,11 @@ async function main() {
   const { depsWhyCommand } = await import('./commands/deps/why.ts')
   const { configVerifyCommand } = await import('./commands/config/verify.ts')
   const { projectsListCommand } = await import('./commands/projects/list.ts')
+  const { zshCommand } = await import('./commands/zsh.ts')
+  const { zshCompletionsCommand } = await import(
+    './commands/zsh/completions.ts'
+  )
+  const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
 
   const commands = {
     run: runCommand,
@@ -155,6 +171,9 @@ async function main() {
     'internals:resource-id': internalsResourceIdCommand,
     projects: projectsListCommand,
     'projects:list': projectsListCommand,
+    zsh: zshCommand,
+    'zsh:completions': zshCompletionsCommand,
+    'zsh:__complete__': zshCompleteCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]

@@ -22,6 +22,17 @@ npm install -g denvig
 After installation, the `denvig` command will be available in your terminal.
 
 
+### Zsh Completions
+
+Enable tab completions for zsh:
+
+```shell
+denvig zsh completions --install
+```
+
+Follow the instructions to add the completions directory to your fpath if needed, then restart your shell.
+
+
 
 ## Commands
 

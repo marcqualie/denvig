@@ -1,6 +1,19 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- `zsh completions` command to output or install zsh shell completion script
+- `zsh __complete__` dynamic completion endpoint for context-aware tab completions
+- Tab completion support for commands, subcommands, services, actions, and quick actions
+
+### Fixed
+
+- Fixed `bin/denvig-dev` script to properly preserve quoted arguments
+
+
 ## [v0.4.2] - 2026-01-17
 
 ### Added
