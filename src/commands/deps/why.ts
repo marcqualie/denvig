@@ -25,6 +25,10 @@ export const depsWhyCommand = new Command({
     },
   ],
   flags: [],
+  completions: async ({ project }) => {
+    const dependencies = await project.dependencies()
+    return dependencies.map((d) => d.name)
+  },
   handler: async ({ project, args }) => {
     const dependencyName = args.dependency as string
     const allDependencies = await project.dependencies()

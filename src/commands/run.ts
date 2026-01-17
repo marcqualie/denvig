@@ -18,6 +18,10 @@ export const runCommand = new Command({
     },
   ],
   flags: [],
+  completions: async ({ project }) => {
+    const actions = await project.actions
+    return Object.keys(actions)
+  },
   handler: async ({ project, args, extraArgs = [] }) => {
     const actions = await project.actions
 
