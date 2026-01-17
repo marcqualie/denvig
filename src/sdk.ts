@@ -1,6 +1,7 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 
+export type { ProjectConfigSchema } from './schemas/config.ts'
 /**
  * Re-exported types from shared types file.
  * These are the single source of truth for CLI JSON responses.
@@ -10,6 +11,7 @@ export type {
   Dependency,
   DependencyVersion,
   OutdatedDependency,
+  ProjectResponse,
   ServiceInfo,
   ServiceResponse,
   ServiceResult,
@@ -19,6 +21,7 @@ export type {
 import type {
   Dependency,
   OutdatedDependency,
+  ProjectResponse,
   ServiceResponse,
 } from './types/responses.ts'
 
@@ -88,6 +91,11 @@ export type DepsOutdatedOptions = {
   semver?: 'patch' | 'minor'
   /** Filter to a specific ecosystem (e.g., npm, rubygems, pypi) */
   ecosystem?: string
+}
+
+export type ProjectsListOptions = {
+  /** Only include projects with a .denvig.yml configuration file */
+  withConfig?: boolean
 }
 
 /**
@@ -311,6 +319,19 @@ export class DenvigSDK {
     ): Promise<OutdatedDependency[]> => {
       const flags = options ? this.buildFlags(options) : ''
       return this.run<OutdatedDependency[]>(`deps outdated ${flags}`.trim())
+    },
+  }
+
+  /**
+   * Project management commands.
+   */
+  projects = {
+    /**
+     * List all projects on the system.
+     */
+    list: async (options?: ProjectsListOptions): Promise<ProjectResponse[]> => {
+      const flags = options ? this.buildFlags(options) : ''
+      return this.run<ProjectResponse[]>(`projects list ${flags}`.trim())
     },
   }
 }

@@ -4,6 +4,8 @@
  * @module
  */
 
+import type { ProjectConfigSchema } from '../schemas/config.ts'
+
 /**
  * Service information for display.
  */
@@ -89,4 +91,14 @@ export type OutdatedDependency = Dependency & {
   latest: string
   specifier: string
   isDevDependency: boolean
+}
+
+/**
+ * A project from projects:list command.
+ */
+export type ProjectResponse = {
+  slug: string
+  name: string
+  path: string
+  config: ProjectConfigSchema | null
 }
