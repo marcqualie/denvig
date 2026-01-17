@@ -12,7 +12,7 @@ describe('servicesRestartCommand', () => {
   it('should have correct usage', () => {
     ok(
       servicesRestartCommand.usage ===
-        'services restart [name] [--format table|json]',
+        'services restart <name> [--format table|json]',
     )
   })
 
