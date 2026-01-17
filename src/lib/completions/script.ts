@@ -5,17 +5,14 @@
 export const zshCompletionScript = `#compdef denvig
 
 _denvig() {
-  local completions
-  # Pass current words and cursor position to denvig
-  completions=$(denvig zsh __complete__ -- "\${words[*]}" "$CURRENT" 2>/dev/null)
+  local -a completions
+  local val desc
 
-  local -a opts
+  # Get completions from denvig
   while IFS=: read -r val desc; do
-    [[ -n "$val" ]] && opts+=("$val:$desc")
-  done <<< "$completions"
+    [[ -n "$val" ]] && completions+=("$val")
+  done < <(denvig zsh __complete__ -- "\${words[*]}" "\${CURRENT}" 2>/dev/null)
 
-  _describe 'command' opts
+  (( \${#completions} )) && compadd -a completions
 }
-
-_denvig "$@"
 `

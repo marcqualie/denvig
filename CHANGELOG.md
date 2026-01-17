@@ -12,6 +12,7 @@
 ### Fixed
 
 - Fixed `bin/denvig-dev` script to properly preserve quoted arguments
+- Fixed zsh completion script executing during compinit which caused subcommand completions to fail
 
 
 ## [v0.4.2] - 2026-01-17
