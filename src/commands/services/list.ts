@@ -1,12 +1,12 @@
-import { Command } from '../lib/command.ts'
-import { formatTable } from '../lib/formatters/table.ts'
-import { DenvigProject } from '../lib/project.ts'
-import { listProjects } from '../lib/projects.ts'
-import launchctl from '../lib/services/launchctl.ts'
+import { Command } from '../../lib/command.ts'
+import { formatTable } from '../../lib/formatters/table.ts'
+import { DenvigProject } from '../../lib/project.ts'
+import { listProjects } from '../../lib/projects.ts'
+import launchctl from '../../lib/services/launchctl.ts'
 import {
   ServiceManager,
   type ServiceResponse,
-} from '../lib/services/manager.ts'
+} from '../../lib/services/manager.ts'
 
 const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   switch (status) {

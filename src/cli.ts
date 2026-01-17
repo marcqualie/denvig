@@ -112,7 +112,7 @@ async function main() {
   const { pluginsCommand } = await import('./commands/plugins.ts')
   const { versionCommand } = await import('./commands/version.ts')
   const { infoCommand } = await import('./commands/info.ts')
-  const { servicesCommand } = await import('./commands/services.ts')
+  const { servicesCommand } = await import('./commands/services/list.ts')
   const { servicesStartCommand } = await import('./commands/services/start.ts')
   const { servicesStopCommand } = await import('./commands/services/stop.ts')
   const { servicesRestartCommand } = await import(
