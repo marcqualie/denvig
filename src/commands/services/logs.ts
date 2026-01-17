@@ -33,6 +33,9 @@ export const logsCommand = new Command({
       defaultValue: false,
     },
   ],
+  completions: ({ project }) => {
+    return Object.keys(project.services)
+  },
   handler: async ({ project, args, flags }) => {
     const manager = new ServiceManager(project)
     const name = args.name as string

@@ -28,6 +28,9 @@ export const servicesStatusCommand = new Command({
       defaultValue: 'table',
     },
   ],
+  completions: ({ project }) => {
+    return Object.keys(project.services)
+  },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
     const format = flags.format as string

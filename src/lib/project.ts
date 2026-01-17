@@ -88,6 +88,13 @@ export class DenvigProject {
   }
 
   /**
+   *  Return all services defined in the project configuration.
+   */
+  get services() {
+    return this.config.services || {}
+  }
+
+  /**
    * List all files in the root of a project.
    * Cached on first access to avoid repeated filesystem calls.
    */

@@ -26,6 +26,12 @@ export const servicesStartCommand = new Command({
       defaultValue: 'table',
     },
   ],
+  completions: ({ project }, inputs) => {
+    const services = project.services
+    return Object.entries(services).flatMap(([serviceName, serviceConfig]) => {
+      return serviceName
+    })
+  },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
     const format = flags.format as string

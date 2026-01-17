@@ -1,6 +1,14 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- `zsh completions` command to output zsh completion script
+- `zsh __complete__` command to handle runtime completion requests
+
+
 ## [v0.4.2] - 2026-01-17
 
 ### Added
