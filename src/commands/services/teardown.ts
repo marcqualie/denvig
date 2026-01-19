@@ -85,7 +85,7 @@ async function teardownGlobal(options?: {
 export const servicesTeardownCommand = new Command({
   name: 'services:teardown',
   description: 'Stop all services and remove them from launchctl',
-  usage: 'services teardown [--global] [--remove-logs] [--format table|json]',
+  usage: 'services teardown [--global] [--remove-logs]',
   example: 'services teardown',
   args: [],
   flags: [
@@ -102,13 +102,6 @@ export const servicesTeardownCommand = new Command({
       required: false,
       type: 'boolean',
       defaultValue: false,
-    },
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
     },
   ],
   handler: async ({ project, flags }) => {

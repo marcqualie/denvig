@@ -10,9 +10,6 @@ describe('servicesStartCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(
-      servicesStartCommand.usage ===
-        'services start <name> [--format table|json]',
-    )
+    ok(servicesStartCommand.usage === 'services start <name>')
   })
 })

@@ -18,6 +18,13 @@ const globalFlags = [
     type: 'string',
     defaultValue: undefined,
   },
+  {
+    name: 'format',
+    description: 'Output format: table or json (default: table)',
+    required: false,
+    type: 'string',
+    defaultValue: 'table',
+  },
 ]
 
 // Main CLI execution
@@ -210,7 +217,9 @@ async function main() {
       }
       return acc
     },
-    {} as Record<string, string | number | boolean>,
+    { format: 'table' } as Record<string, string | number | boolean> & {
+      format: string
+    },
   )
 
   // Extract unrecognized flags and convert them to command line arguments

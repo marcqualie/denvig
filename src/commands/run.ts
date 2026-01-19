@@ -22,10 +22,15 @@ export const runCommand = new Command({
     const actions = await project.actions
     return Object.keys(actions)
   },
-  handler: async ({ project, args, extraArgs = [] }) => {
+  handler: async ({ project, args, flags, extraArgs = [] }) => {
     const actions = await project.actions
 
     if (!args.action) {
+      if (flags.format === 'json') {
+        console.log(JSON.stringify({ actions }))
+        return { success: true, message: 'Actions listed.' }
+      }
+
       console.log(`Denvig v${getDenvigVersion()}`)
       console.log('')
       console.log('Usage: denvig run [action] [...actionArgs]')

@@ -7,7 +7,7 @@ export const infoCommand = new Command({
   example: 'denvig info',
   args: [],
   flags: [],
-  handler: async ({ project }) => {
+  handler: async ({ project, flags }) => {
     // Get GitHub repository URL from package.json
     let githubUrl = null
     try {
@@ -35,6 +35,11 @@ export const infoCommand = new Command({
       allPackageManagers: project.packageManagers,
       numberOfActions: Object.keys(actions).length,
       githubRepository: githubUrl,
+    }
+
+    if (flags.format === 'json') {
+      console.log(JSON.stringify(info))
+      return { success: true }
     }
 
     console.log(`Project: ${info.name}`)

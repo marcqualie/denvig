@@ -5,7 +5,7 @@ import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps:list [--depth <n>] [--ecosystem <name>] [--format table|json]',
+  usage: 'deps:list [--depth <n>] [--ecosystem <name>]',
   example: 'denvig deps:list --depth 1',
   args: [],
   flags: [
@@ -22,13 +22,6 @@ export const depsListCommand = new Command({
       required: false,
       type: 'string',
       defaultValue: undefined,
-    },
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
     },
   ],
   handler: async ({ project, flags }) => {
