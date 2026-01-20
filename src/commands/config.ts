@@ -27,9 +27,30 @@ export const configCommand = new Command({
   example: 'config',
   args: [],
   flags: [],
-  handler: ({ project }) => {
+  handler: ({ project, flags }) => {
     const globalConfig = getGlobalConfig()
     const projectConfig = project.config
+
+    if (flags.format === 'json') {
+      const { $sources: globalSources, ...globalConfigWithoutSources } =
+        globalConfig
+      const { $sources: projectSources, ...projectConfigWithoutSources } =
+        projectConfig
+      console.log(
+        JSON.stringify({
+          global: {
+            sources: globalSources,
+            config: globalConfigWithoutSources,
+          },
+          project: {
+            slug: project.slug,
+            sources: projectSources,
+            config: projectConfigWithoutSources,
+          },
+        }),
+      )
+      return { success: true, message: 'Configuration displayed.' }
+    }
 
     console.log('Denvig Config')
     console.log('')

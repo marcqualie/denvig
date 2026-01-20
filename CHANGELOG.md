@@ -8,6 +8,10 @@
 - `zsh completions` command to output zsh completion script
 - `zsh __complete__` command to handle runtime completion requests
 
+### Changed
+
+- `--format` flag is now a global flag instead of being defined on each command
+
 
 ## [v0.4.2] - 2026-01-17
 

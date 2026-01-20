@@ -39,6 +39,7 @@ export const logsCommand = new Command({
   handler: async ({ project, args, flags }) => {
     const manager = new ServiceManager(project)
     const name = args.name as string
+    const format = flags.format as string
     // Support alias `-n` through `flags.n` for compatibility with common CLI usage
     const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
     const follow = !!flags.follow
@@ -46,6 +47,19 @@ export const logsCommand = new Command({
     const logPath = manager.getLogPath(name, 'stdout')
 
     if (follow) {
+      if (format === 'json') {
+        console.log(
+          JSON.stringify({
+            success: false,
+            error: 'JSON format is not supported with --follow',
+          }),
+        )
+        return {
+          success: false,
+          message: 'JSON format not supported with follow',
+        }
+      }
+
       // Use system tail for follow behavior — acceptable on macOS
       const tailArgs = ['-n', `${lines}`, '-f', logPath]
       spawn('tail', tailArgs, { stdio: 'inherit' })
@@ -60,15 +74,35 @@ export const logsCommand = new Command({
       const content = await readFile(logPath, 'utf-8')
       const allLines = content.trim().split('\n').filter(Boolean)
       const toShow = allLines.slice(-lines)
+
+      if (format === 'json') {
+        console.log(
+          JSON.stringify({
+            service: name,
+            logPath,
+            lines: toShow,
+          }),
+        )
+        return { success: true }
+      }
+
       for (const line of toShow) {
         console.log(line)
       }
       return { success: true }
     } catch (e) {
-      console.error(
-        `Failed to read logs for ${name}:`,
-        e instanceof Error ? e.message : e,
-      )
+      const errorMessage = e instanceof Error ? e.message : String(e)
+      if (format === 'json') {
+        console.log(
+          JSON.stringify({
+            success: false,
+            service: name,
+            error: errorMessage,
+          }),
+        )
+      } else {
+        console.error(`Failed to read logs for ${name}:`, errorMessage)
+      }
       return { success: false, message: 'failed to read logs' }
     }
   },
