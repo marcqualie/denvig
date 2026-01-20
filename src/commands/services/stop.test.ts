@@ -10,9 +10,6 @@ describe('servicesStopCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(
-      servicesStopCommand.usage ===
-        'services stop <name> [--format table|json]',
-    )
+    ok(servicesStopCommand.usage === 'services stop <name>')
   })
 })

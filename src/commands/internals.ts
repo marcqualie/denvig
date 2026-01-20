@@ -36,9 +36,19 @@ export const internalsResourceHashCommand = new Command({
       // Parse full ID: @project#workspace|resource
       const idMatch = resourceStr.match(/^@([^#]+)#([^|]+)\|(.+)$/)
       if (!idMatch) {
-        console.error(
-          'Error: Invalid full ID format. Expected: @project#workspace|resource',
-        )
+        if (flags.format === 'json') {
+          console.log(
+            JSON.stringify({
+              success: false,
+              error:
+                'Invalid full ID format. Expected: @project#workspace|resource',
+            }),
+          )
+        } else {
+          console.error(
+            'Error: Invalid full ID format. Expected: @project#workspace|resource',
+          )
+        }
         return { success: false, message: 'Invalid ID format' }
       }
 
@@ -54,9 +64,19 @@ export const internalsResourceHashCommand = new Command({
 
     // Validate resource format
     if (!resource.startsWith('action/') && !resource.startsWith('service/')) {
-      console.error(
-        'Error: Resource must start with "action/" or "service/" (e.g., service/api, action/build)',
-      )
+      if (flags.format === 'json') {
+        console.log(
+          JSON.stringify({
+            success: false,
+            error:
+              'Resource must start with "action/" or "service/" (e.g., service/api, action/build)',
+          }),
+        )
+      } else {
+        console.error(
+          'Error: Resource must start with "action/" or "service/" (e.g., service/api, action/build)',
+        )
+      }
       return { success: false, message: 'Invalid resource format' }
     }
 
@@ -66,7 +86,11 @@ export const internalsResourceHashCommand = new Command({
       resource: resource as `action/${string}` | `service/${string}`,
     })
 
-    console.log(`${result.id}\n${result.hash}`)
+    if (flags.format === 'json') {
+      console.log(JSON.stringify(result))
+    } else {
+      console.log(`${result.id}\n${result.hash}`)
+    }
 
     return { success: true, message: 'Hash generated successfully' }
   },
@@ -108,9 +132,19 @@ export const internalsResourceIdCommand = new Command({
 
     // Validate resource format
     if (!resource.startsWith('action/') && !resource.startsWith('service/')) {
-      console.error(
-        'Error: Resource must start with "action/" or "service/" (e.g., service/api, action/build)',
-      )
+      if (flags.format === 'json') {
+        console.log(
+          JSON.stringify({
+            success: false,
+            error:
+              'Resource must start with "action/" or "service/" (e.g., service/api, action/build)',
+          }),
+        )
+      } else {
+        console.error(
+          'Error: Resource must start with "action/" or "service/" (e.g., service/api, action/build)',
+        )
+      }
       return { success: false, message: 'Invalid resource format' }
     }
 
@@ -120,7 +154,11 @@ export const internalsResourceIdCommand = new Command({
       resource: resource as `action/${string}` | `service/${string}`,
     })
 
-    console.log(id)
+    if (flags.format === 'json') {
+      console.log(JSON.stringify({ id }))
+    } else {
+      console.log(id)
+    }
 
     return { success: true, message: 'ID generated successfully' }
   },

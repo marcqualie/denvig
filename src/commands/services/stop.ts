@@ -6,7 +6,7 @@ import { getServiceContext } from '../../lib/services/identifier.ts'
 export const servicesStopCommand = new Command({
   name: 'services:stop',
   description: 'Stop a service',
-  usage: 'services stop <name> [--format table|json]',
+  usage: 'services stop <name>',
   example: 'services stop api',
   args: [
     {
@@ -17,15 +17,7 @@ export const servicesStopCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
-    },
-  ],
+  flags: [],
   completions: ({ project }) => {
     return Object.keys(project.services)
   },

@@ -26,17 +26,10 @@ const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
 export const projectsListCommand = new Command({
   name: 'projects',
   description: 'List all projects on the system',
-  usage: 'projects [list] [--format table|json] [--with-config]',
+  usage: 'projects [list] [--with-config]',
   example: 'projects --format json',
   args: [],
   flags: [
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
-    },
     {
       name: 'with-config',
       description: 'Only show projects with a .denvig.yml configuration file',

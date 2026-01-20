@@ -29,7 +29,7 @@ export const depsWhyCommand = new Command({
     const dependencies = await project.dependencies()
     return dependencies.map((d) => d.name)
   },
-  handler: async ({ project, args }) => {
+  handler: async ({ project, args, flags }) => {
     const dependencyName = args.dependency as string
     const allDependencies = await project.dependencies()
 
@@ -37,7 +37,18 @@ export const depsWhyCommand = new Command({
     const dep = allDependencies.find((d) => d.name === dependencyName)
 
     if (!dep) {
-      console.log(`Dependency "${dependencyName}" not found in this project.`)
+      if (flags.format === 'json') {
+        console.log(
+          JSON.stringify({
+            dependency: dependencyName,
+            found: false,
+            dependencies: [],
+            devDependencies: [],
+          }),
+        )
+      } else {
+        console.log(`Dependency "${dependencyName}" not found in this project.`)
+      }
       return { success: false, message: 'Dependency not found.' }
     }
 
@@ -46,9 +57,6 @@ export const depsWhyCommand = new Command({
     for (const d of allDependencies) {
       depsMap.set(d.name, d)
     }
-
-    console.log(`${project.name} ${project.path}`)
-    console.log('')
 
     // Group chains by source type (dependencies vs devDependencies)
     const depChains: TreeNode[] = []
@@ -71,6 +79,26 @@ export const depsWhyCommand = new Command({
         }
       }
     }
+
+    // JSON output
+    if (flags.format === 'json') {
+      console.log(
+        JSON.stringify({
+          dependency: dependencyName,
+          found: true,
+          project: {
+            name: project.name,
+            path: project.path,
+          },
+          dependencies: depChains,
+          devDependencies: devDepChains,
+        }),
+      )
+      return { success: true, message: 'Dependency chain shown.' }
+    }
+
+    console.log(`${project.name} ${project.path}`)
+    console.log('')
 
     // Print dependencies chains
     if (depChains.length > 0) {

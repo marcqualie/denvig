@@ -8,7 +8,7 @@ import { getServiceContext } from '../../lib/services/identifier.ts'
 export const servicesStatusCommand = new Command({
   name: 'services:status',
   description: 'Show status of a specific service',
-  usage: 'services status <name> [--format table|json]',
+  usage: 'services status <name>',
   example: 'services status api or services status marcqualie/denvig/hello',
   args: [
     {
@@ -19,15 +19,7 @@ export const servicesStatusCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
-    },
-  ],
+  flags: [],
   completions: ({ project }) => {
     return Object.keys(project.services)
   },

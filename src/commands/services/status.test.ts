@@ -10,9 +10,6 @@ describe('servicesStatusCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(
-      servicesStatusCommand.usage ===
-        'services status <name> [--format table|json]',
-    )
+    ok(servicesStatusCommand.usage === 'services status <name>')
   })
 })

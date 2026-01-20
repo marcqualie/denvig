@@ -22,18 +22,10 @@ const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
 export const servicesCommand = new Command({
   name: 'services',
   description: 'List all services across all projects',
-  usage: 'services [--format table|json]',
+  usage: 'services',
   example: 'services',
   args: [],
-  flags: [
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
-    },
-  ],
+  flags: [],
   completions: ({ project }, inputs) => {
     return []
   },

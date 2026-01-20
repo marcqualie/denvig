@@ -6,7 +6,7 @@ import { getServiceContext } from '../../lib/services/identifier.ts'
 export const servicesRestartCommand = new Command({
   name: 'services:restart',
   description: 'Restart a service',
-  usage: 'services restart <name> [--format table|json]',
+  usage: 'services restart <name>',
   example: 'services restart api',
   args: [
     {
@@ -17,15 +17,7 @@ export const servicesRestartCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
-    },
-  ],
+  flags: [],
   completions: ({ project }) => {
     return Object.keys(project.services)
   },

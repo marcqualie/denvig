@@ -8,13 +8,32 @@ export const pluginsCommand = new Command({
   example: 'denvig plugins',
   args: [],
   flags: [],
-  handler: async ({ project }) => {
-    for (const [_key, plugin] of Object.entries(plugins)) {
+  handler: async ({ project, flags }) => {
+    const pluginData: Record<
+      string,
+      { name: string; actions: Record<string, string[]> }
+    > = {}
+
+    for (const [key, plugin] of Object.entries(plugins)) {
       const actions = await plugin.actions(project)
-      const actionNames = Object.keys(actions)
+      pluginData[key] = {
+        name: plugin.name,
+        actions,
+      }
+    }
+
+    if (flags.format === 'json') {
+      console.log(JSON.stringify(pluginData))
+      return { success: true }
+    }
+
+    for (const [_key, plugin] of Object.entries(pluginData)) {
+      const actionNames = Object.keys(plugin.actions)
       console.log(`${plugin.name}: ${actionNames.length} actions`)
       for (const actionName of actionNames) {
-        console.log(`  - ${actionName}: ${actions[actionName].join(' && ')}`)
+        console.log(
+          `  - ${actionName}: ${plugin.actions[actionName].join(' && ')}`,
+        )
       }
     }
 

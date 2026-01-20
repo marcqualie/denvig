@@ -6,7 +6,7 @@ import { getServiceContext } from '../../lib/services/identifier.ts'
 export const servicesStartCommand = new Command({
   name: 'services:start',
   description: 'Start a service',
-  usage: 'services start <name> [--format table|json]',
+  usage: 'services start <name>',
   example: 'services start api',
   args: [
     {
@@ -17,15 +17,7 @@ export const servicesStartCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
-    },
-  ],
+  flags: [],
   completions: ({ project }, inputs) => {
     const services = project.services
     return Object.entries(services).flatMap(([serviceName, serviceConfig]) => {

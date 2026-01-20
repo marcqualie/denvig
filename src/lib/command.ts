@@ -43,10 +43,14 @@ type ParsedArgs<
   K extends ArgDefinitions[number]['name'] = string,
 > = Record<K, string | number>
 
-type ParsedFlags<FlagDefinitions extends FlagDefinition[]> = Record<
-  FlagDefinitions[number]['name'],
-  string | number | boolean
->
+/** Global flags available to all commands */
+type GlobalFlags = {
+  project?: string
+  format: string
+}
+
+type ParsedFlags<FlagDefinitions extends FlagDefinition[]> = GlobalFlags &
+  Record<FlagDefinitions[number]['name'], string | number | boolean>
 
 type CommandHandler<
   ArgDefinitions extends ArgDefinition[],

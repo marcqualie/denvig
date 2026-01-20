@@ -36,6 +36,7 @@ describe('logsCommand', () => {
       {
         lines: 5,
         follow: false,
+        format: 'table',
       },
     )
     ok(result1.success)
@@ -47,6 +48,7 @@ describe('logsCommand', () => {
       {
         n: 3,
         follow: false,
+        format: 'table',
       },
     )
     ok(result2.success)

@@ -26,7 +26,7 @@ export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
   usage:
-    'deps:outdated [--no-cache] [--semver patch|minor] [--ecosystem <name>] [--format table|json]',
+    'deps:outdated [--no-cache] [--semver patch|minor] [--ecosystem <name>]',
   example: 'denvig deps:outdated --semver patch',
   args: [],
   flags: [
@@ -51,13 +51,6 @@ export const depsOutdatedCommand = new Command({
       required: false,
       type: 'string',
       defaultValue: undefined,
-    },
-    {
-      name: 'format',
-      description: 'Output format: table or json (default: table)',
-      required: false,
-      type: 'string',
-      defaultValue: 'table',
     },
   ],
   handler: async ({ project, flags }) => {
