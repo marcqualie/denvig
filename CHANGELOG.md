@@ -7,8 +7,6 @@
 
 - `zsh completions` command to output zsh completion script
 - `zsh __complete__` command to handle runtime completion requests
-- Global `--format` flag for all commands (table or json output)
-- JSON output support for all commands that didn't have it (version, info, config, plugins, config verify, deps why, internals, services logs, run)
 
 ### Changed
 
