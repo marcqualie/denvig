@@ -212,6 +212,13 @@ export class ServiceManager {
       }
     }
 
+    // Remove plist file so service doesn't restart on reboot
+    try {
+      await unlink(this.getPlistPath(name))
+    } catch {
+      // Ignore errors removing plist file (may not exist)
+    }
+
     // Append Service Stopped entry to stdout log
     try {
       const timestamp = new Date().toISOString()

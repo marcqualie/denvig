@@ -12,6 +12,10 @@
 
 - `--format` flag is now a global flag instead of being defined on each command
 
+### Fixed
+
+- Fixed services restarting after reboot by removing plist file when stopping a service
+
 
 ## [v0.4.2] - 2026-01-17
 
