@@ -18,6 +18,7 @@ export type ServiceInfo = {
     domain?: string
     secure?: boolean
   }
+  startOnBoot?: boolean
 }
 
 /**

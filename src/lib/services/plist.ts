@@ -8,6 +8,7 @@ export type PlistOptions = {
   environmentVariables?: Record<string, string>
   standardOutPath: string
   keepAlive: boolean
+  runAtLoad: boolean
 }
 
 /**
@@ -51,6 +52,7 @@ export function generatePlist(options: PlistOptions): string {
     environmentVariables = {},
     standardOutPath,
     keepAlive,
+    runAtLoad,
   } = options
 
   // Wrap command with timestamp injection (also merges stderr into stdout)
@@ -94,7 +96,7 @@ ${envVarsXml}
   <${keepAlive ? 'true' : 'false'}/>
 
   <key>RunAtLoad</key>
-  <false/>
+  <${runAtLoad ? 'true' : 'false'}/>
 </dict>
 </plist>
 `

@@ -5,6 +5,7 @@
 
 ### Added
 
+- `startOnBoot` option for services to automatically start when system boots (macOS launchd `RunAtLoad`)
 - `zsh completions` command to output zsh completion script
 - `zsh __complete__` command to handle runtime completion requests
 

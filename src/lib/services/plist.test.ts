@@ -20,6 +20,7 @@ describe('plist', () => {
         },
         standardOutPath: '/tmp/denvig-test-project-api.log',
         keepAlive: true,
+        runAtLoad: false,
       })
 
       ok(plistXml.includes('<?xml version="1.0" encoding="UTF-8"?>'))
@@ -46,6 +47,21 @@ describe('plist', () => {
       ok(plistXml.includes('<false/>'))
     })
 
+    it('should set RunAtLoad to true when runAtLoad option is true', () => {
+      const plistXml = generatePlist({
+        label: 'com.denvig.test.startonboot',
+        command: 'node server.js',
+        workingDirectory: '/tmp/test',
+        standardOutPath: '/tmp/test.log',
+        keepAlive: true,
+        runAtLoad: true,
+      })
+
+      ok(plistXml.includes('<key>RunAtLoad</key>'))
+      // Check that RunAtLoad is followed by <true/>
+      ok(plistXml.includes('<key>RunAtLoad</key>\n  <true/>'))
+    })
+
     it('should generate plist with minimal fields', () => {
       const plistXml = generatePlist({
         label: 'com.denvig.test.simple',
@@ -53,6 +69,7 @@ describe('plist', () => {
         workingDirectory: '/tmp/test',
         standardOutPath: '/tmp/test.log',
         keepAlive: false,
+        runAtLoad: false,
       })
 
       ok(plistXml.includes('com.denvig.test.simple'))
@@ -70,6 +87,7 @@ describe('plist', () => {
         },
         standardOutPath: '/tmp/test.log',
         keepAlive: true,
+        runAtLoad: false,
       })
 
       ok(plistXml.includes('&amp;'))
@@ -90,6 +108,7 @@ describe('plist', () => {
         },
         standardOutPath: '/tmp/test.log',
         keepAlive: true,
+        runAtLoad: false,
       })
 
       ok(plistXml.includes('<key>PORT</key>'))
@@ -103,6 +122,7 @@ describe('plist', () => {
         workingDirectory: '/tmp/test',
         standardOutPath: '/tmp/test.log',
         keepAlive: true,
+        runAtLoad: false,
       })
 
       ok(plistXml.includes('com.denvig.test.export'))

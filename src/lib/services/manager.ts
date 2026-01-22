@@ -55,6 +55,7 @@ export class ServiceManager {
       cwd: config.cwd || '.',
       command: config.command,
       http: config.http,
+      startOnBoot: config.startOnBoot,
     }))
   }
 
@@ -121,6 +122,7 @@ export class ServiceManager {
       environmentVariables,
       standardOutPath: this.getLogPath(name, 'stdout'),
       keepAlive: config.keepAlive ?? true,
+      runAtLoad: config.startOnBoot ?? false,
     })
 
     await writeFile(plistPath, plistContent, 'utf-8')
@@ -201,22 +203,33 @@ export class ServiceManager {
       }
     }
 
-    // Bootout the service (unload it completely to prevent KeepAlive restart)
-    const result = await launchctl.bootout(label)
-
-    if (!result.success) {
-      return {
-        name,
-        success: false,
-        message: `Failed to stop service: ${result.output}`,
+    // For startOnBoot services, use stop() to keep them registered for next boot
+    // For regular services, use bootout() to fully unload them
+    if (config.startOnBoot) {
+      const result = await launchctl.stop(label)
+      if (!result.success) {
+        return {
+          name,
+          success: false,
+          message: `Failed to stop service: ${result.output}`,
+        }
       }
-    }
-
-    // Remove plist file so service doesn't restart on reboot
-    try {
-      await unlink(this.getPlistPath(name))
-    } catch {
-      // Ignore errors removing plist file (may not exist)
+      // Keep plist file so service starts on next boot
+    } else {
+      const result = await launchctl.bootout(label)
+      if (!result.success) {
+        return {
+          name,
+          success: false,
+          message: `Failed to stop service: ${result.output}`,
+        }
+      }
+      // Remove plist file so service doesn't restart on reboot
+      try {
+        await unlink(this.getPlistPath(name))
+      } catch {
+        // Ignore errors removing plist file (may not exist)
+      }
     }
 
     // Append Service Stopped entry to stdout log
