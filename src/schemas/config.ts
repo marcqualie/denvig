@@ -103,6 +103,10 @@ export const ProjectConfigSchema = z
               .boolean()
               .optional()
               .describe('Restart service if it exits'),
+            startOnBoot: z
+              .boolean()
+              .optional()
+              .describe('Start service automatically when system boots'),
           })
           .strict(),
       )
