@@ -248,6 +248,8 @@ async function main() {
     console.log('Available commands:')
     Object.keys(commands).forEach((cmd) => {
       if (cmd.startsWith('internals:') || cmd === 'zsh:__complete__') return
+      // Skip alias entries that duplicate another command
+      if (cmd === 'deps' || cmd === 'projects') return
       console.log(
         `  - ${commands[cmd].usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
       )
