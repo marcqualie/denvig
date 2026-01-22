@@ -17,6 +17,7 @@
 
 - Fixed services restarting after reboot by removing plist file when stopping a service
 - Suppressed config validation warnings to prevent polluting JSON output when using `--format=json`
+- Fixed `deps` subcommands displaying with colons instead of spaces in help output (e.g., `deps:list` → `deps list`)
 
 
 ## [v0.4.2] - 2026-01-17

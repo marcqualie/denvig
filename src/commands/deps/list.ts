@@ -5,8 +5,8 @@ import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps:list [--depth <n>] [--ecosystem <name>]',
-  example: 'denvig deps:list --depth 1',
+  usage: 'deps list [--depth <n>] [--ecosystem <name>]',
+  example: 'denvig deps list --depth 1',
   args: [],
   flags: [
     {

@@ -14,8 +14,8 @@ import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
 export const depsWhyCommand = new Command({
   name: 'deps:why',
   description: 'Show why a dependency is installed',
-  usage: 'deps:why <dependency>',
-  example: 'denvig deps:why yaml',
+  usage: 'deps why <dependency>',
+  example: 'denvig deps why yaml',
   args: [
     {
       name: 'dependency',
