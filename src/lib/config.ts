@@ -84,15 +84,9 @@ export const getProjectConfig = (
         ...ProjectConfigSchema.parse(parse(configRaw)),
         $sources: [configPath],
       }
-    } catch (e: unknown) {
-      console.warn(
-        `Error parsing project config for ${projectSlug} at ${configPath}.`,
-      )
-      if (e instanceof Error) {
-        console.warn(e.message)
-      } else {
-        console.warn('Unknown error:', e)
-      }
+    } catch {
+      // Silently ignore config parsing errors here.
+      // Users can run `denvig config verify` to diagnose config issues.
     }
   }
   return {

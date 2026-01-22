@@ -1,0 +1,5 @@
+name: invalid-config-example
+invalidProperty: this-should-not-be-recognized
+actions:
+  test:
+    command: echo "test"
