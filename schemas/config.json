@@ -79,6 +79,10 @@
           "keepAlive": {
             "type": "boolean",
             "description": "Restart service if it exits"
+          },
+          "startOnBoot": {
+            "type": "boolean",
+            "description": "Start service automatically when system boots"
           }
         },
         "additionalProperties": false,
