@@ -1,13 +1,13 @@
 # Denvig Changelog
 
 
-## [Unreleased]
+## [v0.4.3] - 2026-01-22
 
 ### Added
 
-- `startOnBoot` option for services to automatically start when system boots (macOS launchd `RunAtLoad`)
 - `zsh completions` command to output zsh completion script
 - `zsh __complete__` command to handle runtime completion requests
+- `startOnBoot` option for services to automatically start when system boots (macOS launchd `RunAtLoad`)
 
 ### Changed
 
