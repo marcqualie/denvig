@@ -95,7 +95,7 @@ export const ProjectConfigSchema = z
               .array(z.string())
               .optional()
               .describe(
-                'Paths to .env files (relative to service cwd). Later files override earlier ones.',
+                'Paths to .env files (relative to service cwd). Defaults to [.env.development, .env.local]. Use [] to disable. Later files override earlier ones.',
               ),
             env: z
               .record(z.string(), z.string())

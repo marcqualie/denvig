@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
-import { loadEnvFiles, parseEnvContent, parseEnvFile } from './env.ts'
+import {
+  DEFAULT_ENV_FILES,
+  loadEnvFiles,
+  parseEnvContent,
+  parseEnvFile,
+} from './env.ts'
 
 describe('parseEnvContent()', () => {
   it('should parse basic KEY=VALUE format', () => {
@@ -333,5 +338,66 @@ describe('loadEnvFiles()', () => {
     )
 
     await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should skip missing files when skipMissing is true', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile1 = join(testDir, '.env')
+    const nonExistentFile = join(testDir, '.env.missing')
+
+    await mkdir(testDir, { recursive: true })
+    await writeFile(envFile1, 'KEY=value', 'utf-8')
+
+    const result = await loadEnvFiles([envFile1, nonExistentFile], {
+      skipMissing: true,
+    })
+
+    deepStrictEqual(result, {
+      KEY: 'value',
+    })
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should load only existing files when skipMissing is true', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile1 = join(testDir, '.env.development')
+    const envFile2 = join(testDir, '.env.local')
+
+    await mkdir(testDir, { recursive: true })
+    // Only create .env.local, not .env.development
+    await writeFile(envFile2, 'API_KEY=local-key', 'utf-8')
+
+    const result = await loadEnvFiles([envFile1, envFile2], {
+      skipMissing: true,
+    })
+
+    deepStrictEqual(result, {
+      API_KEY: 'local-key',
+    })
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should return empty object when all files are missing and skipMissing is true', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const nonExistent1 = join(testDir, '.env.development')
+    const nonExistent2 = join(testDir, '.env.local')
+
+    await mkdir(testDir, { recursive: true })
+
+    const result = await loadEnvFiles([nonExistent1, nonExistent2], {
+      skipMissing: true,
+    })
+
+    deepStrictEqual(result, {})
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+})
+
+describe('DEFAULT_ENV_FILES', () => {
+  it('should have the expected default files', () => {
+    deepStrictEqual(DEFAULT_ENV_FILES, ['.env.development', '.env.local'])
   })
 })

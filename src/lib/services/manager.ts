@@ -10,7 +10,7 @@ import {
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
-import { loadEnvFiles } from './env.ts'
+import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist } from './plist.ts'
 
@@ -88,14 +88,20 @@ export class ServiceManager {
       DENVIG_SERVICE: name,
     }
 
-    // Load environment variables from files if specified (later files override earlier)
+    // Load environment variables from files (later files override earlier)
     // Files are resolved relative to the service's working directory
-    if (config.envFiles) {
+    // - undefined: use defaults (.env.development, .env.local), skip missing files
+    // - []: use no env files (explicit override)
+    // - [...]: use specified files, error if missing
+    const envFilesToLoad = config.envFiles ?? DEFAULT_ENV_FILES
+    const skipMissing = config.envFiles === undefined
+
+    if (envFilesToLoad.length > 0) {
       try {
-        const envFilePaths = config.envFiles.map((f) =>
+        const envFilePaths = envFilesToLoad.map((f) =>
           resolve(workingDirectory, f),
         )
-        const envFromFiles = await loadEnvFiles(envFilePaths)
+        const envFromFiles = await loadEnvFiles(envFilePaths, { skipMissing })
         Object.assign(environmentVariables, envFromFiles)
       } catch (error) {
         const errorMessage =
@@ -660,9 +666,9 @@ export class ServiceManager {
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name, 'stdout'),
-      envFiles: config.envFiles
-        ? config.envFiles.map((f) => resolve(this.resolveServiceCwd(config), f))
-        : [],
+      envFiles: (config.envFiles ?? DEFAULT_ENV_FILES).map((f) =>
+        resolve(this.resolveServiceCwd(config), f),
+      ),
       lastExitCode,
     }
 

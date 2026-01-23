@@ -9,7 +9,7 @@
 
 ### Changed
 
-- **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files. Files are resolved relative to the service's `cwd` (not project root) and later files override earlier ones.
+- **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files. Files are resolved relative to the service's `cwd` (not project root) and later files override earlier ones. Defaults to `[.env.development, .env.local]` when not specified. Use `envFiles: []` to disable env file loading.
 
 
 ## [v0.4.3] - 2026-01-22

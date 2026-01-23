@@ -1,4 +1,11 @@
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
+
+/**
+ * Default env files loaded for services when envFiles is not specified.
+ * Files are loaded in order, with later files overriding earlier ones.
+ * Missing files are silently skipped.
+ */
+export const DEFAULT_ENV_FILES = ['.env.development', '.env.local']
 
 /**
  * Parse a .env file and return key-value pairs.
@@ -96,15 +103,26 @@ export async function parseEnvFile(
  * Files are processed in order, with later files overriding earlier ones.
  *
  * @param filePaths - Array of absolute paths to .env files
+ * @param options.skipMissing - If true, silently skip files that don't exist (default: false)
  * @returns Merged object with environment variables
- * @throws Error if any file cannot be read or parsed
+ * @throws Error if any file cannot be read or parsed (unless skipMissing is true)
  */
 export async function loadEnvFiles(
   filePaths: string[],
+  options?: { skipMissing?: boolean },
 ): Promise<Record<string, string>> {
   const env: Record<string, string> = {}
+  const skipMissing = options?.skipMissing ?? false
 
   for (const filePath of filePaths) {
+    if (skipMissing) {
+      try {
+        await access(filePath)
+      } catch {
+        // File doesn't exist, skip it
+        continue
+      }
+    }
     const fileEnv = await parseEnvFile(filePath)
     Object.assign(env, fileEnv)
   }
@@ -114,6 +132,7 @@ export async function loadEnvFiles(
 
 // Default export containing all functions
 export default {
+  DEFAULT_ENV_FILES,
   parseEnvContent,
   parseEnvFile,
   loadEnvFiles,
