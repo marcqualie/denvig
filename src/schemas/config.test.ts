@@ -135,18 +135,18 @@ describe('ProjectConfigSchema - services', () => {
     ok(result.success)
   })
 
-  it('should parse service configuration with envFile', () => {
-    const configWithEnvFile = {
+  it('should parse service configuration with envFiles', () => {
+    const configWithEnvFiles = {
       name: 'my-project',
       services: {
         api: {
           command: 'pnpm run dev',
-          envFile: '.env.local',
+          envFiles: ['.env', '.env.local'],
         },
       },
     }
 
-    const result = ProjectConfigSchema.safeParse(configWithEnvFile)
+    const result = ProjectConfigSchema.safeParse(configWithEnvFiles)
     ok(result.success)
   })
 
@@ -168,13 +168,13 @@ describe('ProjectConfigSchema - services', () => {
     ok(result.success)
   })
 
-  it('should parse service configuration with both envFile and env', () => {
+  it('should parse service configuration with both envFiles and env', () => {
     const configWithBoth = {
       name: 'my-project',
       services: {
         api: {
           command: 'pnpm run dev',
-          envFile: '.env.local',
+          envFiles: ['.env', '.env.local'],
           env: {
             NODE_ENV: 'development',
           },

@@ -7,6 +7,12 @@
 
 - `--json` global flag as shorthand for `--format=json`
 
+### Changed
+
+- **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files
+- `envFiles` files are now resolved relative to the service's `cwd` (not project root)
+- Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
+
 
 ## [v0.4.3] - 2026-01-22
 

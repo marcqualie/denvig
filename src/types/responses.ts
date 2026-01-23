@@ -58,7 +58,7 @@ export type ServiceResponse = {
   command: string
   cwd: string
   logPath: string
-  envFile: string | null
+  envFiles: string[]
   lastExitCode: number | null
   logs?: string[]
 }
