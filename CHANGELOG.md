@@ -1,6 +1,13 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- `--json` global flag as shorthand for `--format=json`
+
+
 ## [v0.4.3] - 2026-01-22
 
 ### Added
