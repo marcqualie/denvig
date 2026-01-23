@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
-import { parseEnvContent, parseEnvFile } from './env.ts'
+import { loadEnvFiles, parseEnvContent, parseEnvFile } from './env.ts'
 
 describe('parseEnvContent()', () => {
   it('should parse basic KEY=VALUE format', () => {
@@ -225,5 +225,113 @@ describe('parseEnvFile()', () => {
         return true
       },
     )
+  })
+})
+
+describe('loadEnvFiles()', () => {
+  it('should return empty object for empty array', async () => {
+    const result = await loadEnvFiles([])
+
+    deepStrictEqual(result, {})
+  })
+
+  it('should load a single env file', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile = join(testDir, '.env')
+
+    await mkdir(testDir, { recursive: true })
+    await writeFile(envFile, 'KEY1=value1\nKEY2=value2', 'utf-8')
+
+    const result = await loadEnvFiles([envFile])
+
+    deepStrictEqual(result, {
+      KEY1: 'value1',
+      KEY2: 'value2',
+    })
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should merge multiple env files', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile1 = join(testDir, '.env')
+    const envFile2 = join(testDir, '.env.local')
+
+    await mkdir(testDir, { recursive: true })
+    await writeFile(envFile1, 'KEY1=value1\nKEY2=value2', 'utf-8')
+    await writeFile(envFile2, 'KEY3=value3', 'utf-8')
+
+    const result = await loadEnvFiles([envFile1, envFile2])
+
+    deepStrictEqual(result, {
+      KEY1: 'value1',
+      KEY2: 'value2',
+      KEY3: 'value3',
+    })
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should override keys from earlier files with later files', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile1 = join(testDir, '.env')
+    const envFile2 = join(testDir, '.env.local')
+
+    await mkdir(testDir, { recursive: true })
+    await writeFile(
+      envFile1,
+      'DATABASE_URL=postgres://localhost/dev\nAPI_KEY=default-key\nDEBUG=false',
+      'utf-8',
+    )
+    await writeFile(envFile2, 'API_KEY=local-secret-key\nDEBUG=true', 'utf-8')
+
+    const result = await loadEnvFiles([envFile1, envFile2])
+
+    deepStrictEqual(result, {
+      DATABASE_URL: 'postgres://localhost/dev', // Only in first file
+      API_KEY: 'local-secret-key', // Overridden by second file
+      DEBUG: 'true', // Overridden by second file
+    })
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should process files in order with last file winning', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile1 = join(testDir, '.env')
+    const envFile2 = join(testDir, '.env.local')
+    const envFile3 = join(testDir, '.env.override')
+
+    await mkdir(testDir, { recursive: true })
+    await writeFile(envFile1, 'KEY=first', 'utf-8')
+    await writeFile(envFile2, 'KEY=second', 'utf-8')
+    await writeFile(envFile3, 'KEY=third', 'utf-8')
+
+    const result = await loadEnvFiles([envFile1, envFile2, envFile3])
+
+    deepStrictEqual(result, {
+      KEY: 'third', // Last file wins
+    })
+
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  it('should throw error if any file does not exist', async () => {
+    const testDir = join(tmpdir(), `denvig-test-${Date.now()}`)
+    const envFile1 = join(testDir, '.env')
+    const nonExistentFile = join(testDir, '.env.missing')
+
+    await mkdir(testDir, { recursive: true })
+    await writeFile(envFile1, 'KEY=value', 'utf-8')
+
+    await rejects(
+      async () => await loadEnvFiles([envFile1, nonExistentFile]),
+      (error: Error) => {
+        ok(error.message.includes('not found'))
+        return true
+      },
+    )
+
+    await rm(testDir, { recursive: true, force: true })
   })
 })

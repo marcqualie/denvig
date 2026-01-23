@@ -91,10 +91,12 @@ export const ProjectConfigSchema = z
               .strict()
               .optional()
               .describe('HTTP configuration for the service URL'),
-            envFile: z
-              .string()
+            envFiles: z
+              .array(z.string())
               .optional()
-              .describe('Path to .env file (relative to project root)'),
+              .describe(
+                'Paths to .env files (relative to project root). Later files override earlier ones.',
+              ),
             env: z
               .record(z.string(), z.string())
               .optional()

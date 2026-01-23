@@ -10,7 +10,7 @@ import {
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
-import { parseEnvFile } from './env.ts'
+import { loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist } from './plist.ts'
 
@@ -88,12 +88,14 @@ export class ServiceManager {
       DENVIG_SERVICE: name,
     }
 
-    // Load environment variables from file if specified
-    if (config.envFile) {
+    // Load environment variables from files if specified (later files override earlier)
+    if (config.envFiles) {
       try {
-        const envFilePath = resolve(this.project.path, config.envFile)
-        const envFromFile = await parseEnvFile(envFilePath)
-        Object.assign(environmentVariables, envFromFile)
+        const envFilePaths = config.envFiles.map((f) =>
+          resolve(this.project.path, f),
+        )
+        const envFromFiles = await loadEnvFiles(envFilePaths)
+        Object.assign(environmentVariables, envFromFiles)
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error'
@@ -657,9 +659,9 @@ export class ServiceManager {
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name, 'stdout'),
-      envFile: config.envFile
-        ? resolve(this.project.path, config.envFile)
-        : null,
+      envFiles: config.envFiles
+        ? config.envFiles.map((f) => resolve(this.project.path, f))
+        : [],
       lastExitCode,
     }
 

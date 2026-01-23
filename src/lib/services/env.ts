@@ -91,8 +91,30 @@ export async function parseEnvFile(
   }
 }
 
+/**
+ * Load and merge multiple .env files.
+ * Files are processed in order, with later files overriding earlier ones.
+ *
+ * @param filePaths - Array of absolute paths to .env files
+ * @returns Merged object with environment variables
+ * @throws Error if any file cannot be read or parsed
+ */
+export async function loadEnvFiles(
+  filePaths: string[],
+): Promise<Record<string, string>> {
+  const env: Record<string, string> = {}
+
+  for (const filePath of filePaths) {
+    const fileEnv = await parseEnvFile(filePath)
+    Object.assign(env, fileEnv)
+  }
+
+  return env
+}
+
 // Default export containing all functions
 export default {
   parseEnvContent,
   parseEnvFile,
+  loadEnvFiles,
 }

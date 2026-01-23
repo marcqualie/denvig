@@ -94,7 +94,7 @@ describe('ServiceManager', () => {
     })
   })
 
-  describe('startService() with envFile', () => {
+  describe('startService() with envFiles', () => {
     it('should return error when envFile does not exist', async () => {
       const project = new DenvigProject('denvig')
 
@@ -102,7 +102,7 @@ describe('ServiceManager', () => {
       project.config.services = {
         'test-service-envfile': {
           command: 'echo test',
-          envFile: 'this-file-definitely-does-not-exist-12345.env',
+          envFiles: ['this-file-definitely-does-not-exist-12345.env'],
         },
       }
 

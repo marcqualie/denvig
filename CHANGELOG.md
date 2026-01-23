@@ -7,6 +7,10 @@
 
 - `--json` global flag as shorthand for `--format=json`
 
+### Changed
+
+- **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files. Later files override earlier ones.
+
 
 ## [v0.4.3] - 2026-01-22
 

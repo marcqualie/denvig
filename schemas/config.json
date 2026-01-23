@@ -65,9 +65,12 @@
             "additionalProperties": false,
             "description": "HTTP configuration for the service URL"
           },
-          "envFile": {
-            "type": "string",
-            "description": "Path to .env file (relative to project root)"
+          "envFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Paths to .env files (relative to project root). Later files override earlier ones."
           },
           "env": {
             "type": "object",
