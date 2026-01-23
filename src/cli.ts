@@ -25,6 +25,13 @@ const globalFlags = [
     type: 'string',
     defaultValue: 'table',
   },
+  {
+    name: 'json',
+    description: 'Shorthand for --format=json',
+    required: false,
+    type: 'boolean',
+    defaultValue: false,
+  },
 ]
 
 // Main CLI execution
@@ -221,6 +228,12 @@ async function main() {
       format: string
     },
   )
+
+  // Map --json shorthand to format: 'json'
+  if (parsedFlags.json) {
+    parsedFlags.format = 'json'
+  }
+  delete parsedFlags.json
 
   // Extract unrecognized flags and convert them to command line arguments
   const extraFlagArgs: string[] = []
