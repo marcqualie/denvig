@@ -75,7 +75,7 @@ Service definitions for the project. Each service can have its own configuration
 - **cwd** (optional): Working directory for the service (relative to project root)
 - **port** (optional): Port number the service listens on
 - **domain** (optional): Local domain for the service
-- **envFile** (optional): Path to .env file (relative to project root)
+- **envFiles** (optional): Array of paths to .env files (relative to service cwd). Defaults to `.env.development,.env.local`.
 - **env** (optional): Environment variables as key-value pairs
 - **keepAlive** (optional): Restart service if it exits
 
@@ -88,7 +88,9 @@ services:
     cwd: apps/api
     port: 3000
     domain: api.local
-    envFile: .env.local
+    envFiles:
+      - .env
+      - .env.local
     env:
       NODE_ENV: development
     keepAlive: true
