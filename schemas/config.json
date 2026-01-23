@@ -70,7 +70,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Paths to .env files (relative to service cwd). Defaults to [.env.development, .env.local]. Use [] to disable. Later files override earlier ones."
+            "description": "Paths to .env files (relative to service cwd)"
           },
           "env": {
             "type": "object",
