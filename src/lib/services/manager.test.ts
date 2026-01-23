@@ -112,6 +112,30 @@ describe('ServiceManager', () => {
       ok(!result.success)
       ok(result.message.includes('not found'))
     })
+
+    it('should resolve envFiles relative to service cwd', async () => {
+      const project = new DenvigProject('denvig')
+
+      // Set up a service with cwd and an envFile that doesn't exist
+      // The error should include the path relative to cwd, not project root
+      project.config.services = {
+        'test-service-cwd': {
+          command: 'echo test',
+          cwd: 'apps/api',
+          envFiles: ['.env.local'],
+        },
+      }
+
+      const manager = new ServiceManager(project)
+      const result = await manager.startService('test-service-cwd')
+
+      ok(!result.success)
+      // The error should mention the path resolved from cwd (apps/api/.env.local)
+      ok(
+        result.message.includes('apps/api/.env.local'),
+        `Expected error to include "apps/api/.env.local" but got: ${result.message}`,
+      )
+    })
   })
 
   describe('log entries on start/stop', () => {

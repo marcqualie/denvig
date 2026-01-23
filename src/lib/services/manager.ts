@@ -89,10 +89,11 @@ export class ServiceManager {
     }
 
     // Load environment variables from files if specified (later files override earlier)
+    // Files are resolved relative to the service's working directory
     if (config.envFiles) {
       try {
         const envFilePaths = config.envFiles.map((f) =>
-          resolve(this.project.path, f),
+          resolve(workingDirectory, f),
         )
         const envFromFiles = await loadEnvFiles(envFilePaths)
         Object.assign(environmentVariables, envFromFiles)
@@ -660,7 +661,7 @@ export class ServiceManager {
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name, 'stdout'),
       envFiles: config.envFiles
-        ? config.envFiles.map((f) => resolve(this.project.path, f))
+        ? config.envFiles.map((f) => resolve(this.resolveServiceCwd(config), f))
         : [],
       lastExitCode,
     }
