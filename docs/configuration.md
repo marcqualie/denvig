@@ -75,7 +75,7 @@ Service definitions for the project. Each service can have its own configuration
 - **cwd** (optional): Working directory for the service (relative to project root)
 - **port** (optional): Port number the service listens on
 - **domain** (optional): Local domain for the service
-- **envFiles** (optional): Array of paths to .env files (relative to service cwd). Defaults to `[.env.development, .env.local]`. Use `[]` to disable env file loading. Later files override earlier ones.
+- **envFiles** (optional): Array of paths to .env files (relative to service cwd). Defaults to `.env.development,.env.local`.
 - **env** (optional): Environment variables as key-value pairs
 - **keepAlive** (optional): Restart service if it exits
 
