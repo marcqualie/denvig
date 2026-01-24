@@ -9,7 +9,7 @@
 - Tab completion now includes services from all configured projects with their slug prefix (e.g., `marcqualie/denvig/hello`)
 - Service commands now accept slugs without the `github:` prefix (e.g., `denvig services start marcqualie/denvig/hello`)
 - Unique project ID based on full SHA1 hash of project path
-  - Displayed in `denvig info` and `denvig projects` output (truncated to 8 characters for display, full ID in JSON)
+  - `denvig info` displays full ID, `denvig projects` shows short ID (8 chars)
   - Service commands support `id:[id]/[serviceName]` format for exact project matching (e.g., `denvig services start id:5444710a/hello`)
   - Both short (8 char) and full IDs are accepted when matching
   - Enables git worktree support where the same slug may exist in multiple paths
