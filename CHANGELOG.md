@@ -7,6 +7,9 @@
 
 - `--json` global flag as shorthand for `--format=json`
 - New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
+- Environment variable configuration support:
+  - `DENVIG_PROJECT_PATHS` - comma-separated list of project paths
+  - `DENVIG_QUICK_ACTIONS` - comma-separated list of quick actions (empty string disables)
 
 ### Changed
 
@@ -15,6 +18,8 @@
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root)
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
 - Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']`
+- Global config load order: defaults → `~/.denvig/config.yml` → environment variables
+- Project config is loaded from `./.denvig.yml` in the project root
 
 
 ## [v0.4.3] - 2026-01-22
