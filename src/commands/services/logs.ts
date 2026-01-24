@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
 import { Command } from '../../lib/command.ts'
+import { getServiceCompletions } from '../../lib/services/identifier.ts'
 import { ServiceManager } from '../../lib/services/manager.ts'
 
 export const logsCommand = new Command({
@@ -34,7 +35,7 @@ export const logsCommand = new Command({
     },
   ],
   completions: ({ project }) => {
-    return Object.keys(project.services)
+    return getServiceCompletions(project)
   },
   handler: async ({ project, args, flags }) => {
     const manager = new ServiceManager(project)

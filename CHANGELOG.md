@@ -6,6 +6,8 @@
 ### Added
 
 - New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
+- Tab completion now includes services from all configured projects with their slug prefix (e.g., `marcqualie/denvig/hello`)
+- Service commands now accept slugs without the `github:` prefix (e.g., `denvig services start marcqualie/denvig/hello`)
 - Environment variable configuration support:
   - `DENVIG_PROJECT_PATHS` - comma-separated list of project paths
   - `DENVIG_QUICK_ACTIONS` - comma-separated list of quick actions (empty string disables)

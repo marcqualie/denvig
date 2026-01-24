@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
-import { getServiceContext } from '../../lib/services/identifier.ts'
+import {
+  getServiceCompletions,
+  getServiceContext,
+} from '../../lib/services/identifier.ts'
 
 export const servicesStartCommand = new Command({
   name: 'services:start',
@@ -18,11 +21,8 @@ export const servicesStartCommand = new Command({
     },
   ],
   flags: [],
-  completions: ({ project }, inputs) => {
-    const services = project.services
-    return Object.entries(services).flatMap(([serviceName, serviceConfig]) => {
-      return serviceName
-    })
+  completions: ({ project }) => {
+    return getServiceCompletions(project)
   },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
