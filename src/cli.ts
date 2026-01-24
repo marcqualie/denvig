@@ -337,21 +337,26 @@ async function main() {
       process.exit(1)
     }
 
-    const { success } = await command.run(
+    const { success, message } = await command.run(
       project,
       parsedArgs,
       parsedFlags,
       extraArgs,
     )
     if (!success) {
-      await cliLogTracker.finish(1, 'Command failed')
+      const errorMsg = (message || 'Command failed')
+        .replace(/[\r\n]+/g, ' ')
+        .trim()
+      await cliLogTracker.finish(1, errorMsg)
       process.exit(1)
     }
 
     // Log successful completion
     await cliLogTracker.finish(0)
   } catch (e: unknown) {
-    const errorMsg = e instanceof Error ? e.message : 'Unknown error'
+    const errorMsg = (e instanceof Error ? e.message : 'Unknown error')
+      .replace(/[\r\n]+/g, ' ')
+      .trim()
     console.error(`Error executing command "${commandName}":`, e)
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
