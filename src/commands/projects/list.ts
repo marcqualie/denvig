@@ -38,10 +38,9 @@ export const projectsListCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: async ({ project, flags }) => {
+  handler: async ({ flags }) => {
     const format = flags.format as string
     const withConfig = flags['with-config'] as boolean
-    const currentProjectSlug = project.slug
     const projectInfos = listProjects({ withConfig })
 
     if (projectInfos.length === 0) {
@@ -97,16 +96,8 @@ export const projectsListCommand = new Command({
       })
     }
 
-    // Sort: current project first, then alphabetically by slug
-    const sortedProjects = projects.sort((a, b) => {
-      const aIsCurrent = a.slug === currentProjectSlug
-      const bIsCurrent = b.slug === currentProjectSlug
-
-      if (aIsCurrent && !bIsCurrent) return -1
-      if (!aIsCurrent && bIsCurrent) return 1
-
-      return a.slug.localeCompare(b.slug)
-    })
+    // Sort by absolute path ascending
+    const sortedProjects = projects.sort((a, b) => a.path.localeCompare(b.path))
 
     // JSON output
     if (format === 'json') {
