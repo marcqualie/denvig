@@ -21,6 +21,7 @@
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
 - Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']`
 - All project configuration fields are now optional
+- `services teardown --global` now removes all `denvig.*.plist` files from LaunchAgents, not just stopped services
 
 
 ## [v0.4.3] - 2026-01-22
