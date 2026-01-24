@@ -1,4 +1,8 @@
 import { ROOT_COMMANDS, SUBCOMMANDS } from '../commands.ts'
+import {
+  getProjectCompletions,
+  getProjectFlagPartial,
+} from './project-completions.ts'
 
 import type { GenericCommand } from '../command.ts'
 import type { DenvigProject } from '../project.ts'
@@ -13,6 +17,12 @@ export const zshCompletionsFor = async (
   context?: CompletionContext,
 ): Promise<string[]> => {
   // words[0] is "denvig", words[1] is command, words[2] is subcommand or arg, etc.
+
+  // Check if we're completing a --project flag value
+  const projectPartial = getProjectFlagPartial(words)
+  if (projectPartial !== null) {
+    return getProjectCompletions(projectPartial)
+  }
 
   if (words.length === 1) {
     return [...ROOT_COMMANDS]

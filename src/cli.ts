@@ -4,6 +4,7 @@ import parseArgs from 'minimist'
 
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
 import { DenvigProject } from './lib/project.ts'
+import { resolveProjectId } from './lib/project-id.ts'
 import { listProjects } from './lib/projects.ts'
 import { getDenvigVersion } from './lib/version.ts'
 
@@ -42,17 +43,9 @@ async function main() {
   let projectPath: string | null = null
 
   if (projectFlag) {
-    // If flag is provided, check if it's a path or a slug
-    if (projectFlag.startsWith('/') || projectFlag.startsWith('~')) {
-      projectPath = expandTilde(projectFlag)
-    } else {
-      // Search for matching project by slug
-      const projects = listProjects()
-      const match = projects.find((p) => p.slug === projectFlag)
-      if (match) {
-        projectPath = match.path
-      }
-    }
+    // Use the unified project ID resolver
+    const resolved = resolveProjectId(projectFlag, expandTilde)
+    projectPath = resolved.path
   } else {
     // Check if current directory matches any projectPaths pattern
     const projects = listProjects()

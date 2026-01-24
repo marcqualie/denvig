@@ -1,4 +1,6 @@
+import { expandTilde } from '../config.ts'
 import { DenvigProject, shortProjectId } from '../project.ts'
+import { parseProjectId, resolveProjectPath } from '../project-id.ts'
 import { listProjects } from '../projects.ts'
 import { ServiceManager } from './manager.ts'
 
@@ -13,33 +15,16 @@ export type ServiceIdentifier = {
  *
  * Supported formats:
  * - `serviceName` - uses the current project
- * - `project/service` - project slug format (e.g., `marcqualie/denvig/hello`)
- * - `id:[id]/[serviceName]` - exact project ID match (e.g., `id:a1b2c3d4/hello`)
+ * - `id:[id]/[serviceName]` - ID lookup (e.g., `id:a1b2c3d4/hello`)
+ * - `github:[slug]/[serviceName]` - GitHub slug (e.g., `github:owner/repo/hello`)
+ * - `local:/path/to/project` - local path (service name extracted from path if exists)
+ * - `[slug]/[serviceName]` - unprefixed slug (e.g., `marcqualie/denvig/hello`)
  */
 export const parseServiceIdentifier = (
   identifier: string,
   currentProjectSlug: string,
 ): ServiceIdentifier => {
-  // Handle id:[id]/[serviceName] format
-  if (identifier.startsWith('id:')) {
-    const withoutPrefix = identifier.slice(3)
-    const slashIndex = withoutPrefix.indexOf('/')
-    if (slashIndex === -1) {
-      // Invalid format - no service name
-      return {
-        projectSlug: currentProjectSlug,
-        serviceName: withoutPrefix,
-      }
-    }
-    const projectId = withoutPrefix.slice(0, slashIndex)
-    const serviceName = withoutPrefix.slice(slashIndex + 1)
-    return {
-      projectSlug: '',
-      projectId,
-      serviceName,
-    }
-  }
-
+  // If no slash, it's just a service name in the current project
   if (!identifier.includes('/')) {
     return {
       projectSlug: currentProjectSlug,
@@ -47,6 +32,43 @@ export const parseServiceIdentifier = (
     }
   }
 
+  // Use the unified project ID parser
+  const parsed = parseProjectId(identifier)
+
+  // If the parser found a service name, use it
+  if (parsed.serviceName !== undefined) {
+    if (parsed.type === 'id') {
+      return {
+        projectSlug: '',
+        projectId: parsed.value,
+        serviceName: parsed.serviceName,
+      }
+    }
+
+    // For github/local types, construct the slug
+    const slug =
+      parsed.type === 'local'
+        ? `local:${parsed.value}`
+        : `github:${parsed.value}`
+    return {
+      projectSlug: slug,
+      serviceName: parsed.serviceName,
+    }
+  }
+
+  // For paths and local without explicit service, the identifier is ambiguous
+  // Fall back to the old behavior: last part is service name
+  if (parsed.type === 'path' || parsed.type === 'local') {
+    // For absolute paths, we can't easily distinguish between path and service
+    // Return the whole thing as the slug, let getServiceContext handle it
+    return {
+      projectSlug:
+        parsed.type === 'local' ? `local:${parsed.value}` : parsed.value,
+      serviceName: '',
+    }
+  }
+
+  // For github slugs without explicit service name, fall back to old behavior
   // Split by `/` and the last part is the service name
   const parts = identifier.split('/')
   const serviceName = parts.pop() as string
@@ -113,6 +135,20 @@ export const getServiceContext = (
   identifier: string,
   currentProject: DenvigProject,
 ): { project: DenvigProject; manager: ServiceManager; serviceName: string } => {
+  // Try using the unified project ID resolver first
+  const parsed = parseProjectId(identifier)
+
+  // If the identifier has a service name from parsing
+  if (parsed.serviceName !== undefined && parsed.serviceName !== '') {
+    const projectPath = resolveProjectPath(parsed, expandTilde)
+    if (projectPath) {
+      const project = new DenvigProject(projectPath)
+      const manager = new ServiceManager(project)
+      return { project, manager, serviceName: parsed.serviceName }
+    }
+  }
+
+  // Fall back to the service identifier parsing for backwards compatibility
   const { projectSlug, projectId, serviceName } = parseServiceIdentifier(
     identifier,
     currentProject.slug,
