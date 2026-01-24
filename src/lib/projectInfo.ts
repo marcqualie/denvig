@@ -7,6 +7,7 @@ import type { DenvigProject } from './project.ts'
 export type ServiceStatus = 'running' | 'stopped' | 'none'
 
 export type ProjectInfo = {
+  id: string
   slug: string
   name: string
   path: string
@@ -60,6 +61,7 @@ export const getProjectInfo = async (
   }
 
   return {
+    id: project.id,
     slug: project.slug,
     name: project.name,
     path: project.path,
