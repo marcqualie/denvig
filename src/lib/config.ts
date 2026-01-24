@@ -106,18 +106,12 @@ export const getGlobalConfig =
  */
 export const getProjectConfig = (
   projectPath: string,
-  defaultName?: string,
 ): ConfigWithSourcePaths<ProjectConfigSchema> => {
-  const defaultConfig = {
-    name: defaultName || projectPath.split('/').pop() || 'unknown',
-    actions: {},
-  }
   const configPath = `${projectPath}/.denvig.yml`
   const configRaw = safeReadTextFileSync(configPath)
   if (configRaw) {
     try {
       return {
-        ...defaultConfig,
         ...ProjectConfigSchema.parse(parse(configRaw)),
         $sources: [configPath],
       }
@@ -127,7 +121,6 @@ export const getProjectConfig = (
     }
   }
   return {
-    ...defaultConfig,
     $sources: [],
   }
 }

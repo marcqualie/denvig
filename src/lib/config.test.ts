@@ -183,15 +183,10 @@ describe('getGlobalConfig()', () => {
 })
 
 describe('getProjectConfig()', () => {
-  it('should return a default project config if no config file exists', () => {
+  it('should return empty config if no config file exists', () => {
     const projectPath = '/tmp/test-project'
     const config = getProjectConfig(projectPath)
-    ok(config.name === 'test-project')
-    ok(typeof config.actions === 'object')
+    strictEqual(config.name, undefined)
+    strictEqual(config.$sources.length, 0)
   })
-
-  // TODO: Re-enable mocking tests when Node.js compatible mocking is implemented
-  // it('should return the project config from the file if it exists', () => {
-  //   // Test disabled - needs Node.js compatible mocking
-  // })
 })

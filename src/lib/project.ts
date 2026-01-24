@@ -30,7 +30,7 @@ export class DenvigProject {
   }
 
   get name(): string {
-    return this.config.name
+    return this.config.name ?? this._path.split('/').pop() ?? 'unknown'
   }
 
   get path(): string {

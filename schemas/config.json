@@ -7,7 +7,7 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "Unique identifier for the project"
+      "description": "Display name for the project"
     },
     "actions": {
       "type": "object",
@@ -96,8 +96,5 @@
       "description": "Service that can be managed for this project"
     }
   },
-  "additionalProperties": false,
-  "required": [
-    "name"
-  ]
+  "additionalProperties": false
 }
