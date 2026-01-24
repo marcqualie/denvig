@@ -65,13 +65,12 @@ async function main() {
   const project = projectPath ? new DenvigProject(projectPath) : null
 
   // Initialize CLI logging (after project detection for slug)
-  const sdkClient = process.env.DENVIG_SDK_CLIENT
   const slug = projectPath ? getGitHubSlug(projectPath) : null
   const cliLogTracker = createCliLogTracker({
     command: `denvig ${process.argv.slice(2).join(' ')}`,
     path: process.cwd(),
     slug: slug ?? undefined,
-    via: sdkClient ? `sdk:${sdkClient}` : undefined,
+    via: process.env.DENVIG_CLI_VIA,
   })
 
   // Command aliases - map shortcuts to their full commands
