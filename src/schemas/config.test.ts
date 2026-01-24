@@ -261,7 +261,6 @@ describe('ProjectConfigSchema - services', () => {
       'my-service',
       'my-long-service-name',
       'api1',
-      '1api',
       'a1b2c3',
     ]
 
@@ -274,6 +273,16 @@ describe('ProjectConfigSchema - services', () => {
       const result = ProjectConfigSchema.safeParse(config)
       ok(result.success, `Expected "${name}" to be a valid service name`)
     }
+  })
+
+  it('should reject service names starting with a number', () => {
+    const config = {
+      services: {
+        '1api': { command: 'echo test' },
+      },
+    }
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
   })
 
   it('should reject service names starting with hyphen', () => {

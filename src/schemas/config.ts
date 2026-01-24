@@ -66,8 +66,8 @@ export const ProjectConfigSchema = z
         z
           .string()
           .regex(
-            /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
-            'Service name must be lowercase alphanumeric with hyphens (like a hostname)',
+            /^[a-z]([a-z0-9-]*[a-z0-9])?$/,
+            'Service name must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen',
           ),
         z
           .object({
