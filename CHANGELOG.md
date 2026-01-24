@@ -6,6 +6,7 @@
 ### Added
 
 - `--project` flag now supports all identifier formats: `id:[id]`, `github:[slug]`, `local:/path`, or unprefixed slugs (defaults to `github:`)
+- Tab completion for `--project` flag: completes slugs by default, IDs when `id:` prefix is typed, and falls back to file completion for `/` or `~` paths
 - New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
 - Tab completion now includes services from all configured projects with their slug prefix (e.g., `marcqualie/denvig/hello`)
 - Service commands now accept slugs without the `github:` prefix (e.g., `denvig services start marcqualie/denvig/hello`)
