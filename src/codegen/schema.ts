@@ -90,6 +90,18 @@ export const zodToJsonSchema = (schema: z.ZodTypeAny): JsonSchemaIsh => {
       type: 'object',
       additionalProperties: zodToJsonSchema(def.valueType),
     }
+
+    // Extract key constraints for propertyNames using Zod's built-in toJSONSchema
+    if (def.keyType?.toJSONSchema) {
+      const keySchema = def.keyType.toJSONSchema()
+      // Remove $schema as it's not needed for propertyNames
+      const { $schema, ...propertyNames } = keySchema
+      // Only add propertyNames if there are constraints beyond type
+      if (propertyNames.maxLength || propertyNames.pattern) {
+        result.propertyNames = propertyNames
+      }
+    }
+
     if (description) {
       result.description = description
     }
