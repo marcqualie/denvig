@@ -64,16 +64,14 @@ describe('ProjectConfigSchema', () => {
   })
 
   it('should parse minimal project configuration', () => {
-    const minimalConfig = {
-      name: 'my-project',
-    }
+    const minimalConfig = {}
 
     const result = ProjectConfigSchema.safeParse(minimalConfig)
     ok(result.success)
   })
 
-  it('should reject configuration without name', () => {
-    const invalidConfig = {
+  it('should parse configuration without name', () => {
+    const configWithoutName = {
       actions: {
         build: {
           command: 'pnpm build',
@@ -81,8 +79,8 @@ describe('ProjectConfigSchema', () => {
       },
     }
 
-    const result = ProjectConfigSchema.safeParse(invalidConfig)
-    ok(!result.success)
+    const result = ProjectConfigSchema.safeParse(configWithoutName)
+    ok(result.success)
   })
 })
 

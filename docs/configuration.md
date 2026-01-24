@@ -3,11 +3,20 @@
 
 ## Global Configuration
 
-The file location for global configuration is `~/.denvig/config.yml`.
+Global configuration can be set via YAML files or environment variables.
+
+**Global Configuration Sources (in order of precedence, highest first):**
+
+1. Environment variables (`DENVIG_PROJECT_PATHS`, `DENVIG_QUICK_ACTIONS`)
+2. `~/.denvig/config.yml`
+3. Default values
+
+**Project Configuration** is loaded from `./.denvig.yml` in the project root.
 
 ## projectPaths
 
 **default:** `['~/src/*/*', '~/.dotfiles']`
+**env:** `DENVIG_PROJECT_PATHS` (comma-separated list, e.g., `~/src/*/*,~/.dotfiles`)
 
 An array of paths or glob-like patterns where your projects live. Each `*` matches a single directory level (not recursive).
 
@@ -35,8 +44,14 @@ projectPaths:
 ## quickActions
 
 **default:** build, dev, check-types, install, lint, outdated, test
+**env:** `DENVIG_QUICK_ACTIONS` (comma-separated list, e.g., `build,dev,lint`; empty string disables)
 
 A list of actions that will be available by default for all projects. See local configuration for more details.
+
+Setting an empty string via the environment variable disables quick actions entirely:
+```bash
+export DENVIG_QUICK_ACTIONS=""
+```
 
 
 
