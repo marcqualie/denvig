@@ -7,10 +7,10 @@ import { listProjects } from '../projects.ts'
  * Completion behavior:
  * - No prefix or partial slug: returns slugs without github: prefix (e.g., `marcqualie/denvig`)
  * - `id:` prefix: returns project IDs in `id:[shortId]` format
- * - `/` or `~` prefix: returns empty array (signals zsh to use file completion)
+ * - `/` or `~` prefix: returns empty (path completion not yet supported)
  */
 export const getProjectCompletions = (partial: string = ''): string[] => {
-  // For path completions, return empty to let zsh handle file completion
+  // Path completions not yet supported
   if (partial.startsWith('/') || partial.startsWith('~')) {
     return []
   }

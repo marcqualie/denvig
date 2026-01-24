@@ -90,16 +90,13 @@ describe('getProjectFlagPartial()', () => {
 })
 
 describe('getProjectCompletions()', () => {
-  // Note: These tests depend on the actual projects configured on the system
-  // We test the behavior for path prefixes which should always return empty
-
-  it('returns empty array for / prefix (file completion mode)', async () => {
+  it('returns empty array for / prefix (path completion not yet supported)', async () => {
     const { getProjectCompletions } = await import('./project-completions.ts')
-    const result = getProjectCompletions('/usr')
+    const result = getProjectCompletions('/usr/')
     deepStrictEqual(result, [])
   })
 
-  it('returns empty array for ~ prefix (file completion mode)', async () => {
+  it('returns empty array for ~ prefix (path completion not yet supported)', async () => {
     const { getProjectCompletions } = await import('./project-completions.ts')
     const result = getProjectCompletions('~/src')
     deepStrictEqual(result, [])
