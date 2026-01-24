@@ -72,7 +72,7 @@ export const runTestCommand = (
     ['--experimental-strip-types', `${rootDir}/src/cli.ts`, ...args],
     {
       cwd,
-      env: { ...process.env, ...env },
+      env: { ...process.env, DENVIG_CLI_VIA: 'node:test', ...env },
       stdio: ['pipe', 'pipe', 'pipe'],
     },
   )
