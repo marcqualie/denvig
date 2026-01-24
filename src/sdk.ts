@@ -135,7 +135,7 @@ export class DenvigSDK {
   private cliPath: string
   private cwd: string
   private shell: string
-  private via: string
+  private client: string
 
   constructor(options: DenvigSDKOptions) {
     if (!CLIENT_NAME_PATTERN.test(options.client)) {
@@ -148,7 +148,7 @@ export class DenvigSDK {
     this.cliPath = options.cliPath ?? './node_modules/.bin/denvig'
     this.cwd = options.cwd ?? process.cwd()
     this.shell = options.shell ?? '/bin/zsh'
-    this.via = `sdk:${options.client}`
+    this.client = options.client
   }
 
   /**
@@ -163,7 +163,7 @@ export class DenvigSDK {
         env: {
           ...process.env,
           LC_ALL: this.locale,
-          DENVIG_CLI_VIA: this.via,
+          DENVIG_SDK_CLIENT: this.client,
         },
       })
       return JSON.parse(stdout) as T
@@ -205,7 +205,7 @@ export class DenvigSDK {
         env: {
           ...process.env,
           LC_ALL: this.locale,
-          DENVIG_CLI_VIA: this.via,
+          DENVIG_SDK_CLIENT: this.client,
         },
       })
       return stdout.trim()

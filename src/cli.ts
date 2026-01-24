@@ -33,10 +33,11 @@ const globalFlags = [
 // Main CLI execution
 async function main() {
   // Initialize CLI logging
+  const sdkClient = process.env.DENVIG_SDK_CLIENT
   const cliLogTracker = createCliLogTracker({
     command: `denvig ${process.argv.slice(2).join(' ')}`,
     path: process.cwd(),
-    via: process.env.DENVIG_CLI_VIA,
+    via: sdkClient ? `sdk:${sdkClient}` : undefined,
   })
 
   let commandName = process.argv[2]
