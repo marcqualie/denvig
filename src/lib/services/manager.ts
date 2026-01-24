@@ -60,26 +60,24 @@ export class ServiceManager {
   }
 
   /**
-   * Start a specific service.
+   * Build environment variables for a service.
+   * This loads env files and merges with explicit env config.
+   * All env files are optional - missing files are silently skipped.
    */
-  async startService(name: string): Promise<ServiceResult> {
+  async buildServiceEnvironment(
+    name: string,
+  ): Promise<
+    | { success: true; env: Record<string, string> }
+    | { success: false; message: string }
+  > {
     const config = this.getServiceConfig(name)
     if (!config) {
       return {
-        name,
         success: false,
         message: `Service "${name}" not found in configuration`,
       }
     }
 
-    const label = this.getServiceLabel(name)
-    const isBootstrapped = await this.isServiceBootstrapped(name)
-
-    // Ensure denvig directories exist
-    await this.ensureDenvigDirectories()
-
-    // Ensure plist file exists
-    const plistPath = this.getPlistPath(name)
     const workingDirectory = this.resolveServiceCwd(config)
 
     // Build environment variables
@@ -90,24 +88,25 @@ export class ServiceManager {
 
     // Load environment variables from files (later files override earlier)
     // Files are resolved relative to the service's working directory
-    // - undefined: use defaults (.env.development, .env.local), skip missing files
+    // All env files are optional - missing files are silently skipped
+    // - undefined: use defaults (.env.development, .env.local)
     // - []: use no env files (explicit override)
-    // - [...]: use specified files, error if missing
+    // - [...]: use specified files
     const envFilesToLoad = config.envFiles ?? DEFAULT_ENV_FILES
-    const skipMissing = config.envFiles === undefined
 
     if (envFilesToLoad.length > 0) {
       try {
         const envFilePaths = envFilesToLoad.map((f) =>
           resolve(workingDirectory, f),
         )
-        const envFromFiles = await loadEnvFiles(envFilePaths, { skipMissing })
+        const envFromFiles = await loadEnvFiles(envFilePaths, {
+          skipMissing: true,
+        })
         Object.assign(environmentVariables, envFromFiles)
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error'
         return {
-          name,
           success: false,
           message: `Failed to load environment file: ${errorMessage}`,
         }
@@ -124,11 +123,38 @@ export class ServiceManager {
       environmentVariables.PORT = config.http.port.toString()
     }
 
+    return { success: true, env: environmentVariables }
+  }
+
+  /**
+   * Start a specific service.
+   */
+  async startService(name: string): Promise<ServiceResult> {
+    const envResult = await this.buildServiceEnvironment(name)
+    if (!envResult.success) {
+      return {
+        name,
+        success: false,
+        message: envResult.message,
+      }
+    }
+
+    const config = this.getServiceConfig(name)!
+    const label = this.getServiceLabel(name)
+    const isBootstrapped = await this.isServiceBootstrapped(name)
+
+    // Ensure denvig directories exist
+    await this.ensureDenvigDirectories()
+
+    // Ensure plist file exists
+    const plistPath = this.getPlistPath(name)
+    const workingDirectory = this.resolveServiceCwd(config)
+
     const plistContent = generatePlist({
       label,
       command: config.command,
       workingDirectory,
-      environmentVariables,
+      environmentVariables: envResult.env,
       standardOutPath: this.getLogPath(name, 'stdout'),
       keepAlive: config.keepAlive ?? true,
       runAtLoad: config.startOnBoot ?? false,
