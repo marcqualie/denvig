@@ -23,6 +23,7 @@
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files
 - **Breaking:** Plist and log file naming changed from slug-based to ID-based format (`denvig.[id].[service].plist`). Run `denvig services teardown --global` to clean up old plist files.
+- **Breaking:** Service names must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen. Names like `1api`, `my_service`, or `api-` are no longer valid.
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root)
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
 - Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']`
