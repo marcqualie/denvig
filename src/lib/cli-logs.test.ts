@@ -185,6 +185,21 @@ describe('cli-logs', () => {
       assert.strictEqual(entry.via, 'custom-integration')
     })
 
+    it('should include slug when provided', async () => {
+      const tracker = createCliLogTracker({
+        command: 'denvig test-command',
+        path: '/test/path',
+        slug: 'owner/repo',
+      })
+
+      await tracker.finish(0)
+
+      const content = await readFile(testLogPath, 'utf-8')
+      const entry = JSON.parse(content.trim())
+
+      assert.strictEqual(entry.slug, 'owner/repo')
+    })
+
     it('should log error status correctly', async () => {
       const tracker = createCliLogTracker({
         command: 'denvig failing-command',

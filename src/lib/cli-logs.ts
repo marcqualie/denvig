@@ -11,6 +11,7 @@ export type CliLogEntry = {
   path: string
   duration: number
   status: number
+  slug?: string
   via?: string
   error?: string
 }
@@ -70,6 +71,7 @@ export const appendCliLog = async (entry: CliLogEntry): Promise<void> => {
 export const createCliLogTracker = (options: {
   command: string
   path: string
+  slug?: string
   via?: string
 }) => {
   const startTime = Date.now()
@@ -87,6 +89,10 @@ export const createCliLogTracker = (options: {
         path: options.path,
         duration: Date.now() - startTime,
         status,
+      }
+
+      if (options.slug !== undefined) {
+        entry.slug = options.slug
       }
 
       if (options.via !== undefined) {

@@ -4,6 +4,7 @@ import parseArgs from 'minimist'
 
 import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
+import { getGitHubSlug } from './lib/git.ts'
 import { DenvigProject } from './lib/project.ts'
 import { resolveProjectId } from './lib/project-id.ts'
 import { listProjects } from './lib/projects.ts'
@@ -32,14 +33,6 @@ const globalFlags = [
 
 // Main CLI execution
 async function main() {
-  // Initialize CLI logging
-  const sdkClient = process.env.DENVIG_SDK_CLIENT
-  const cliLogTracker = createCliLogTracker({
-    command: `denvig ${process.argv.slice(2).join(' ')}`,
-    path: process.cwd(),
-    via: sdkClient ? `sdk:${sdkClient}` : undefined,
-  })
-
   let commandName = process.argv[2]
   let args = process.argv.slice(2)
 
@@ -70,6 +63,16 @@ async function main() {
   }
 
   const project = projectPath ? new DenvigProject(projectPath) : null
+
+  // Initialize CLI logging (after project detection for slug)
+  const sdkClient = process.env.DENVIG_SDK_CLIENT
+  const slug = projectPath ? getGitHubSlug(projectPath) : null
+  const cliLogTracker = createCliLogTracker({
+    command: `denvig ${process.argv.slice(2).join(' ')}`,
+    path: process.cwd(),
+    slug: slug ?? undefined,
+    via: sdkClient ? `sdk:${sdkClient}` : undefined,
+  })
 
   // Command aliases - map shortcuts to their full commands
   const commandAliases: Record<string, string> = {
