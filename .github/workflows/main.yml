@@ -19,9 +19,9 @@ jobs:
     strategy:
       matrix:
         node-version:
-          - 22.21
-          - 24.12
-          - 25.2
+          - 22.22
+          - 24.13
+          - 25.4
 
     steps:
       - name: Checkout
