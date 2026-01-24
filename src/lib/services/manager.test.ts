@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
+import { platform } from 'node:os'
 import { describe, it } from 'node:test'
 
 import { createMockProject } from '../../test/mock.ts'
@@ -108,30 +109,35 @@ describe('ServiceManager', () => {
   })
 
   describe('startService() with envFiles', () => {
-    it('should skip missing env files when explicitly specified', async () => {
-      const project = createMockProject({
-        slug: 'github:marcqualie/denvig',
-        path: process.cwd(),
-      })
+    // This test requires macOS since it uses launchd to start services
+    it(
+      'should skip missing env files when explicitly specified',
+      { skip: platform() !== 'darwin' },
+      async () => {
+        const project = createMockProject({
+          slug: 'github:marcqualie/denvig',
+          path: process.cwd(),
+        })
 
-      // Set up a service with a non-existent envFile
-      // This should NOT cause an error - env files should be optional
-      project.config.services = {
-        'test-service-envfile': {
-          command: 'echo test',
-          envFiles: ['this-file-definitely-does-not-exist-12345.env'],
-        },
-      }
+        // Set up a service with a non-existent envFile
+        // This should NOT cause an error - env files should be optional
+        project.config.services = {
+          'test-service-envfile': {
+            command: 'echo test',
+            envFiles: ['this-file-definitely-does-not-exist-12345.env'],
+          },
+        }
 
-      const manager = new ServiceManager(project)
-      const result = await manager.startService('test-service-envfile')
+        const manager = new ServiceManager(project)
+        const result = await manager.startService('test-service-envfile')
 
-      // The service should start successfully, silently skipping missing env files
-      ok(
-        result.success,
-        `Expected service to start successfully but got: ${result.message}`,
-      )
-    })
+        // The service should start successfully, silently skipping missing env files
+        ok(
+          result.success,
+          `Expected service to start successfully but got: ${result.message}`,
+        )
+      },
+    )
   })
 
   describe('log entries on start/stop', () => {
