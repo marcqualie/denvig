@@ -3,6 +3,7 @@ import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { createMockProject } from '../../test/mock.ts'
+import { projectId } from '../project.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {
@@ -17,13 +18,14 @@ describe('ServiceManager', () => {
   })
 
   describe('getServiceLabel()', () => {
-    it('should generate correct service label format', () => {
+    it('should generate correct service label format using project ID', () => {
       const project = createMockProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const label = manager.getServiceLabel('api')
 
-      strictEqual(label, 'denvig.workspace__my-app__api')
+      // Label format: denvig.[projectId].[serviceName]
+      strictEqual(label, `denvig.${project.id}.api`)
     })
 
     it('should sanitize service name with special characters', () => {
@@ -32,37 +34,30 @@ describe('ServiceManager', () => {
 
       const label = manager.getServiceLabel('dev:watch')
 
-      strictEqual(label, 'denvig.workspace__my-app__dev-watch')
+      strictEqual(label, `denvig.${project.id}.dev-watch`)
     })
 
-    it('should generate label with github slug format', () => {
-      const project = createMockProject('github:marcqualie/denvig')
-      const manager = new ServiceManager(project)
+    it('should generate same label format regardless of slug format', () => {
+      const project1 = createMockProject('github:marcqualie/denvig')
+      const project2 = createMockProject('local:/Users/marc/dotfiles')
+      const manager1 = new ServiceManager(project1)
+      const manager2 = new ServiceManager(project2)
 
-      const label = manager.getServiceLabel('api')
-
-      strictEqual(label, 'denvig.github-marcqualie__denvig__api')
-    })
-
-    it('should generate label with local slug format', () => {
-      const project = createMockProject('local:/Users/marc/dotfiles')
-      const manager = new ServiceManager(project)
-
-      const label = manager.getServiceLabel('api')
-
-      strictEqual(label, 'denvig.local-__Users__marc__dotfiles__api')
+      // Both should use the same format: denvig.[id].[service]
+      strictEqual(manager1.getServiceLabel('api'), `denvig.${project1.id}.api`)
+      strictEqual(manager2.getServiceLabel('api'), `denvig.${project2.id}.api`)
     })
   })
 
   describe('getPlistPath()', () => {
-    it('should generate correct plist path', () => {
+    it('should generate correct plist path using project ID', () => {
       const project = createMockProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getPlistPath('api')
 
       ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes('denvig.workspace__my-app__api.plist'))
+      ok(path.includes(`denvig.${project.id}.api.plist`))
     })
 
     it('should sanitize special characters in plist filename', () => {
@@ -72,32 +67,32 @@ describe('ServiceManager', () => {
       const path = manager.getPlistPath('dev:watch')
 
       ok(path.includes('Library/LaunchAgents'))
-      ok(path.includes('denvig.workspace__my-app__dev-watch.plist'))
+      ok(path.includes(`denvig.${project.id}.dev-watch.plist`))
       ok(!path.includes(':'))
     })
   })
 
   describe('getLogPath()', () => {
-    it('should generate correct stdout log path', () => {
+    it('should generate correct stdout log path using project ID', () => {
       const project = createMockProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api', 'stdout')
 
       ok(path.includes('.denvig/logs'))
-      ok(path.includes('workspace__my-app__api.log'))
+      ok(path.includes(`${project.id}.api.log`))
     })
 
     // Note: stderr is now merged with stdout via the timestamp wrapper,
     // but getLogPath still supports 'stderr' for backwards compatibility
-    it('should generate correct stderr log path', () => {
+    it('should generate correct stderr log path using project ID', () => {
       const project = createMockProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api', 'stderr')
 
       ok(path.includes('.denvig/logs'))
-      ok(path.includes('workspace__my-app__api.error.log'))
+      ok(path.includes(`${project.id}.api.error.log`))
     })
 
     it('should sanitize special characters in log filename', () => {
@@ -107,7 +102,7 @@ describe('ServiceManager', () => {
       const path = manager.getLogPath('dev:watch', 'stdout')
 
       ok(path.includes('.denvig/logs'))
-      ok(path.includes('workspace__my-app__dev-watch.log'))
+      ok(path.includes(`${project.id}.dev-watch.log`))
       ok(!path.includes(':'))
     })
   })
@@ -194,7 +189,7 @@ describe('ServiceManager', () => {
         home,
         '.denvig',
         'logs',
-        'workspace__denvig__test-logger.log',
+        `${project.id}.test-logger.log`,
       )
 
       // Read the log and assert the started line exists
@@ -213,7 +208,7 @@ describe('ServiceManager', () => {
             home,
             'Library',
             'LaunchAgents',
-            'denvig.workspace__denvig__test-logger.plist',
+            `denvig.${project.id}.test-logger.plist`,
           ),
           { force: true },
         ),
@@ -247,7 +242,7 @@ describe('ServiceManager', () => {
         home,
         '.denvig',
         'logs',
-        'workspace__denvig__test-logger-stop.log',
+        `${project.id}.test-logger-stop.log`,
       )
       const fs = await import('node:fs/promises')
       await fs.mkdir(require('node:path').resolve(home, '.denvig', 'logs'), {
@@ -272,7 +267,7 @@ describe('ServiceManager', () => {
             home,
             'Library',
             'LaunchAgents',
-            'denvig.workspace__denvig__test-logger-stop.plist',
+            `denvig.${project.id}.test-logger-stop.plist`,
           ),
           { force: true },
         ),

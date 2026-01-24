@@ -1,5 +1,6 @@
 import { Command } from '../lib/command.ts'
 import { prettyPath } from '../lib/path.ts'
+import { shortProjectId } from '../lib/project.ts'
 import { getProjectInfo } from '../lib/projectInfo.ts'
 
 const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
@@ -34,6 +35,7 @@ export const infoCommand = new Command({
     console.log(`${statusText}${info.config?.name || info.slug}`)
     console.log(`   Path: ${prettyPath(info.path)}`)
     console.log(`   Slug: ${info.slug}`)
+    console.log(`     ID: ${shortProjectId(info.id)}`)
 
     return { success: true }
   },

@@ -1,5 +1,7 @@
 import fs from 'node:fs'
 
+import { projectId } from '../lib/project.ts'
+
 import type { DenvigProject } from '../lib/project.ts'
 
 export type MockProjectOptions = {
@@ -24,12 +26,14 @@ export const createMockProject = (
   const slug = options.slug ?? 'github:owner/repo'
   const name = options.name ?? slug.split('/').pop() ?? 'test-project'
   const path = options.path ?? '/tmp/test-project'
+  const id = projectId(path)
   const config = options.config ?? {
     name,
     $sources: [],
   }
 
   return {
+    id,
     slug,
     name,
     path,

@@ -21,7 +21,7 @@ describe('logsCommand', () => {
       home,
       '.denvig',
       'logs',
-      'workspace__denvig__test-logs.log',
+      `${project.id}.test-logs.log`,
     )
 
     const fs = await import('node:fs/promises')

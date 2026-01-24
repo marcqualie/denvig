@@ -1,7 +1,7 @@
 import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
 import { prettyPath } from '../../lib/path.ts'
-import { DenvigProject } from '../../lib/project.ts'
+import { DenvigProject, shortProjectId } from '../../lib/project.ts'
 import { getProjectInfo, type ProjectInfo } from '../../lib/projectInfo.ts'
 import { listProjects } from '../../lib/projects.ts'
 import launchctl from '../../lib/services/launchctl.ts'
@@ -68,6 +68,7 @@ export const projectsListCommand = new Command({
     const lines = formatTable({
       columns: [
         { header: '', accessor: (p) => getStatusIcon(p.serviceStatus) },
+        { header: 'ID', accessor: (p) => shortProjectId(p.id) },
         { header: 'Name', accessor: (p) => p.config?.name || p.slug },
         { header: 'Path', accessor: (p) => prettyPath(p.path) },
       ],
