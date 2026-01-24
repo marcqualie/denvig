@@ -7,6 +7,7 @@ import { resolve } from 'node:path'
  */
 export type CliLogEntry = {
   timestamp: string
+  version: string
   command: string
   path: string
   duration: number
@@ -69,6 +70,7 @@ export const appendCliLog = async (entry: CliLogEntry): Promise<void> => {
  * Call start() before command execution and finish() after.
  */
 export const createCliLogTracker = (options: {
+  version: string
   command: string
   path: string
   slug?: string
@@ -85,6 +87,7 @@ export const createCliLogTracker = (options: {
     finish: async (status: number, error?: string): Promise<void> => {
       const entry: CliLogEntry = {
         timestamp: new Date().toISOString(),
+        version: options.version,
         command: options.command,
         path: options.path,
         duration: Date.now() - startTime,

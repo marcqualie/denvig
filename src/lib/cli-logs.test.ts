@@ -66,6 +66,7 @@ describe('cli-logs', () => {
     it('should append a log entry to the file', async () => {
       const entry = {
         timestamp: '2026-01-24T12:00:00.000Z',
+        version: '1.0.0',
         command: 'denvig version',
         path: '/test/path',
         duration: 100,
@@ -83,6 +84,7 @@ describe('cli-logs', () => {
     it('should append log entry with via field', async () => {
       const entry = {
         timestamp: '2026-01-24T12:00:00.000Z',
+        version: '1.0.0',
         command: 'denvig services list',
         path: '/test/path',
         duration: 200,
@@ -100,6 +102,7 @@ describe('cli-logs', () => {
     it('should append multiple entries', async () => {
       const entry1 = {
         timestamp: '2026-01-24T12:00:00.000Z',
+        version: '1.0.0',
         command: 'denvig version',
         path: '/test/path',
         duration: 100,
@@ -107,6 +110,7 @@ describe('cli-logs', () => {
       }
       const entry2 = {
         timestamp: '2026-01-24T12:00:01.000Z',
+        version: '1.0.0',
         command: 'denvig services list',
         path: '/test/path',
         duration: 200,
@@ -128,6 +132,7 @@ describe('cli-logs', () => {
 
       const entry = {
         timestamp: '2026-01-24T12:00:00.000Z',
+        version: '1.0.0',
         command: 'denvig version',
         path: '/test/path',
         duration: 100,
@@ -150,6 +155,7 @@ describe('cli-logs', () => {
   describe('createCliLogTracker()', () => {
     it('should track command execution and log on finish', async () => {
       const tracker = createCliLogTracker({
+        version: '1.0.0',
         command: 'denvig test-command',
         path: '/test/path',
       })
@@ -162,6 +168,7 @@ describe('cli-logs', () => {
       const content = await readFile(testLogPath, 'utf-8')
       const entry = JSON.parse(content.trim())
 
+      assert.strictEqual(entry.version, '1.0.0')
       assert.strictEqual(entry.command, 'denvig test-command')
       assert.strictEqual(entry.path, '/test/path')
       assert.strictEqual(entry.status, 0)
@@ -172,6 +179,7 @@ describe('cli-logs', () => {
 
     it('should include via field when provided', async () => {
       const tracker = createCliLogTracker({
+        version: '1.0.0',
         command: 'denvig test-command',
         path: '/test/path',
         via: 'custom-integration',
@@ -187,6 +195,7 @@ describe('cli-logs', () => {
 
     it('should include slug when provided', async () => {
       const tracker = createCliLogTracker({
+        version: '1.0.0',
         command: 'denvig test-command',
         path: '/test/path',
         slug: 'owner/repo',
@@ -202,6 +211,7 @@ describe('cli-logs', () => {
 
     it('should log error status correctly', async () => {
       const tracker = createCliLogTracker({
+        version: '1.0.0',
         command: 'denvig failing-command',
         path: '/test/path',
       })
@@ -221,6 +231,7 @@ describe('cli-logs', () => {
 
     it('should include error message when provided', async () => {
       const tracker = createCliLogTracker({
+        version: '1.0.0',
         command: 'denvig bad-command',
         path: '/test/path',
       })

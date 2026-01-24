@@ -67,6 +67,7 @@ async function main() {
   // Initialize CLI logging (after project detection for slug)
   const slug = projectPath ? getGitHubSlug(projectPath) : null
   const cliLogTracker = createCliLogTracker({
+    version: getDenvigVersion(),
     command: `denvig ${process.argv.slice(2).join(' ')}`,
     path: process.cwd(),
     slug: slug ?? undefined,
