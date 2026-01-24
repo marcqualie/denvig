@@ -3,7 +3,10 @@ import { homedir } from 'node:os'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
-import { getServiceContext } from '../../lib/services/identifier.ts'
+import {
+  getServiceCompletions,
+  getServiceContext,
+} from '../../lib/services/identifier.ts'
 
 export const servicesStatusCommand = new Command({
   name: 'services:status',
@@ -21,7 +24,7 @@ export const servicesStatusCommand = new Command({
   ],
   flags: [],
   completions: ({ project }) => {
-    return Object.keys(project.services)
+    return getServiceCompletions(project)
   },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
