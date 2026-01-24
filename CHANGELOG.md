@@ -8,6 +8,11 @@
 - New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
 - Tab completion now includes services from all configured projects with their slug prefix (e.g., `marcqualie/denvig/hello`)
 - Service commands now accept slugs without the `github:` prefix (e.g., `denvig services start marcqualie/denvig/hello`)
+- Unique project ID based on full SHA1 hash of project path
+  - `denvig info` displays full ID, `denvig projects` shows short ID (8 chars)
+  - Service commands support `id:[id]/[serviceName]` format for exact project matching (e.g., `denvig services start id:5444710a/hello`)
+  - Both short (8 char) and full IDs are accepted when matching
+  - Enables git worktree support where the same slug may exist in multiple paths
 - Environment variable configuration support:
   - `DENVIG_PROJECT_PATHS` - comma-separated list of project paths
   - `DENVIG_QUICK_ACTIONS` - comma-separated list of quick actions (empty string disables)
@@ -17,6 +22,7 @@
 - **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output.
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files
+- **Breaking:** Plist and log file naming changed from slug-based to ID-based format (`denvig.[id].[service].plist`). Run `denvig services teardown --global` to clean up old plist files.
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root)
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
 - Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']`

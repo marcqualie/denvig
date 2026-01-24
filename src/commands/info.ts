@@ -34,6 +34,7 @@ export const infoCommand = new Command({
     console.log(`${statusText}${info.config?.name || info.slug}`)
     console.log(`   Path: ${prettyPath(info.path)}`)
     console.log(`   Slug: ${info.slug}`)
+    console.log(`     ID: ${info.id}`)
 
     return { success: true }
   },

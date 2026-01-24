@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 
 import { detectActions } from './actions/actions.ts'
@@ -13,20 +14,42 @@ import plugins from './plugins.ts'
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 import type { OutdatedDependenciesOptions } from './plugin.ts'
 
+/**
+ * Generate a unique project ID from the absolute path.
+ * Returns the full SHA1 hash of the path.
+ */
+export function projectId(absolutePath: string): string {
+  return createHash('sha1').update(absolutePath).digest('hex')
+}
+
+/**
+ * Truncate a project ID for display purposes.
+ * Returns the first 8 characters of the ID.
+ */
+export function shortProjectId(id: string): string {
+  return id.slice(0, 8)
+}
+
 export class DenvigProject {
   private _path: string
   private _slug: string
+  private _id: string
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
 
   constructor(projectPath: string) {
     this._path = projectPath
     this._slug = getProjectSlug(projectPath)
+    this._id = projectId(projectPath)
     this.config = getProjectConfig(projectPath)
   }
 
   get slug(): string {
     return this._slug
+  }
+
+  get id(): string {
+    return this._id
   }
 
   get name(): string {

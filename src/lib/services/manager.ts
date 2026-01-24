@@ -397,8 +397,7 @@ export class ServiceManager {
     removeLogs?: boolean
   }): Promise<ServiceResult[]> {
     const results: ServiceResult[] = []
-    const normalizedSlug = this.normalizeForLabel(this.project.slug)
-    const labelPrefix = `denvig.${normalizedSlug}__`
+    const labelPrefix = `denvig.${this.project.id}.`
     const successfullyRemovedLabels: string[] = []
 
     // Get all denvig services for this project from launchctl
@@ -441,10 +440,10 @@ export class ServiceManager {
     if (options?.removeLogs && successfullyRemovedLabels.length > 0) {
       const logsDir = resolve(this.getDenvigHomeDir(), 'logs')
 
-      // Extract service names from labels (format: denvig.{slug}__{serviceName})
+      // Extract log prefixes from labels (format: denvig.{projectId}.{serviceName})
       const serviceLogPrefixes = successfullyRemovedLabels.map((label) => {
-        // Label format: denvig.{normalizedSlug}__{serviceName}
-        // Log format: {normalizedSlug}__{serviceName}.log
+        // Label format: denvig.{projectId}.{serviceName}
+        // Log format: {projectId}.{serviceName}.log
         return label.replace('denvig.', '')
       })
 
@@ -483,12 +482,11 @@ export class ServiceManager {
 
   /**
    * Get the service label for launchctl.
-   * Format: denvig.[workspace]__[repo]__[service]
+   * Format: denvig.[projectId].[serviceName]
    */
   getServiceLabel(name: string): string {
-    const normalizedSlug = this.normalizeForLabel(this.project.slug)
     const normalizedName = this.normalizeForLabel(name)
-    return `denvig.${normalizedSlug}__${normalizedName}`
+    return `denvig.${this.project.id}.${normalizedName}`
   }
 
   /**
@@ -508,16 +506,15 @@ export class ServiceManager {
 
   /**
    * Get the log file path.
-   * Format: [workspace]__[repo]__[service].log or [workspace]__[repo]__[service].error.log
+   * Format: [projectId].[serviceName].log or [projectId].[serviceName].error.log
    */
   getLogPath(name: string, type: 'stdout' | 'stderr'): string {
-    const normalizedSlug = this.normalizeForLabel(this.project.slug)
     const normalizedName = this.normalizeForLabel(name)
     const suffix = type === 'stderr' ? '.error' : ''
     return resolve(
       this.getDenvigHomeDir(),
       'logs',
-      `${normalizedSlug}__${normalizedName}${suffix}.log`,
+      `${this.project.id}.${normalizedName}${suffix}.log`,
     )
   }
 
