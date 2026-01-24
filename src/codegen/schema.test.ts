@@ -1,4 +1,4 @@
-import { deepStrictEqual, strictEqual } from 'node:assert'
+import { deepStrictEqual, ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 import { z } from 'zod'
 
@@ -338,8 +338,10 @@ describe('generateConfigSchema()', () => {
     strictEqual(schema.properties?.actions?.type, 'object')
     strictEqual(schema.properties?.quickActions?.type, 'array')
 
-    // Verify that name is required
-    strictEqual(Array.isArray(schema.required), true)
-    strictEqual(schema.required?.includes('name'), true)
+    // Verify that all fields are optional (no required array or empty)
+    ok(
+      schema.required === undefined || schema.required?.length === 0,
+      'All fields should be optional',
+    )
   })
 })

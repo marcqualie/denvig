@@ -47,7 +47,7 @@ export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
  */
 export const ProjectConfigSchema = z
   .object({
-    name: z.string().describe('Unique identifier for the project'),
+    name: z.string().optional().describe('Display name for the project'),
     actions: z
       .record(
         z.string().describe('Name of the action'),
