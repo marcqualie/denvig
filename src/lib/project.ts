@@ -1,29 +1,32 @@
 import fs from 'node:fs'
 
 import { detectActions } from './actions/actions.ts'
-import {
-  type ConfigWithSourcePaths,
-  getGlobalConfig,
-  getProjectConfig,
-} from './config.ts'
+import { type ConfigWithSourcePaths, getProjectConfig } from './config.ts'
 import {
   detectDependencies,
   type OutdatedDependencySchema,
   type ProjectDependencySchema,
 } from './dependencies.ts'
+import { getProjectSlug } from './git.ts'
 import plugins from './plugins.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 import type { OutdatedDependenciesOptions } from './plugin.ts'
 
 export class DenvigProject {
-  slug: string
+  private _path: string
+  private _slug: string
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
 
-  constructor(slug: string) {
-    this.slug = slug
-    this.config = getProjectConfig(slug)
+  constructor(projectPath: string) {
+    this._path = projectPath
+    this._slug = getProjectSlug(projectPath)
+    this.config = getProjectConfig(projectPath)
+  }
+
+  get slug(): string {
+    return this._slug
   }
 
   get name(): string {
@@ -31,8 +34,7 @@ export class DenvigProject {
   }
 
   get path(): string {
-    const globalConfig = getGlobalConfig()
-    return `${globalConfig.codeRootDir}/${this.slug}`
+    return this._path
   }
 
   get packageManagers(): string[] {

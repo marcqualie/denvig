@@ -2,17 +2,11 @@ import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
 import { prettyPath } from '../../lib/path.ts'
 import { DenvigProject } from '../../lib/project.ts'
+import { getProjectInfo, type ProjectInfo } from '../../lib/projectInfo.ts'
 import { listProjects } from '../../lib/projects.ts'
 import launchctl from '../../lib/services/launchctl.ts'
-import { ServiceManager } from '../../lib/services/manager.ts'
 
-import type { ProjectResponse } from '../../types/responses.ts'
-
-type ProjectWithStatus = ProjectResponse & {
-  serviceStatus: 'running' | 'stopped' | 'none'
-}
-
-const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
+const getStatusIcon = (status: ProjectInfo['serviceStatus']): string => {
   switch (status) {
     case 'running':
       return '🟢'
@@ -38,13 +32,12 @@ export const projectsListCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: async ({ project, flags }) => {
+  handler: async ({ flags }) => {
     const format = flags.format as string
     const withConfig = flags['with-config'] as boolean
-    const currentProjectSlug = project.slug
-    const projectSlugs = listProjects({ withConfig })
+    const projectPaths = listProjects({ withConfig })
 
-    if (projectSlugs.length === 0) {
+    if (projectPaths.length === 0) {
       if (format === 'json') {
         console.log(JSON.stringify([]))
       } else {
@@ -56,57 +49,16 @@ export const projectsListCommand = new Command({
     // Pre-fetch launchctl list once to avoid N shell calls
     const launchctlList = await launchctl.list('denvig.')
 
-    const projects: ProjectWithStatus[] = []
+    const projects: ProjectInfo[] = []
 
-    for (const slug of projectSlugs) {
-      const proj = new DenvigProject(slug)
-      const hasConfig = proj.config.$sources.length > 0
-
-      // Extract config without internal $sources property
-      const { $sources: _, ...configWithoutSources } = proj.config
-
-      // Determine service status
-      let serviceStatus: 'running' | 'stopped' | 'none' = 'none'
-      const services = proj.config.services || {}
-      const serviceNames = Object.keys(services)
-
-      if (serviceNames.length > 0) {
-        // Check if any service is running
-        const manager = new ServiceManager(proj)
-        let hasRunningService = false
-
-        for (const serviceName of serviceNames) {
-          const response = await manager.getServiceResponse(serviceName, {
-            launchctlList,
-          })
-          if (response?.status === 'running') {
-            hasRunningService = true
-            break
-          }
-        }
-
-        serviceStatus = hasRunningService ? 'running' : 'stopped'
-      }
-
-      projects.push({
-        slug,
-        name: proj.name,
-        path: proj.path,
-        config: hasConfig ? configWithoutSources : null,
-        serviceStatus,
-      })
+    for (const projectPath of projectPaths) {
+      const proj = new DenvigProject(projectPath.path)
+      const info = await getProjectInfo(proj, { launchctlList })
+      projects.push(info)
     }
 
-    // Sort: current project first, then alphabetically by slug
-    const sortedProjects = projects.sort((a, b) => {
-      const aIsCurrent = a.slug === currentProjectSlug
-      const bIsCurrent = b.slug === currentProjectSlug
-
-      if (aIsCurrent && !bIsCurrent) return -1
-      if (!aIsCurrent && bIsCurrent) return 1
-
-      return a.slug.localeCompare(b.slug)
-    })
+    // Sort by absolute path ascending
+    const sortedProjects = projects.sort((a, b) => a.path.localeCompare(b.path))
 
     // JSON output
     if (format === 'json') {

@@ -2,7 +2,7 @@ import { ok, strictEqual } from 'node:assert'
 import { createHash } from 'node:crypto'
 import { describe, it } from 'node:test'
 
-import { DenvigProject } from './project.ts'
+import { createMockProject } from '../test/mock.ts'
 import {
   constructDenvigResourceId,
   generateDenvigResourceHash,
@@ -10,8 +10,7 @@ import {
 
 describe('constructDenvigResourceId()', () => {
   it('constructs id for a basic action in root workspace', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'marcqualie/denvig'
+    const project = createMockProject('marcqualie/denvig')
 
     const expectedId = `@marcqualie/denvig|root|action/build`
     const id = constructDenvigResourceId({
@@ -23,8 +22,7 @@ describe('constructDenvigResourceId()', () => {
   })
 
   it('throws an error with an invalid resource format', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'my-project'
+    const project = createMockProject('my-project')
 
     const resource = 'invalid-resource-format' as unknown as
       | `action/${string}`
@@ -48,8 +46,7 @@ describe('constructDenvigResourceId()', () => {
 
 describe('generateDenvigResourceHash()', () => {
   it('constructs id and hash for a basic action in root workspace', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'marcqualie/denvig'
+    const project = createMockProject('marcqualie/denvig')
 
     const result = generateDenvigResourceHash({
       project,
@@ -62,8 +59,7 @@ describe('generateDenvigResourceHash()', () => {
   })
 
   it('includes workspace when provided', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'my-project'
+    const project = createMockProject('my-project')
 
     const result = generateDenvigResourceHash({
       project,
@@ -75,8 +71,7 @@ describe('generateDenvigResourceHash()', () => {
   })
 
   it('uses "root" as default workspace when omitted', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'my-app'
+    const project = createMockProject('my-app')
 
     const result = generateDenvigResourceHash({
       project,
@@ -86,8 +81,7 @@ describe('generateDenvigResourceHash()', () => {
   })
 
   it('generates stable hashes for same inputs and different for different inputs', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'stable-test'
+    const project = createMockProject('stable-test')
 
     const a = generateDenvigResourceHash({ project, resource: 'action/x' })
     const b = generateDenvigResourceHash({ project, resource: 'action/x' })
@@ -99,8 +93,7 @@ describe('generateDenvigResourceHash()', () => {
   })
 
   it('handles weird characters in slug, workspace and resource', () => {
-    const project = new DenvigProject('denvig')
-    project.slug = 'org/Repo With Spaces-ç'
+    const project = createMockProject('org/Repo With Spaces-ç')
 
     const workspace = 'we!rd/space$|name'
     const resource = 'action/hello-world_v2|part'

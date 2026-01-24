@@ -6,12 +6,15 @@
 ### Added
 
 - `--json` global flag as shorthand for `--format=json`
+- New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
 
 ### Changed
 
+- **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root)
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
+- Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']`
 
 
 ## [v0.4.3] - 2026-01-22

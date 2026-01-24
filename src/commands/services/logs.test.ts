@@ -1,12 +1,15 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { DenvigProject } from '../../lib/project.ts'
+import { createMockProject } from '../../test/mock.ts'
 import { logsCommand } from './logs.ts'
 
 describe('logsCommand', () => {
   it('should show last N lines using --lines flag', async () => {
-    const project = new DenvigProject('workspace/denvig')
+    const project = createMockProject({
+      slug: 'workspace/denvig',
+      path: process.cwd(),
+    })
     project.config.services = {
       'test-logs': {
         command: 'echo hi',

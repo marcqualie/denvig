@@ -1,4 +1,17 @@
 import { Command } from '../lib/command.ts'
+import { prettyPath } from '../lib/path.ts'
+import { getProjectInfo } from '../lib/projectInfo.ts'
+
+const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
+  switch (status) {
+    case 'running':
+      return '🟢'
+    case 'stopped':
+      return '◯'
+    default:
+      return ''
+  }
+}
 
 export const infoCommand = new Command({
   name: 'info',
@@ -8,51 +21,19 @@ export const infoCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ project, flags }) => {
-    // Get GitHub repository URL from package.json
-    let githubUrl = null
-    try {
-      const packageJsonPath = `${project.path}/package.json`
-      const fs = await import('node:fs')
-      if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(
-          fs.readFileSync(packageJsonPath, 'utf-8'),
-        )
-        if (packageJson.repository?.url) {
-          githubUrl = packageJson.repository.url
-            .replace('git+', '')
-            .replace('.git', '')
-        }
-      }
-    } catch (_error) {
-      // Ignore errors - GitHub URL is optional
-    }
-
-    const actions = await project.actions
-
-    const info = {
-      name: project.name,
-      primaryPackageManager: project.primaryPackageManager,
-      allPackageManagers: project.packageManagers,
-      numberOfActions: Object.keys(actions).length,
-      githubRepository: githubUrl,
-    }
+    const info = await getProjectInfo(project)
 
     if (flags.format === 'json') {
       console.log(JSON.stringify(info))
       return { success: true }
     }
 
-    console.log(`Project: ${info.name}`)
-    console.log(
-      `Primary Package Manager: ${info.primaryPackageManager || 'None detected'}`,
-    )
-    console.log(
-      `All Package Managers: ${info.allPackageManagers.join(', ') || 'None detected'}`,
-    )
-    console.log(`Available Actions: ${info.numberOfActions}`)
-    if (info.githubRepository) {
-      console.log(`GitHub Repository: ${info.githubRepository}`)
-    }
+    const statusIcon = getStatusIcon(info.serviceStatus)
+    const statusText = statusIcon ? `${statusIcon} ` : ''
+
+    console.log(`${statusText}${info.config?.name || info.slug}`)
+    console.log(`   Path: ${prettyPath(info.path)}`)
+    console.log(`   Slug: ${info.slug}`)
 
     return { success: true }
   },

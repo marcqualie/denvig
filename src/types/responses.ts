@@ -4,6 +4,7 @@
  * @module
  */
 
+import type { ProjectInfo } from '../lib/projectInfo.ts'
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 
 /**
@@ -95,11 +96,7 @@ export type OutdatedDependency = Dependency & {
 }
 
 /**
- * A project from projects:list command.
+ * A project from projects:list and info commands.
+ * Re-exported from lib/projectInfo.ts for backwards compatibility.
  */
-export type ProjectResponse = {
-  slug: string
-  name: string
-  path: string
-  config: ProjectConfigSchema | null
-}
+export type ProjectResponse = ProjectInfo

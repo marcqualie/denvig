@@ -7,7 +7,8 @@ describe('getGlobalConfig()', () => {
   describe('root config file does not exist', () => {
     it('should return the default config', () => {
       const config = getGlobalConfig()
-      ok(config.codeRootDir !== undefined)
+      ok(config.projectPaths !== undefined)
+      ok(Array.isArray(config.projectPaths))
     })
   })
 
@@ -21,9 +22,9 @@ describe('getGlobalConfig()', () => {
 
 describe('getProjectConfig()', () => {
   it('should return a default project config if no config file exists', () => {
-    const projectSlug = 'test-project'
-    const config = getProjectConfig(projectSlug)
-    ok(config.name === projectSlug)
+    const projectPath = '/tmp/test-project'
+    const config = getProjectConfig(projectPath)
+    ok(config.name === 'test-project')
     ok(typeof config.actions === 'object')
   })
 
