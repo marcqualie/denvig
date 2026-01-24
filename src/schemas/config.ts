@@ -63,7 +63,12 @@ export const ProjectConfigSchema = z
       .describe('Actions that are available on the CLI root for quick access'),
     services: z
       .record(
-        z.string(),
+        z
+          .string()
+          .regex(
+            /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+            'Service name must be lowercase alphanumeric with hyphens (like a hostname)',
+          ),
         z
           .object({
             cwd: z

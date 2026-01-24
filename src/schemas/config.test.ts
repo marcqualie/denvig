@@ -253,4 +253,85 @@ describe('ProjectConfigSchema - services', () => {
     const result = ProjectConfigSchema.safeParse(emptyConfig)
     ok(result.success)
   })
+
+  it('should accept valid service names', () => {
+    const validNames = [
+      'a',
+      'api',
+      'my-service',
+      'my-long-service-name',
+      'api1',
+      '1api',
+      'a1b2c3',
+    ]
+
+    for (const name of validNames) {
+      const config = {
+        services: {
+          [name]: { command: 'echo test' },
+        },
+      }
+      const result = ProjectConfigSchema.safeParse(config)
+      ok(result.success, `Expected "${name}" to be a valid service name`)
+    }
+  })
+
+  it('should reject service names starting with hyphen', () => {
+    const config = {
+      services: {
+        '-api': { command: 'echo test' },
+      },
+    }
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
+  it('should reject service names ending with hyphen', () => {
+    const config = {
+      services: {
+        'api-': { command: 'echo test' },
+      },
+    }
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
+  it('should reject service names with underscores', () => {
+    const config = {
+      services: {
+        my_service: { command: 'echo test' },
+      },
+    }
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
+  it('should reject service names with uppercase letters', () => {
+    const config = {
+      services: {
+        'My-Service': { command: 'echo test' },
+      },
+    }
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
+  it('should reject service names with special characters', () => {
+    const invalidNames = [
+      'my:service',
+      'my.service',
+      'my/service',
+      'my@service',
+    ]
+
+    for (const name of invalidNames) {
+      const config = {
+        services: {
+          [name]: { command: 'echo test' },
+        },
+      }
+      const result = ProjectConfigSchema.safeParse(config)
+      ok(!result.success, `Expected "${name}" to be rejected as invalid`)
+    }
+  })
 })
