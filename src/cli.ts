@@ -20,15 +20,8 @@ const globalFlags = [
     defaultValue: undefined,
   },
   {
-    name: 'format',
-    description: 'Output format: table or json (default: table)',
-    required: false,
-    type: 'string',
-    defaultValue: 'table',
-  },
-  {
     name: 'json',
-    description: 'Shorthand for --format=json',
+    description: 'Output in JSON format',
     required: false,
     type: 'boolean',
     defaultValue: false,
@@ -249,16 +242,8 @@ async function main() {
       }
       return acc
     },
-    { format: 'table' } as Record<string, string | number | boolean> & {
-      format: string
-    },
+    {} as Record<string, string | number | boolean>,
   )
-
-  // Map --json shorthand to format: 'json'
-  if (parsedFlags.json) {
-    parsedFlags.format = 'json'
-  }
-  delete parsedFlags.json
 
   // Extract unrecognized flags and convert them to command line arguments
   const extraFlagArgs: string[] = []

@@ -10,7 +10,7 @@ export const versionCommand = new Command({
   flags: [],
   handler: ({ flags }) => {
     const version = getDenvigVersion()
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify({ version }))
     } else {
       console.log(`v${version}`)

@@ -23,7 +23,7 @@ export const infoCommand = new Command({
   handler: async ({ project, flags }) => {
     const info = await getProjectInfo(project)
 
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(info))
       return { success: true }
     }

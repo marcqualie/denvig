@@ -23,7 +23,6 @@ export const servicesStopCommand = new Command({
   },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
-    const format = flags.format as string
 
     const {
       manager,
@@ -34,14 +33,14 @@ export const servicesStopCommand = new Command({
     const projectPrefix =
       targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
 
-    if (format !== 'json') {
+    if (!flags.json) {
       console.log(`Stopping ${projectPrefix}${serviceName}...`)
     }
 
     const result = await manager.stopService(serviceName)
 
     if (!result.success) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -61,7 +60,7 @@ export const servicesStopCommand = new Command({
     // Get service response after stopping
     const response = await manager.getServiceResponse(serviceName)
 
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(response))
     } else {
       console.log(`✓ ${projectPrefix}${serviceName} stopped successfully`)

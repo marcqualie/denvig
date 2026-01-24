@@ -26,7 +26,6 @@ export const servicesStartCommand = new Command({
   },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
-    const format = flags.format as string
 
     const {
       manager,
@@ -37,14 +36,14 @@ export const servicesStartCommand = new Command({
     const projectPrefix =
       targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
 
-    if (format !== 'json') {
+    if (!flags.json) {
       console.log(`Starting ${projectPrefix}${serviceName}...`)
     }
 
     const result = await manager.startService(serviceName)
 
     if (!result.success) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -70,7 +69,7 @@ export const servicesStartCommand = new Command({
     })
 
     if (response?.status === 'running') {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify(response))
       } else {
         const urlInfo = response.url ? ` → ${response.url}` : ''
@@ -82,7 +81,7 @@ export const servicesStartCommand = new Command({
     }
 
     // Service failed to start
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(response))
     } else {
       console.error(`✗ ${projectPrefix}${serviceName} failed to start`)

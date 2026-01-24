@@ -28,7 +28,7 @@ export const configVerifyCommand = new Command({
     const configRaw = safeReadTextFileSync(configPath)
 
     if (!configRaw) {
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             valid: false,
@@ -47,7 +47,7 @@ export const configVerifyCommand = new Command({
       parsedYaml = parse(configRaw)
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error'
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             valid: false,
@@ -65,7 +65,7 @@ export const configVerifyCommand = new Command({
     const result = ProjectConfigSchema.safeParse(parsedYaml)
 
     if (!result.success) {
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             valid: false,
@@ -86,7 +86,7 @@ export const configVerifyCommand = new Command({
       return { success: false, message: 'Config validation failed.' }
     }
 
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify({ valid: true, path: configPath }))
     } else {
       console.log(`Config is valid: ${configPath}`)
