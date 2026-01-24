@@ -32,9 +32,9 @@ export const servicesCommand = new Command({
   handler: async ({ project, flags }) => {
     const format = flags.format as string
     const currentProjectSlug = project.slug
-    const projects = listProjects()
+    const projectInfos = listProjects()
 
-    if (projects.length === 0) {
+    if (projectInfos.length === 0) {
       if (format === 'json') {
         console.log(JSON.stringify([]))
       } else {
@@ -48,8 +48,8 @@ export const servicesCommand = new Command({
 
     const allServices: ServiceResponse[] = []
 
-    for (const projectSlug of projects) {
-      const proj = new DenvigProject(projectSlug)
+    for (const projectInfo of projectInfos) {
+      const proj = new DenvigProject(projectInfo.path)
       const manager = new ServiceManager(proj)
       const services = await manager.listServices()
 
@@ -111,7 +111,7 @@ export const servicesCommand = new Command({
 
     console.log('')
     console.log(
-      `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${projects.length} project${projects.length === 1 ? '' : 's'}`,
+      `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${projectInfos.length} project${projectInfos.length === 1 ? '' : 's'}`,
     )
 
     return { success: true, message: 'Services listed successfully.' }

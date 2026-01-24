@@ -1,42 +1,13 @@
 import { deepStrictEqual, ok, strictEqual } from 'node:assert'
-import fs from 'node:fs'
 import { describe, it } from 'node:test'
 
+import { createMockProjectFromPath } from '../test/mock.ts'
 import pnpmPlugin from './pnpm.ts'
-
-import type { DenvigProject } from '../lib/project.ts'
 
 const turborepoExamplePath = new URL(
   '../test/examples/turborepo',
   import.meta.url,
 ).pathname
-
-/**
- * Create a minimal mock project for testing that points to a real directory
- */
-function createMockProject(projectPath: string): DenvigProject {
-  return {
-    path: projectPath,
-    rootFiles: fs.readdirSync(projectPath),
-    findFilesByName(fileName: string): string[] {
-      const results: string[] = []
-      const walk = (dir: string) => {
-        const files = fs.readdirSync(dir, { withFileTypes: true })
-        for (const file of files) {
-          if (file.isDirectory()) {
-            if (file.name !== 'node_modules') {
-              walk(`${dir}/${file.name}`)
-            }
-          } else if (file.name === fileName) {
-            results.push(`${dir}/${file.name}`)
-          }
-        }
-      }
-      walk(projectPath)
-      return results
-    },
-  } as DenvigProject
-}
 
 describe('pnpm plugin', () => {
   it('should have correct plugin name', () => {
@@ -49,7 +20,7 @@ describe('pnpm plugin', () => {
 
   describe('dependencies', () => {
     it('should detect pnpm as a system dependency when pnpm-lock.yaml exists', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -59,7 +30,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should read devDependencies from root package.json', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -70,7 +41,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should read dependencies from workspace packages', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -87,7 +58,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should combine multiple of the same dependency into one', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -123,7 +94,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should return dependencies that are in the lock file but not in any package.json', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -140,7 +111,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should not include bracketed versions', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -157,7 +128,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should return dependencies sorted alphabetically by name', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -171,7 +142,7 @@ describe('pnpm plugin', () => {
     })
 
     it('should return all expected dependencies from turborepo example', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
       const deps = await pnpmPlugin.dependencies(project)
 
@@ -188,7 +159,7 @@ describe('pnpm plugin', () => {
 
   describe('actions', () => {
     it('should return install and outdated actions for workspace', async () => {
-      const project = createMockProject(turborepoExamplePath)
+      const project = createMockProjectFromPath(turborepoExamplePath)
       const actions = await pnpmPlugin.actions(project)
 
       deepStrictEqual(actions.install, ['pnpm install'])

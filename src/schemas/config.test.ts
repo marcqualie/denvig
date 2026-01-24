@@ -6,7 +6,7 @@ import { GlobalConfigSchema, ProjectConfigSchema } from './config.ts'
 describe('GlobalConfigSchema', () => {
   it('should parse valid global configuration', () => {
     const validConfig = {
-      codeRootDir: '~/code',
+      projectPaths: ['~/code/*/*', '~/.dotfiles'],
       quickActions: ['build', 'test', 'lint'],
     }
 
@@ -21,13 +21,14 @@ describe('GlobalConfigSchema', () => {
     ok(result.success)
   })
 
-  it('should apply default codeRootDir', () => {
+  it('should apply default projectPaths', () => {
     const config = {}
 
     const result = GlobalConfigSchema.safeParse(config)
     ok(result.success)
     if (result.success) {
-      ok(result.data.codeRootDir === '~/src')
+      ok(Array.isArray(result.data.projectPaths))
+      ok(result.data.projectPaths.includes('~/src/*/*'))
     }
   })
 

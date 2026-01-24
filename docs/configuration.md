@@ -5,13 +5,31 @@
 
 The file location for global configuration is `~/.denvig/config.yml`.
 
-## codeRootDir
+## projectPaths
 
-**default:** `~/src`
+**default:** `['~/src/*/*', '~/.dotfiles']`
 
-The root directory where your code lives. Development environment work best when there is a consistent location
-for all projects. Denvig works on the concept of `[group]/[project]` so you can have a consistent structure
-for all your projects. Since most people use GitHub, this maps to `[owner]/[repo]`.
+An array of paths or glob-like patterns where your projects live. Each `*` matches a single directory level (not recursive).
+
+Development environments work best when there is a consistent location for all projects. Denvig works best on the concept of `[group]/[project]` so you can have a consistent structure for all your projects. Since most people use GitHub, this maps to `[owner]/[repo]`. You could subpath them based on hosting provider such as `~/src/github/[owner]/[repo]` or `~/src/gitlab/[owner]/[repo]` if you want to keep them separate.
+
+**Pattern Examples:**
+- `~/src/*/*` - Matches all directories two levels deep under `~/src`
+- `~/.dotfiles` - Matches a single specific directory
+
+**Project Slugs:**
+
+Projects are identified by slugs that indicate their source:
+- `github:owner/repo` - For projects with a GitHub remote (detected from git config)
+- `local:/absolute/path` - For projects without a GitHub remote
+
+**Example Configuration:**
+```yaml
+projectPaths:
+  - ~/src/*/*
+  - ~/work/*/*
+  - ~/.dotfiles
+```
 
 
 ## quickActions

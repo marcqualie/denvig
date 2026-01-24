@@ -19,11 +19,11 @@ const DEFAULT_QUICK_ACTIONS = [
  * This is located in ~/.denvig/config.yml but can be overridden by ENV.DENVIG_GLOBAL_CONFIG_PATH
  */
 export const GlobalConfigSchema = z.object({
-  codeRootDir: z
-    .string()
+  projectPaths: z
+    .array(z.string())
     .optional()
-    .default('~/src')
-    .describe('The base directory where projects are stored'),
+    .default(['~/src/*/*', '~/.dotfiles'])
+    .describe('Paths or patterns where projects are located'),
   quickActions: z
     .array(z.string())
     .default(DEFAULT_QUICK_ACTIONS)

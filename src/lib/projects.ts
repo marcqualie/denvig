@@ -1,6 +1,12 @@
 import fs from 'node:fs'
 
-import { getGlobalConfig } from './config.ts'
+import { expandTilde, getGlobalConfig } from './config.ts'
+import { getProjectSlug } from './git.ts'
+
+export type ProjectInfo = {
+  slug: string
+  path: string
+}
 
 export type ListProjectsOptions = {
   /** Only include projects with a .denvig.yml configuration file */
@@ -8,51 +14,93 @@ export type ListProjectsOptions = {
 }
 
 /**
- * List all projects in the codeRootDir.
- * Projects are detected at [codeRootDir]/[workspace]/[repo].
- *
- * @param options - Optional filters for project listing
- * @returns Array of project slugs in the format "workspace/repo"
+ * Expand a path pattern containing * wildcards into matching directories.
+ * Each * matches a single directory level (not recursive).
  */
-export const listProjects = (options?: ListProjectsOptions): string[] => {
-  const globalConfig = getGlobalConfig()
-  const codeRootDir = globalConfig.codeRootDir
-  const projects: string[] = []
-  const withConfig = options?.withConfig ?? false
+const expandPattern = (pattern: string): string[] => {
+  const expandedPattern = expandTilde(pattern)
+  const parts = expandedPattern.split('/')
+  let paths = ['']
 
-  // Check if codeRootDir exists
-  if (!fs.existsSync(codeRootDir)) {
-    return projects
-  }
+  for (const part of parts) {
+    if (part === '') {
+      // Handle leading slash
+      paths = paths.map((p) => p + '/')
+      continue
+    }
 
-  // Get all workspace directories
-  const workspaces = fs.readdirSync(codeRootDir, { withFileTypes: true })
+    if (part === '*') {
+      // Expand wildcard: for each current path, list directories
+      const newPaths: string[] = []
+      for (const basePath of paths) {
+        const fullPath = basePath || '/'
+        if (!fs.existsSync(fullPath)) continue
 
-  for (const workspace of workspaces) {
-    if (!workspace.isDirectory()) continue
-    if (workspace.name.startsWith('.')) continue
-
-    const workspacePath = `${codeRootDir}/${workspace.name}`
-
-    // Get all repo directories within the workspace
-    const repos = fs.readdirSync(workspacePath, { withFileTypes: true })
-
-    for (const repo of repos) {
-      if (!repo.isDirectory()) continue
-      if (repo.name.startsWith('.')) continue
-
-      const repoPath = `${workspacePath}/${repo.name}`
-
-      if (withConfig) {
-        const configPath = `${repoPath}/.denvig.yml`
-        if (!fs.existsSync(configPath)) {
-          continue
+        try {
+          const entries = fs.readdirSync(fullPath, { withFileTypes: true })
+          for (const entry of entries) {
+            if (!entry.isDirectory()) continue
+            if (entry.name.startsWith('.')) continue
+            newPaths.push(`${basePath}${entry.name}`)
+          }
+        } catch {
+          // Skip directories we can't read
         }
       }
+      paths = newPaths
+    } else {
+      // Literal path segment
+      paths = paths.map((p) => `${p}${part}`)
+    }
 
-      projects.push(`${workspace.name}/${repo.name}`)
+    // Add trailing slash for next iteration
+    paths = paths.map((p) => `${p}/`)
+  }
+
+  // Remove trailing slashes and filter to existing directories
+  return paths
+    .map((p) => p.replace(/\/$/, ''))
+    .filter((p) => {
+      try {
+        return fs.existsSync(p) && fs.statSync(p).isDirectory()
+      } catch {
+        return false
+      }
+    })
+}
+
+/**
+ * List all projects based on projectPaths patterns.
+ *
+ * @param options - Optional filters for project listing
+ * @returns Array of ProjectInfo objects with slug and path
+ */
+export const listProjects = (options?: ListProjectsOptions): ProjectInfo[] => {
+  const globalConfig = getGlobalConfig()
+  const projectPaths = globalConfig.projectPaths
+  const withConfig = options?.withConfig ?? false
+
+  const seenPaths = new Set<string>()
+  const projects: ProjectInfo[] = []
+
+  for (const pattern of projectPaths) {
+    const expandedPaths = expandPattern(pattern)
+
+    for (const projectPath of expandedPaths) {
+      // Skip duplicates
+      if (seenPaths.has(projectPath)) continue
+      seenPaths.add(projectPath)
+
+      // Check for config file if required
+      if (withConfig) {
+        const configPath = `${projectPath}/.denvig.yml`
+        if (!fs.existsSync(configPath)) continue
+      }
+
+      const slug = getProjectSlug(projectPath)
+      projects.push({ slug, path: projectPath })
     }
   }
 
-  return projects.sort()
+  return projects.sort((a, b) => a.slug.localeCompare(b.slug))
 }
