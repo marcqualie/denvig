@@ -10,7 +10,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Paths or patterns where projects are located. Supports * wildcard for single directory level."
+      "description": "Paths or patterns where projects are located"
     },
     "quickActions": {
       "type": "array",
