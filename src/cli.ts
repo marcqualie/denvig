@@ -224,8 +224,9 @@ async function main() {
     }
   }
   if (missingArg) {
-    console.error(`Missing required argument: ${missingArg}`)
-    await cliLogTracker.finish(1)
+    const errorMsg = `Missing required argument: ${missingArg}`
+    console.error(errorMsg)
+    await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
 
@@ -250,8 +251,9 @@ async function main() {
     }
   }
   if (missingFlag) {
-    console.error(`Missing required flag: ${missingFlag}`)
-    await cliLogTracker.finish(1)
+    const errorMsg = `Missing required flag: ${missingFlag}`
+    console.error(errorMsg)
+    await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
 
@@ -314,20 +316,22 @@ async function main() {
     globalFlags.forEach((flag) => {
       console.log(`  --${flag.name.padEnd(padLength, ' ')} ${flag.description}`)
     })
-    await cliLogTracker.finish(1)
+    await cliLogTracker.finish(1, 'No command provided')
     process.exit(1)
   }
 
   if (!commands[commandName]) {
-    console.error(`Command "${commandName}" not found.`)
-    await cliLogTracker.finish(1)
+    const errorMsg = `Command "${commandName}" not found`
+    console.error(`${errorMsg}.`)
+    await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
 
   try {
     if (!project) {
-      console.error('No project provided or detected.')
-      await cliLogTracker.finish(1)
+      const errorMsg = 'No project provided or detected'
+      console.error(`${errorMsg}.`)
+      await cliLogTracker.finish(1, errorMsg)
       process.exit(1)
     }
 
@@ -338,16 +342,16 @@ async function main() {
       extraArgs,
     )
     if (!success) {
-      // console.error(`Command "${commandName}" failed.`)
-      await cliLogTracker.finish(1)
+      await cliLogTracker.finish(1, 'Command failed')
       process.exit(1)
     }
 
     // Log successful completion
     await cliLogTracker.finish(0)
   } catch (e: unknown) {
+    const errorMsg = e instanceof Error ? e.message : 'Unknown error'
     console.error(`Error executing command "${commandName}":`, e)
-    await cliLogTracker.finish(1)
+    await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
 }

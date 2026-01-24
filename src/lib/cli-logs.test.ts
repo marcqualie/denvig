@@ -197,6 +197,26 @@ describe('cli-logs', () => {
       const entry = JSON.parse(content.trim())
 
       assert.strictEqual(entry.status, 1)
+      assert.strictEqual(
+        entry.error,
+        undefined,
+        'Should not have error field without message',
+      )
+    })
+
+    it('should include error message when provided', async () => {
+      const tracker = createCliLogTracker({
+        command: 'denvig bad-command',
+        path: '/test/path',
+      })
+
+      await tracker.finish(1, 'Command "bad-command" not found')
+
+      const content = await readFile(testLogPath, 'utf-8')
+      const entry = JSON.parse(content.trim())
+
+      assert.strictEqual(entry.status, 1)
+      assert.strictEqual(entry.error, 'Command "bad-command" not found')
     })
   })
 })

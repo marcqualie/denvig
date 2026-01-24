@@ -12,6 +12,7 @@ export type CliLogEntry = {
   duration: number
   status: number
   via?: string
+  error?: string
 }
 
 /**
@@ -77,8 +78,9 @@ export const createCliLogTracker = (options: {
     /**
      * Complete the log entry and write it to the log file.
      * @param status - Exit code (0 for success, non-zero for failure)
+     * @param error - Optional error message for non-zero exit codes
      */
-    finish: async (status: number): Promise<void> => {
+    finish: async (status: number, error?: string): Promise<void> => {
       const entry: CliLogEntry = {
         timestamp: new Date().toISOString(),
         command: options.command,
@@ -89,6 +91,10 @@ export const createCliLogTracker = (options: {
 
       if (options.via !== undefined) {
         entry.via = options.via
+      }
+
+      if (error !== undefined) {
+        entry.error = error
       }
 
       await appendCliLog(entry)
