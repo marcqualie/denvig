@@ -163,7 +163,7 @@ export class DenvigSDK {
         env: {
           ...process.env,
           LC_ALL: this.locale,
-          DENVIG_SDK_VIA: this.via,
+          DENVIG_CLI_VIA: this.via,
         },
       })
       return JSON.parse(stdout) as T
@@ -205,7 +205,7 @@ export class DenvigSDK {
         env: {
           ...process.env,
           LC_ALL: this.locale,
-          DENVIG_SDK_VIA: this.via,
+          DENVIG_CLI_VIA: this.via,
         },
       })
       return stdout.trim()

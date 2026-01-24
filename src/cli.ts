@@ -36,7 +36,7 @@ async function main() {
   const cliLogTracker = createCliLogTracker({
     command: `denvig ${process.argv.slice(2).join(' ')}`,
     path: process.cwd(),
-    via: process.env.DENVIG_SDK_VIA,
+    via: process.env.DENVIG_CLI_VIA,
   })
 
   let commandName = process.argv[2]
