@@ -2,20 +2,8 @@
 import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
+import { createMockProject } from '../../test/mock.ts'
 import { ServiceManager } from './manager.ts'
-
-import type { DenvigProject } from '../project.ts'
-
-/** Create a mock project with the given slug for testing */
-const createMockProject = (
-  slug: string,
-  path = '/tmp/test-project',
-): DenvigProject =>
-  ({
-    slug,
-    path,
-    config: { name: slug, $sources: [] },
-  }) as unknown as DenvigProject
 
 describe('ServiceManager', () => {
   describe('listServices()', () => {
@@ -126,10 +114,10 @@ describe('ServiceManager', () => {
 
   describe('startService() with envFiles', () => {
     it('should return error when envFile does not exist', async () => {
-      const project = createMockProject(
-        'github:marcqualie/denvig',
-        process.cwd(),
-      )
+      const project = createMockProject({
+        slug: 'github:marcqualie/denvig',
+        path: process.cwd(),
+      })
 
       // Set up a service with a non-existent envFile
       project.config.services = {
@@ -147,10 +135,10 @@ describe('ServiceManager', () => {
     })
 
     it('should resolve envFiles relative to service cwd', async () => {
-      const project = createMockProject(
-        'github:marcqualie/denvig',
-        process.cwd(),
-      )
+      const project = createMockProject({
+        slug: 'github:marcqualie/denvig',
+        path: process.cwd(),
+      })
 
       // Set up a service with cwd and an envFile that doesn't exist
       // The error should include the path relative to cwd, not project root
@@ -178,7 +166,10 @@ describe('ServiceManager', () => {
     // These tests require mocking ES modules which isn't supported with direct assignment
     // TODO: Implement proper dependency injection or use a mocking library
     it.skip('should append a timestamped Service Started line on start', async () => {
-      const project = createMockProject('workspace/denvig', process.cwd())
+      const project = createMockProject({
+        slug: 'workspace/denvig',
+        path: process.cwd(),
+      })
       project.config.services = {
         'test-logger': {
           command: 'echo hello',
@@ -230,7 +221,10 @@ describe('ServiceManager', () => {
     })
 
     it.skip('should append a timestamped Service Stopped line on stop', async () => {
-      const project = createMockProject('workspace/denvig', process.cwd())
+      const project = createMockProject({
+        slug: 'workspace/denvig',
+        path: process.cwd(),
+      })
       project.config.services = {
         'test-logger-stop': {
           command: 'echo bye',

@@ -2,16 +2,11 @@ import { ok, strictEqual } from 'node:assert'
 import { createHash } from 'node:crypto'
 import { describe, it } from 'node:test'
 
+import { createMockProject } from '../test/mock.ts'
 import {
   constructDenvigResourceId,
   generateDenvigResourceHash,
 } from './resources.ts'
-
-import type { DenvigProject } from './project.ts'
-
-/** Create a mock project with the given slug for testing */
-const createMockProject = (slug: string): DenvigProject =>
-  ({ slug }) as DenvigProject
 
 describe('constructDenvigResourceId()', () => {
   it('constructs id for a basic action in root workspace', () => {

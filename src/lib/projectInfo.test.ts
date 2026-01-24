@@ -1,28 +1,10 @@
 import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
+import { createMockProject } from '../test/mock.ts'
 import { getProjectInfo, type ProjectInfo } from './projectInfo.ts'
 
 import type { DenvigProject } from './project.ts'
-
-/** Create a mock project for testing */
-const createMockProject = (
-  overrides: Partial<{
-    slug: string
-    name: string
-    path: string
-    config: DenvigProject['config']
-  }> = {},
-): DenvigProject =>
-  ({
-    slug: overrides.slug ?? 'github:owner/repo',
-    name: overrides.name ?? 'test-project',
-    path: overrides.path ?? '/tmp/test-project',
-    config: overrides.config ?? {
-      name: 'test-project',
-      $sources: [],
-    },
-  }) as unknown as DenvigProject
 
 describe('getProjectInfo()', () => {
   it('should return project info with correct slug', async () => {
