@@ -23,7 +23,6 @@ export const servicesRestartCommand = new Command({
   },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
-    const format = flags.format as string
 
     const {
       manager,
@@ -34,14 +33,14 @@ export const servicesRestartCommand = new Command({
     const projectPrefix =
       targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
 
-    if (format !== 'json') {
+    if (!flags.json) {
       console.log(`Restarting ${projectPrefix}${serviceName}...`)
     }
 
     const result = await manager.restartService(serviceName)
 
     if (!result.success) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -67,7 +66,7 @@ export const servicesRestartCommand = new Command({
     })
 
     if (response?.status === 'running') {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify(response))
       } else {
         const urlInfo = response.url ? ` → ${response.url}` : ''
@@ -79,7 +78,7 @@ export const servicesRestartCommand = new Command({
     }
 
     // Service failed to start
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(response))
     } else {
       console.error(`✗ ${projectPrefix}${serviceName} failed to restart`)

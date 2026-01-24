@@ -135,18 +135,15 @@ export class DenvigSDK {
    */
   private async run<T>(args: string): Promise<T> {
     try {
-      const { stdout } = await execAsync(
-        `${this.cliPath} ${args} --format json`,
-        {
-          encoding: 'utf-8',
-          cwd: this.cwd,
-          shell: this.shell,
-          env: {
-            ...process.env,
-            LC_ALL: this.locale,
-          },
+      const { stdout } = await execAsync(`${this.cliPath} ${args} --json`, {
+        encoding: 'utf-8',
+        cwd: this.cwd,
+        shell: this.shell,
+        env: {
+          ...process.env,
+          LC_ALL: this.locale,
         },
-      )
+      })
       return JSON.parse(stdout) as T
     } catch (error) {
       const execError = error as {
