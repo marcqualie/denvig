@@ -88,10 +88,13 @@ export const createCliLogTracker = (options: {
       const entry: CliLogEntry = {
         timestamp: new Date().toISOString(),
         version: options.version,
+        slug: undefined,
         command: options.command,
-        path: options.path,
+        via: undefined,
         duration: Date.now() - startTime,
+        path: options.path,
         status,
+        error: undefined,
       }
 
       if (options.slug !== undefined) {
