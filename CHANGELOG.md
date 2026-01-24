@@ -5,6 +5,11 @@
 
 ### Added
 
+- CLI usage logging: tracks command execution in JSONL format at `~/.denvig/logs/cli.jsonl`
+  - Logs timestamp, command, path, duration (ms), and exit status
+  - Disable with `DENVIG_CLI_LOGS_ENABLED=0` environment variable
+- SDK `client` option (required) to identify the integration using the SDK (e.g., `client: 'raycast'` logs as `via: 'sdk:raycast'`)
+  - Must follow service name format: start with a letter, lowercase alphanumeric and hyphens only, cannot end with hyphen
 - `--project` flag now supports all identifier formats: `id:[id]`, `github:[slug]`, `local:/path`, or unprefixed slugs (defaults to `github:`)
 - Tab completion for `--project` flag: completes slugs by default, IDs when `id:` prefix is typed
 - New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects

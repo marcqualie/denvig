@@ -61,6 +61,13 @@ export type DenvigSDKOptions = {
    * @default '/bin/zsh'
    */
   shell?: string
+
+  /**
+   * Client identifier for the integration using the SDK (required).
+   * Used for CLI usage logging to track which integration is using the SDK.
+   * Logs will include `via: 'sdk:${client}'` (e.g., `sdk:raycast`).
+   */
+  client: string
 }
 
 export type ListServicesOptions = {
@@ -105,7 +112,7 @@ export type ProjectsListOptions = {
  * ```ts
  * import { DenvigSDK } from 'denvig'
  *
- * const denvig = new DenvigSDK()
+ * const denvig = new DenvigSDK({ client: 'my-app' })
  *
  * // List all services across all projects
  * const services = await denvig.services.list()
@@ -117,17 +124,31 @@ export type ProjectsListOptions = {
  * const outdated = await denvig.deps.outdated()
  * ```
  */
+/**
+ * Regex pattern for valid client names.
+ * Must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen.
+ */
+const CLIENT_NAME_PATTERN = /^[a-z]([a-z0-9-]*[a-z0-9])?$/
+
 export class DenvigSDK {
   private locale: string
   private cliPath: string
   private cwd: string
   private shell: string
+  private client: string
 
-  constructor(options: DenvigSDKOptions = {}) {
+  constructor(options: DenvigSDKOptions) {
+    if (!CLIENT_NAME_PATTERN.test(options.client)) {
+      throw new Error(
+        `Invalid client name "${options.client}". Must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen.`,
+      )
+    }
+
     this.locale = options.locale ?? 'en_GB.UTF-8'
     this.cliPath = options.cliPath ?? './node_modules/.bin/denvig'
     this.cwd = options.cwd ?? process.cwd()
     this.shell = options.shell ?? '/bin/zsh'
+    this.client = options.client
   }
 
   /**
@@ -142,6 +163,7 @@ export class DenvigSDK {
         env: {
           ...process.env,
           LC_ALL: this.locale,
+          DENVIG_CLI_VIA: `sdk:${this.client}`,
         },
       })
       return JSON.parse(stdout) as T
@@ -183,6 +205,7 @@ export class DenvigSDK {
         env: {
           ...process.env,
           LC_ALL: this.locale,
+          DENVIG_CLI_VIA: `sdk:${this.client}`,
         },
       })
       return stdout.trim()
