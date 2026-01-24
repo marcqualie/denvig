@@ -2,8 +2,9 @@
 
 import parseArgs from 'minimist'
 
-import { getGlobalConfig } from './lib/config.ts'
+import { expandTilde, getGlobalConfig } from './lib/config.ts'
 import { DenvigProject } from './lib/project.ts'
+import { listProjects } from './lib/projects.ts'
 import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
@@ -39,17 +40,41 @@ async function main() {
   let commandName = process.argv[2]
   let args = process.argv.slice(2)
 
-  // If inside a valid folder, get the project slug from the current directory
+  // Detect project from current directory or --project flag
   const globalConfig = getGlobalConfig()
   const currentDir = process.cwd()
-  const projectSlug =
-    parseArgs(process.argv.slice(2)).project?.toString() ||
-    currentDir
-      .replace(`${globalConfig.codeRootDir}/`, '')
-      .split('/')
-      .slice(0, 2)
-      .join('/')
-  const project = new DenvigProject(projectSlug)
+  const projectFlag = parseArgs(process.argv.slice(2)).project?.toString()
+
+  // Find project path: either from flag, or detect from current directory
+  let projectPath: string | null = null
+
+  if (projectFlag) {
+    // If flag is provided, check if it's a path or a slug
+    if (projectFlag.startsWith('/') || projectFlag.startsWith('~')) {
+      projectPath = expandTilde(projectFlag)
+    } else {
+      // Search for matching project by slug
+      const projects = listProjects()
+      const match = projects.find((p) => p.slug === projectFlag)
+      if (match) {
+        projectPath = match.path
+      }
+    }
+  } else {
+    // Check if current directory matches any projectPaths pattern
+    const projects = listProjects()
+    const match = projects.find(
+      (p) => currentDir === p.path || currentDir.startsWith(`${p.path}/`),
+    )
+    if (match) {
+      projectPath = match.path
+    } else {
+      // Fall back to current directory
+      projectPath = currentDir
+    }
+  }
+
+  const project = projectPath ? new DenvigProject(projectPath) : null
 
   // Command aliases - map shortcuts to their full commands
   const commandAliases: Record<string, string> = {
@@ -123,8 +148,8 @@ async function main() {
 
   // Quick actions
   const quickActions = [
-    ...(globalConfig.quickActions || []),
-    ...(project?.config?.quickActions || []),
+    ...(globalConfig.quickActions ?? []),
+    ...(project?.config?.quickActions ?? []),
   ].sort()
   if (quickActions.includes(commandName as (typeof quickActions)[number])) {
     args = ['run', ...process.argv.slice(2)]
@@ -303,8 +328,9 @@ async function main() {
   }
 
   try {
-    if (!projectSlug) {
+    if (!project) {
       console.error('No project provided or detected.')
+      process.exit(1)
     }
 
     const { success } = await command.run(

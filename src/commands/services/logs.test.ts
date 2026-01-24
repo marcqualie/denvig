@@ -1,12 +1,24 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { DenvigProject } from '../../lib/project.ts'
 import { logsCommand } from './logs.ts'
+
+import type { DenvigProject } from '../../lib/project.ts'
+
+/** Create a mock project with the given slug for testing */
+const createMockProject = (
+  slug: string,
+  path = '/tmp/test-project',
+): DenvigProject =>
+  ({
+    slug,
+    path,
+    config: { name: slug, $sources: [], services: {} },
+  }) as unknown as DenvigProject
 
 describe('logsCommand', () => {
   it('should show last N lines using --lines flag', async () => {
-    const project = new DenvigProject('workspace/denvig')
+    const project = createMockProject('workspace/denvig', process.cwd())
     project.config.services = {
       'test-logs': {
         command: 'echo hi',

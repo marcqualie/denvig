@@ -9,12 +9,8 @@ export const GLOBAL_CONFIG_PATH = resolve(
     `${process.env.HOME}/.denvig/config.yml`,
 )
 
-export const CODE_ROOT_DIR = resolve(
-  process.env.DENVIG_CODE_ROOT_DIR || `${process.env.HOME}/src`,
-)
-
 const DEFAULT_GLOBAL_CONFIG = {
-  codeRootDir: CODE_ROOT_DIR,
+  projectPaths: ['~/src/*/*', '~/.dotfiles'],
   quickActions: undefined,
 } satisfies GlobalConfigSchema
 
@@ -28,6 +24,16 @@ export type ConfigWithSourcePaths<C> = C & {
  * Default is ~/.denvig/config.yml but it can be overridden
  * by the DENVIG_GLOBAL_CONFIG_PATH environment variable.
  */
+/**
+ * Expand ~ to home directory in a path.
+ */
+export const expandTilde = (path: string): string => {
+  if (path.startsWith('~/')) {
+    return `${process.env.HOME}${path.slice(1)}`
+  }
+  return path
+}
+
 export const getGlobalConfig =
   (): ConfigWithSourcePaths<GlobalConfigSchema> => {
     const configRaw = safeReadTextFileSync(GLOBAL_CONFIG_PATH)
@@ -35,12 +41,6 @@ export const getGlobalConfig =
       const globalConfig = (parse(configRaw) ||
         {}) as Partial<GlobalConfigSchema>
       try {
-        if (globalConfig.codeRootDir?.startsWith('.')) {
-          const configDir = dirname(GLOBAL_CONFIG_PATH)
-          globalConfig.codeRootDir = resolve(
-            `${configDir}/${globalConfig.codeRootDir}`,
-          )
-        }
         return {
           ...GlobalConfigSchema.parse({
             ...DEFAULT_GLOBAL_CONFIG,
@@ -64,18 +64,18 @@ export const getGlobalConfig =
   }
 
 /**
- * Load the project configuration for the given project slug.
- * This is usually loaded from ~/.denvig.yml or ~/.denvig/config.yml
+ * Load the project configuration for the given project path.
+ * This is usually loaded from [projectPath]/.denvig.yml
  */
 export const getProjectConfig = (
-  projectSlug: string,
+  projectPath: string,
+  defaultName?: string,
 ): ConfigWithSourcePaths<ProjectConfigSchema> => {
-  const globalConfig = getGlobalConfig()
   const defaultConfig = {
-    name: projectSlug,
+    name: defaultName || projectPath.split('/').pop() || 'unknown',
     actions: {},
   }
-  const configPath = `${globalConfig.codeRootDir}/${projectSlug}/.denvig.yml`
+  const configPath = `${projectPath}/.denvig.yml`
   const configRaw = safeReadTextFileSync(configPath)
   if (configRaw) {
     try {

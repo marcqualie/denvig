@@ -5,9 +5,12 @@
   "description": "Configuration schema for global denvig config files",
   "type": "object",
   "properties": {
-    "codeRootDir": {
-      "type": "string",
-      "description": "The base directory where projects are stored"
+    "projectPaths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Paths or patterns where projects are located. Supports * wildcard for single directory level."
     },
     "quickActions": {
       "type": "array",

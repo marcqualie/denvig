@@ -42,9 +42,9 @@ export const projectsListCommand = new Command({
     const format = flags.format as string
     const withConfig = flags['with-config'] as boolean
     const currentProjectSlug = project.slug
-    const projectSlugs = listProjects({ withConfig })
+    const projectInfos = listProjects({ withConfig })
 
-    if (projectSlugs.length === 0) {
+    if (projectInfos.length === 0) {
       if (format === 'json') {
         console.log(JSON.stringify([]))
       } else {
@@ -58,8 +58,8 @@ export const projectsListCommand = new Command({
 
     const projects: ProjectWithStatus[] = []
 
-    for (const slug of projectSlugs) {
-      const proj = new DenvigProject(slug)
+    for (const projectInfo of projectInfos) {
+      const proj = new DenvigProject(projectInfo.path)
       const hasConfig = proj.config.$sources.length > 0
 
       // Extract config without internal $sources property
@@ -89,7 +89,7 @@ export const projectsListCommand = new Command({
       }
 
       projects.push({
-        slug,
+        slug: proj.slug,
         name: proj.name,
         path: proj.path,
         config: hasConfig ? configWithoutSources : null,
