@@ -2,6 +2,7 @@
 
 import parseArgs from 'minimist'
 
+import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
 import { DenvigProject } from './lib/project.ts'
 import { resolveProjectId } from './lib/project-id.ts'
@@ -31,6 +32,13 @@ const globalFlags = [
 
 // Main CLI execution
 async function main() {
+  // Initialize CLI logging
+  const cliLogTracker = createCliLogTracker({
+    command: `denvig ${process.argv.slice(2).join(' ')}`,
+    path: process.cwd(),
+    via: process.env.DENVIG_SDK_VIA,
+  })
+
   let commandName = process.argv[2]
   let args = process.argv.slice(2)
 
@@ -201,20 +209,24 @@ async function main() {
 
   const command = commands[commandName]
   const flags = parseArgs(args)
-  const parsedArgs =
-    command?.args.reduce(
-      (acc, arg, index) => {
-        const value = flags._[index + 1]
-        if (value !== undefined) {
-          acc[arg.name] = value
-        } else if (arg.required) {
-          console.error(`Missing required argument: ${arg.name}`)
-          process.exit(1)
-        }
-        return acc
-      },
-      {} as Record<string, string | number>,
-    ) || {}
+
+  // Parse command arguments
+  const parsedArgs: Record<string, string | number> = {}
+  let missingArg: string | null = null
+  for (const [index, arg] of (command?.args || []).entries()) {
+    const value = flags._[index + 1]
+    if (value !== undefined) {
+      parsedArgs[arg.name] = value
+    } else if (arg.required) {
+      missingArg = arg.name
+      break
+    }
+  }
+  if (missingArg) {
+    console.error(`Missing required argument: ${missingArg}`)
+    await cliLogTracker.finish(1)
+    process.exit(1)
+  }
 
   // Extract extra arguments that weren't consumed by the command definition
   const extraPositionalArgs =
@@ -223,20 +235,24 @@ async function main() {
   const allFlags = [...globalFlags, ...(command?.flags || [])]
   const recognizedFlagNames = new Set(allFlags.map((flag) => flag.name))
 
-  const parsedFlags = allFlags.reduce(
-    (acc, flag) => {
-      if (flags[flag.name] !== undefined) {
-        acc[flag.name] = flags[flag.name]
-      } else if (flag.defaultValue !== undefined) {
-        acc[flag.name] = flag.defaultValue
-      } else if (flag.required) {
-        console.error(`Missing required flag: ${flag.name}`)
-        process.exit(1)
-      }
-      return acc
-    },
-    {} as Record<string, string | number | boolean>,
-  )
+  // Parse command flags
+  const parsedFlags: Record<string, string | number | boolean> = {}
+  let missingFlag: string | null = null
+  for (const flag of allFlags) {
+    if (flags[flag.name] !== undefined) {
+      parsedFlags[flag.name] = flags[flag.name]
+    } else if (flag.defaultValue !== undefined) {
+      parsedFlags[flag.name] = flag.defaultValue
+    } else if (flag.required) {
+      missingFlag = flag.name
+      break
+    }
+  }
+  if (missingFlag) {
+    console.error(`Missing required flag: ${missingFlag}`)
+    await cliLogTracker.finish(1)
+    process.exit(1)
+  }
 
   // Extract unrecognized flags and convert them to command line arguments
   const extraFlagArgs: string[] = []
@@ -297,17 +313,20 @@ async function main() {
     globalFlags.forEach((flag) => {
       console.log(`  --${flag.name.padEnd(padLength, ' ')} ${flag.description}`)
     })
+    await cliLogTracker.finish(1)
     process.exit(1)
   }
 
   if (!commands[commandName]) {
     console.error(`Command "${commandName}" not found.`)
+    await cliLogTracker.finish(1)
     process.exit(1)
   }
 
   try {
     if (!project) {
       console.error('No project provided or detected.')
+      await cliLogTracker.finish(1)
       process.exit(1)
     }
 
@@ -319,10 +338,15 @@ async function main() {
     )
     if (!success) {
       // console.error(`Command "${commandName}" failed.`)
+      await cliLogTracker.finish(1)
       process.exit(1)
     }
+
+    // Log successful completion
+    await cliLogTracker.finish(0)
   } catch (e: unknown) {
     console.error(`Error executing command "${commandName}":`, e)
+    await cliLogTracker.finish(1)
     process.exit(1)
   }
 }
