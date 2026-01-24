@@ -57,7 +57,6 @@ export const depsOutdatedCommand = new Command({
     const cache = !(flags['no-cache'] as boolean)
     const semverFilter = flags.semver as 'patch' | 'minor' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
-    const format = flags.format as string
 
     // Validate semver flag
     if (semverFilter && semverFilter !== 'patch' && semverFilter !== 'minor') {
@@ -88,7 +87,7 @@ export const depsOutdatedCommand = new Command({
     }
 
     if (entries.length === 0) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
         let message = 'All dependencies are up to date!'
@@ -120,7 +119,7 @@ export const depsOutdatedCommand = new Command({
     })
 
     // JSON output
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(sortedEntries))
       return { success: true, message: 'Outdated dependencies listed.' }
     }

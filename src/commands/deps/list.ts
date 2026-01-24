@@ -27,11 +27,10 @@ export const depsListCommand = new Command({
   handler: async ({ project, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
     const maxDepth = (flags.depth as number) ?? 0
-    const format = flags.format as string
     const dependencies = await project.dependencies()
 
     if (dependencies.length === 0) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
         console.log('No dependencies detected in this project.')
@@ -42,7 +41,7 @@ export const depsListCommand = new Command({
     const entries = buildDependencyTree(dependencies, maxDepth, ecosystemFilter)
 
     if (entries.length === 0) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
         const message = ecosystemFilter
@@ -59,7 +58,7 @@ export const depsListCommand = new Command({
     }
 
     // JSON output
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(dependencies))
       return { success: true, message: 'Dependencies listed successfully.' }
     }

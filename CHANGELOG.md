@@ -5,7 +5,6 @@
 
 ### Added
 
-- `--json` global flag as shorthand for `--format=json`
 - New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
 - Environment variable configuration support:
   - `DENVIG_PROJECT_PATHS` - comma-separated list of project paths
@@ -13,6 +12,7 @@
 
 ### Changed
 
+- **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output.
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root)

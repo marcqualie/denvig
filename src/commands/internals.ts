@@ -36,7 +36,7 @@ export const internalsResourceHashCommand = new Command({
       // Parse full ID: @project#workspace|resource
       const idMatch = resourceStr.match(/^@([^#]+)#([^|]+)\|(.+)$/)
       if (!idMatch) {
-        if (flags.format === 'json') {
+        if (flags.json) {
           console.log(
             JSON.stringify({
               success: false,
@@ -64,7 +64,7 @@ export const internalsResourceHashCommand = new Command({
 
     // Validate resource format
     if (!resource.startsWith('action/') && !resource.startsWith('service/')) {
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -86,7 +86,7 @@ export const internalsResourceHashCommand = new Command({
       resource: resource as `action/${string}` | `service/${string}`,
     })
 
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(result))
     } else {
       console.log(`${result.id}\n${result.hash}`)
@@ -132,7 +132,7 @@ export const internalsResourceIdCommand = new Command({
 
     // Validate resource format
     if (!resource.startsWith('action/') && !resource.startsWith('service/')) {
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -154,7 +154,7 @@ export const internalsResourceIdCommand = new Command({
       resource: resource as `action/${string}` | `service/${string}`,
     })
 
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify({ id }))
     } else {
       console.log(id)

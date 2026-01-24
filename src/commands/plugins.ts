@@ -22,7 +22,7 @@ export const pluginsCommand = new Command({
       }
     }
 
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(pluginData))
       return { success: true }
     }

@@ -58,7 +58,7 @@ denvig deps                          # List all dependencies
 denvig deps list                     # List all dependencies (explicit)
 denvig deps outdated                 # Show outdated dependencies
 denvig deps outdated --semver patch  # Filter by semver level
-denvig deps --format json            # Output as JSON
+denvig deps --json                   # Output as JSON
 ```
 
 
@@ -84,7 +84,7 @@ denvig services status marcqualie/denvig/hello # Check status of 'hello' in marc
 
 See [docs/configuration.md](docs/configuration.md) for service configuration options.
 
-All services commands accept `--format json` for programmatic output.
+All services commands accept `--json` for programmatic output.
 
 
 

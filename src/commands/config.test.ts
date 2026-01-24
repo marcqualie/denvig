@@ -17,11 +17,11 @@ describe('commands / config', () => {
     strictEqual(result.stderr, '')
   })
 
-  it('should not output config warnings when using --format=json with invalid config', async () => {
+  it('should not output config warnings when using --json with invalid config', async () => {
     const testExamplesDir = resolve(__dirname, '../test/examples')
     const invalidConfigDir = resolve(testExamplesDir, 'invalid-config')
 
-    const result = await runTestCommand('denvig version --format=json', {
+    const result = await runTestCommand('denvig version --json', {
       cwd: invalidConfigDir,
       env: {
         DENVIG_CODE_ROOT_DIR: testExamplesDir,

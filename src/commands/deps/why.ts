@@ -37,7 +37,7 @@ export const depsWhyCommand = new Command({
     const dep = allDependencies.find((d) => d.name === dependencyName)
 
     if (!dep) {
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             dependency: dependencyName,
@@ -81,7 +81,7 @@ export const depsWhyCommand = new Command({
     }
 
     // JSON output
-    if (flags.format === 'json') {
+    if (flags.json) {
       console.log(
         JSON.stringify({
           dependency: dependencyName,

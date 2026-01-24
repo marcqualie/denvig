@@ -31,7 +31,7 @@ export const configCommand = new Command({
     const globalConfig = getGlobalConfig()
     const projectConfig = project.config
 
-    if (flags.format === 'json') {
+    if (flags.json) {
       const { $sources: globalSources, ...globalConfigWithoutSources } =
         globalConfig
       const { $sources: projectSources, ...projectConfigWithoutSources } =

@@ -30,12 +30,11 @@ export const servicesCommand = new Command({
     return []
   },
   handler: async ({ project, flags }) => {
-    const format = flags.format as string
     const currentProjectSlug = project.slug
     const projectInfos = listProjects()
 
     if (projectInfos.length === 0) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
         console.log('No projects found with .denvig.yml configuration.')
@@ -64,7 +63,7 @@ export const servicesCommand = new Command({
     }
 
     if (allServices.length === 0) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
         console.log('No services configured across any project.')
@@ -87,7 +86,7 @@ export const servicesCommand = new Command({
     })
 
     // JSON output
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(sortedServices))
       return { success: true, message: 'Services listed successfully.' }
     }

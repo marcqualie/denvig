@@ -21,7 +21,7 @@ export const projectsListCommand = new Command({
   name: 'projects',
   description: 'List all projects on the system',
   usage: 'projects [list] [--with-config]',
-  example: 'projects --format json',
+  example: 'projects --json',
   args: [],
   flags: [
     {
@@ -33,12 +33,11 @@ export const projectsListCommand = new Command({
     },
   ],
   handler: async ({ flags }) => {
-    const format = flags.format as string
     const withConfig = flags['with-config'] as boolean
     const projectPaths = listProjects({ withConfig })
 
     if (projectPaths.length === 0) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
         console.log('No projects found.')
@@ -61,7 +60,7 @@ export const projectsListCommand = new Command({
     const sortedProjects = projects.sort((a, b) => a.path.localeCompare(b.path))
 
     // JSON output
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(sortedProjects))
       return { success: true, message: 'Projects listed successfully.' }
     }

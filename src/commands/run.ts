@@ -26,7 +26,7 @@ export const runCommand = new Command({
     const actions = await project.actions
 
     if (!args.action) {
-      if (flags.format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify({ actions }))
         return { success: true, message: 'Actions listed.' }
       }

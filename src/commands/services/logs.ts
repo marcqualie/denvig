@@ -39,7 +39,6 @@ export const logsCommand = new Command({
   handler: async ({ project, args, flags }) => {
     const manager = new ServiceManager(project)
     const name = args.name as string
-    const format = flags.format as string
     // Support alias `-n` through `flags.n` for compatibility with common CLI usage
     const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
     const follow = !!flags.follow
@@ -47,7 +46,7 @@ export const logsCommand = new Command({
     const logPath = manager.getLogPath(name, 'stdout')
 
     if (follow) {
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -75,7 +74,7 @@ export const logsCommand = new Command({
       const allLines = content.trim().split('\n').filter(Boolean)
       const toShow = allLines.slice(-lines)
 
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             service: name,
@@ -92,7 +91,7 @@ export const logsCommand = new Command({
       return { success: true }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e)
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,

@@ -25,7 +25,6 @@ export const servicesStatusCommand = new Command({
   },
   handler: async ({ project, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
-    const format = flags.format as string
     const {
       manager,
       serviceName,
@@ -41,7 +40,7 @@ export const servicesStatusCommand = new Command({
         targetProject.slug !== project.slug
           ? ` in project "${targetProject.slug}"`
           : ''
-      if (format === 'json') {
+      if (flags.json) {
         console.log(
           JSON.stringify({
             success: false,
@@ -61,7 +60,7 @@ export const servicesStatusCommand = new Command({
       }
     }
 
-    if (format === 'json') {
+    if (flags.json) {
       console.log(JSON.stringify(response))
       return { success: true, message: 'Status retrieved successfully.' }
     }

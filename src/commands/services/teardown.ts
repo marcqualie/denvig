@@ -105,19 +105,18 @@ export const servicesTeardownCommand = new Command({
     },
   ],
   handler: async ({ project, flags }) => {
-    const format = flags.format as string
     const removeLogs = flags['remove-logs'] as boolean
     const global = flags.global as boolean
 
     if (global) {
       // Global teardown - all denvig services across all projects
-      if (format !== 'json') {
+      if (!flags.json) {
         console.log('Tearing down all denvig services globally...')
       }
 
       const result = await teardownGlobal({ removeLogs })
 
-      if (format === 'json') {
+      if (flags.json) {
         console.log(JSON.stringify(result))
       } else {
         if (result.services.length === 0) {
@@ -146,13 +145,13 @@ export const servicesTeardownCommand = new Command({
     // Project-specific teardown
     const manager = new ServiceManager(project)
 
-    if (format !== 'json') {
+    if (!flags.json) {
       console.log(`Tearing down all services for ${project.slug}...`)
     }
 
     const results = await manager.teardownAll({ removeLogs })
 
-    if (format === 'json') {
+    if (flags.json) {
       console.log(
         JSON.stringify({
           success: true,

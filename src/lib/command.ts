@@ -46,7 +46,7 @@ type ParsedArgs<
 /** Global flags available to all commands */
 type GlobalFlags = {
   project?: string
-  format: string
+  json?: boolean
 }
 
 type ParsedFlags<FlagDefinitions extends FlagDefinition[]> = GlobalFlags &
