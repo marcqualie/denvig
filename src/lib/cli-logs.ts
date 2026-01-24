@@ -25,8 +25,12 @@ export const isCliLoggingEnabled = (): boolean => {
 
 /**
  * Get the path to the CLI logs file.
+ * Can be overridden via DENVIG_CLI_LOGS_PATH environment variable.
  */
 export const getCliLogsPath = (): string => {
+  if (process.env.DENVIG_CLI_LOGS_PATH) {
+    return resolve(process.env.DENVIG_CLI_LOGS_PATH)
+  }
   return resolve(homedir(), '.denvig', 'logs', 'cli.jsonl')
 }
 
@@ -34,7 +38,8 @@ export const getCliLogsPath = (): string => {
  * Ensure the logs directory exists.
  */
 const ensureLogsDir = async (): Promise<void> => {
-  const logsDir = resolve(homedir(), '.denvig', 'logs')
+  const logPath = getCliLogsPath()
+  const logsDir = resolve(logPath, '..')
   await mkdir(logsDir, { recursive: true })
 }
 

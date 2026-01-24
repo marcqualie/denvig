@@ -1,8 +1,8 @@
 import assert from 'node:assert'
 import { readFile, rm } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
-import { afterEach, beforeEach, describe, it } from 'node:test'
+import { afterEach, before, beforeEach, describe, it } from 'node:test'
 
 import {
   appendCliLog,
@@ -12,7 +12,14 @@ import {
 } from './cli-logs.ts'
 
 describe('cli-logs', () => {
-  const testLogPath = getCliLogsPath()
+  // Use a unique test directory to avoid interfering with real logs
+  const testDir = resolve(tmpdir(), 'denvig-test-cli-logs')
+  const testLogPath = resolve(testDir, 'cli.jsonl')
+
+  before(() => {
+    // Set the test log path before any tests run
+    process.env.DENVIG_CLI_LOGS_PATH = testLogPath
+  })
 
   beforeEach(async () => {
     // Clean up any existing log file before each test
@@ -22,7 +29,7 @@ describe('cli-logs', () => {
   afterEach(async () => {
     // Clean up after tests
     await rm(testLogPath, { force: true })
-    // Reset env var
+    // Reset env vars (but keep DENVIG_CLI_LOGS_PATH for subsequent tests)
     delete process.env.DENVIG_CLI_LOGS_ENABLED
   })
 
@@ -50,9 +57,8 @@ describe('cli-logs', () => {
   })
 
   describe('getCliLogsPath()', () => {
-    it('should return the correct log path', () => {
-      const expected = resolve(homedir(), '.denvig', 'logs', 'cli.jsonl')
-      assert.strictEqual(getCliLogsPath(), expected)
+    it('should return the overridden path when DENVIG_CLI_LOGS_PATH is set', () => {
+      assert.strictEqual(getCliLogsPath(), testLogPath)
     })
   })
 
