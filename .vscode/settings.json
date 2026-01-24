@@ -1,6 +1,6 @@
 {
   "yaml.schemaStore.enable": true,
   "yaml.schemas": {
-    "./schemas/config.json": ["file://./.denvig.yml"]
+    "./schemas/config.json": ["**/.denvig.yml"]
   }
 }
