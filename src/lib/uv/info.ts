@@ -7,8 +7,8 @@ import {
 } from 'node:fs'
 import { homedir } from 'node:os'
 
-/** Cache duration in milliseconds (30 minutes) */
-const CACHE_DURATION_MS = 30 * 60 * 1000
+/** Cache duration in milliseconds */
+const CACHE_DURATION_MS = 60 * 60 * 1000
 
 /** Cache directory for PyPI package info */
 const getCacheDir = (): string => {
