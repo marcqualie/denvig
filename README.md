@@ -45,7 +45,6 @@ denvig build
 denvig test
 denvig install
 denvig lint
-denvig outdated
 ```
 
 
@@ -54,11 +53,13 @@ denvig outdated
 Inspect and manage project dependencies across multiple ecosystems (npm, pnpm, yarn, Ruby/Bundler, Python/uv):
 
 ```shell
-denvig deps                          # List all dependencies
-denvig deps list                     # List all dependencies (explicit)
-denvig deps outdated                 # Show outdated dependencies
-denvig deps outdated --semver patch  # Filter by semver level
-denvig deps --json                   # Output as JSON
+denvig deps.                           # List all dependencies
+denvig deps list --depth 1             # Include subdependencies
+denvig deps list --ecosystem npm       # Filter to specific ecosystem
+denvig deps outdated                   # Show outdated dependencies
+denvig deps outdated --semver patch    # Filter by semver level (patch or minor)
+denvig deps outdated --no-cache        # Force fresh data
+denvig deps why <package>              # Show why a dependency is installed
 ```
 
 
@@ -67,12 +68,16 @@ denvig deps --json                   # Output as JSON
 Manage background services defined in `.denvig.yml`. Services run via launchctl on macOS:
 
 ```shell
-denvig services               # List all services and their status
-denvig services start api     # Start a service
-denvig services stop api      # Stop a service
-denvig services restart api   # Restart a service
-denvig services status api    # Check status of a service
-denvig services logs api      # View service logs
+denvig services                 # List all services and their status
+denvig services start api       # Start a service
+denvig services stop api        # Stop a service
+denvig services restart api     # Restart a service
+denvig services status api      # Check status of a service
+denvig services logs api        # View service logs
+denvig services logs api -n 50  # View last 50 lines
+denvig services logs api -f     # Follow logs in real-time
+denvig services teardown        # Stop all services in current project
+denvig services teardown --global --remove-logs  # Full cleanup
 ```
 
 Manage services from other projects using the full path:
@@ -84,7 +89,38 @@ denvig services status marcqualie/denvig/hello # Check status of 'hello' in marc
 
 See [docs/configuration.md](docs/configuration.md) for service configuration options.
 
-All services commands accept `--json` for programmatic output.
+
+### Projects
+
+Discover and manage projects across your system:
+
+```shell
+denvig projects                  # List all projects
+denvig projects --with-config    # Only show projects with .denvig.yml
+```
+
+
+### Configuration
+
+View and validate configuration:
+
+```shell
+denvig config                    # Display current configuration
+denvig config verify             # Verify .denvig.yml against schema
+denvig config verify path/to/file.yml
+```
+
+
+### Utilities
+
+```shell
+denvig info                      # Show information about current project
+denvig plugins                   # List available plugins and their actions
+denvig version                   # Show version
+denvig zsh completions --install # Install shell completions
+```
+
+Most commands accept `--json` for programmatic output and `--project` to target a different project.
 
 
 
