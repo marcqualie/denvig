@@ -2,6 +2,7 @@
 
 import parseArgs from 'minimist'
 
+import { globalFlags, showCommandHelp, showRootHelp } from './lib/cli-help.ts'
 import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
 import { getGitHubSlug } from './lib/git.ts'
@@ -11,58 +12,6 @@ import { listProjects } from './lib/projects.ts'
 import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
-
-// Global flags that are available for all commands
-const globalFlags = [
-  {
-    name: 'project',
-    description:
-      'The project slug to run against. Defaults to current directory.',
-    required: false,
-    type: 'string',
-    defaultValue: undefined,
-  },
-  {
-    name: 'json',
-    description: 'Output in JSON format',
-    required: false,
-    type: 'boolean',
-    defaultValue: false,
-  },
-]
-
-// Helper function to show root help
-function showRootHelp(commands: Record<string, GenericCommand>) {
-  console.log(`Denvig v${getDenvigVersion()}`)
-  console.log('')
-  console.log('Commands:')
-  // Find the longest usage string for padding
-  const usages = Object.keys(commands)
-    .filter(
-      (cmd) =>
-        !cmd.startsWith('internals:') &&
-        cmd !== 'zsh:__complete__' &&
-        cmd !== 'deps' &&
-        cmd !== 'projects',
-    )
-    .map((cmd) => `denvig ${commands[cmd].usage}`)
-  const maxUsageLength = Math.max(...usages.map((u) => u.length))
-  const padLength = maxUsageLength + 2
-
-  Object.keys(commands).forEach((cmd) => {
-    if (cmd.startsWith('internals:') || cmd === 'zsh:__complete__') return
-    // Skip alias entries that duplicate another command
-    if (cmd === 'deps' || cmd === 'projects') return
-    const usage = `denvig ${commands[cmd].usage}`
-    console.log(
-      `  ${usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
-    )
-  })
-  console.log('')
-  console.log('Options:')
-  console.log('  -h, --help       Show help')
-  console.log('  -v, --version    Show version number')
-}
 
 // Main CLI execution
 async function main() {
@@ -343,41 +292,7 @@ async function main() {
 
   // Handle --help flag for individual commands
   if (helpRequested) {
-    const cmd = commands[commandName]
-    console.log(`Usage: denvig ${cmd.usage}`)
-    console.log('')
-    console.log(cmd.description)
-    if (cmd.args.length > 0) {
-      console.log('')
-      console.log('Arguments:')
-      for (const arg of cmd.args) {
-        const required = arg.required ? '' : ' (optional)'
-        console.log(`  ${arg.name}${required}`)
-        console.log(`      ${arg.description}`)
-      }
-    }
-    const cmdFlags = [...globalFlags, ...cmd.flags]
-    if (cmdFlags.length > 0) {
-      console.log('')
-      console.log('Options:')
-      const flagNames = cmdFlags.map((f) => `--${f.name}`)
-      const maxFlagLength = Math.max(...flagNames.map((f) => f.length))
-      const flagPadLength = maxFlagLength + 2
-      for (const flag of cmdFlags) {
-        const flagName = `--${flag.name}`
-        console.log(
-          `  ${flagName.padEnd(flagPadLength, ' ')} ${flag.description}`,
-        )
-      }
-    }
-    if (cmd.example) {
-      console.log('')
-      console.log('Example:')
-      const example = cmd.example.startsWith('denvig ')
-        ? cmd.example
-        : `denvig ${cmd.example}`
-      console.log(`  ${example}`)
-    }
+    showCommandHelp(commands[commandName])
     await cliLogTracker.finish(0, 'Showed command help')
     process.exit(0)
   }
