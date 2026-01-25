@@ -19,7 +19,7 @@ export const getProjectCompletions = (partial: string = ''): string[] => {
 
   // ID completion mode
   if (partial.startsWith('id:')) {
-    const idPrefix = partial.slice(3)
+    const _idPrefix = partial.slice(3)
     return projects
       .map((p) => {
         const project = new DenvigProject(p.path)

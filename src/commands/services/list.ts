@@ -26,7 +26,7 @@ export const servicesCommand = new Command({
   example: 'services',
   args: [],
   flags: [],
-  completions: ({ project }, inputs) => {
+  completions: () => {
     return []
   },
   handler: async ({ project, flags }) => {

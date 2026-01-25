@@ -11,10 +11,7 @@ export type {
   OutdatedDependency as OutdatedDependencySchema,
 } from '../types/responses.ts'
 
-import type {
-  OutdatedDependency as OutdatedDependencySchema,
-  Dependency as ProjectDependencySchema,
-} from '../types/responses.ts'
+import type { Dependency as ProjectDependencySchema } from '../types/responses.ts'
 
 /**
  * Zod schema for dependency version validation.

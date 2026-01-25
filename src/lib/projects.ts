@@ -25,7 +25,7 @@ const expandPattern = (pattern: string): string[] => {
   for (const part of parts) {
     if (part === '') {
       // Handle leading slash
-      paths = paths.map((p) => p + '/')
+      paths = paths.map((p) => `${p}/`)
       continue
     }
 
