@@ -25,12 +25,12 @@
 
 ### Changed
 
-- **Breaking:** `ServiceResponse.project` changed from `string` (slug) to object `{ id, slug, name, path }` for richer SDK usage
 - **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output. (#101)
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level (#99)
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files (#98)
 - **Breaking:** Plist and log file naming changed from slug-based to ID-based format (`denvig.[id].[service].plist`). Run `denvig services teardown --global` to clean up old plist files (#106)
 - **Breaking:** Service names must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen. Names like (#108)
+- **Breaking:** `ServiceResponse.project` changed from `string` (slug) to object `{ id, slug, name, path }` for richer SDK usage (#117)
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root) (#98)
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices (#98)
 - Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']` (#99)
