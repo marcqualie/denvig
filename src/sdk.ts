@@ -13,6 +13,7 @@ export type {
   OutdatedDependency,
   ProjectResponse,
   ServiceInfo,
+  ServiceProjectData,
   ServiceResponse,
   ServiceResult,
   ServiceStatus,
