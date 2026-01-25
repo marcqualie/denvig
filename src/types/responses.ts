@@ -47,12 +47,22 @@ export type ServiceStatus = {
 }
 
 /**
+ * Project data included in service responses.
+ */
+export type ServiceProjectData = {
+  id: string
+  slug: string
+  name: string
+  path: string
+}
+
+/**
  * Unified service response for all service commands.
  * Used by list, status, start, stop, and restart commands.
  */
 export type ServiceResponse = {
   name: string
-  project: string
+  project: ServiceProjectData
   status: 'running' | 'error' | 'stopped'
   pid: number | null
   url: string | null

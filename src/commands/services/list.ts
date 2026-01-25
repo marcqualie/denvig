@@ -73,13 +73,13 @@ export const servicesCommand = new Command({
 
     // Sort: current project first, then alphabetically by project slug
     const sortedServices = allServices.sort((a, b) => {
-      const aIsCurrent = a.project === currentProjectSlug
-      const bIsCurrent = b.project === currentProjectSlug
+      const aIsCurrent = a.project.slug === currentProjectSlug
+      const bIsCurrent = b.project.slug === currentProjectSlug
 
       if (aIsCurrent && !bIsCurrent) return -1
       if (!aIsCurrent && bIsCurrent) return 1
 
-      const projectCompare = a.project.localeCompare(b.project)
+      const projectCompare = a.project.slug.localeCompare(b.project.slug)
       if (projectCompare !== 0) return projectCompare
 
       return a.name.localeCompare(b.name)
@@ -97,7 +97,7 @@ export const servicesCommand = new Command({
           header: '',
           accessor: (s) => getStatusIcon(s.status),
         },
-        { header: 'Project', accessor: (s) => s.project },
+        { header: 'Project', accessor: (s) => s.project.slug },
         { header: 'Name', accessor: (s) => s.name },
         { header: 'URL', accessor: (s) => s.url || '-' },
       ],

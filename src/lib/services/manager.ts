@@ -682,7 +682,12 @@ export class ServiceManager {
 
     const response: ServiceResponse = {
       name,
-      project: this.project.slug,
+      project: {
+        id: this.project.id,
+        slug: this.project.slug,
+        name: this.project.name,
+        path: this.project.path,
+      },
       status,
       pid,
       url: this.getServiceUrl(name),
