@@ -5,37 +5,34 @@
 
 ### Added
 
-- CLI usage logging: tracks command execution in JSONL format at `~/.denvig/logs/cli.jsonl`
+- CLI usage logging: tracks command execution in JSONL format at `~/.denvig/logs/cli.jsonl` (#110)
   - Logs timestamp, command, path, duration (ms), and exit status
   - Disable with `DENVIG_CLI_LOGS_ENABLED=0` environment variable
-- SDK `client` option (required) to identify the integration using the SDK (e.g., `client: 'raycast'` logs as `via: 'sdk:raycast'`)
-  - Must follow service name format: start with a letter, lowercase alphanumeric and hyphens only, cannot end with hyphen
-- `--project` flag now supports all identifier formats: `id:[id]`, `github:[slug]`, `local:/path`, or unprefixed slugs (defaults to `github:`)
-- Tab completion for `--project` flag: completes slugs by default, IDs when `id:` prefix is typed
-- New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects
-- Tab completion now includes services from all configured projects with their slug prefix (e.g., `marcqualie/denvig/hello`)
-- Service commands now accept slugs without the `github:` prefix (e.g., `denvig services start marcqualie/denvig/hello`)
-- Unique project ID based on full SHA1 hash of project path
-  - `denvig info` displays full ID, `denvig projects` shows short ID (8 chars)
+- SDK `client` option (required) to identify the integration using the SDK (e.g., `client: 'raycast'` logs as `via: 'sdk:raycast'`) (#110)
+- `--project` flag now supports all identifier formats: `id:[id]`, `github:[slug]`, `local:/path`, or unprefixed slugs (defaults to `github:`) (#109)
+- Tab completion for `--project` flag: completes slugs by default, IDs when `id:` prefix is typed (#109)
+- New slug format for projects: `github:owner/repo` for GitHub projects, `local:/path` for local-only projects (#102)
+- Tab completion now includes services from all configured projects with their slug prefix (e.g., `marcqualie/denvig/hello`) (#102)
+- Service commands now accept slugs without the `github:` prefix (e.g., `denvig services start marcqualie/denvig/hello`) (#102)
+- Unique project ID based on full SHA1 hash of project path (#106)
   - Service commands support `id:[id]/[serviceName]` format for exact project matching (e.g., `denvig services start id:5444710a/hello`)
-  - Both short (8 char) and full IDs are accepted when matching
   - Enables git worktree support where the same slug may exist in multiple paths
-- Environment variable configuration support:
+- Environment variable configuration support: (#100)
   - `DENVIG_PROJECT_PATHS` - comma-separated list of project paths
   - `DENVIG_QUICK_ACTIONS` - comma-separated list of quick actions (empty string disables)
 
 ### Changed
 
-- **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output.
-- **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level
-- **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files
-- **Breaking:** Plist and log file naming changed from slug-based to ID-based format (`denvig.[id].[service].plist`). Run `denvig services teardown --global` to clean up old plist files.
-- **Breaking:** Service names must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen. Names like `1api`, `my_service`, or `api-` are no longer valid.
-- `envFiles` files are now resolved relative to the service's `cwd` (not project root)
-- Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices
-- Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']`
-- All project configuration fields are now optional
-- `services teardown --global` now removes all `denvig.*.plist` files from LaunchAgents, not just stopped services
+- **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output. (#101)
+- **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level (#99)
+- **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files (#98)
+- **Breaking:** Plist and log file naming changed from slug-based to ID-based format (`denvig.[id].[service].plist`). Run `denvig services teardown --global` to clean up old plist files (#106)
+- **Breaking:** Service names must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen. Names like (#108)
+- `envFiles` files are now resolved relative to the service's `cwd` (not project root) (#98)
+- Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices (#98)
+- Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']` (#99)
+- All project configuration fields are now optional (#111)
+- `services teardown --global` now removes all `denvig.*.plist` files from LaunchAgents, not just stopped services (#103)
 
 
 ## [v0.4.3] - 2026-01-22
