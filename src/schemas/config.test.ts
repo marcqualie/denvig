@@ -345,7 +345,7 @@ describe('ProjectConfigSchema - services', () => {
   })
 
   it('should accept service names up to 64 characters', () => {
-    const name = 'a' + 'b'.repeat(62) + 'c' // 64 chars
+    const name = `a${'b'.repeat(62)}c` // 64 chars
     const config = {
       services: {
         [name]: { command: 'echo test' },
@@ -356,7 +356,7 @@ describe('ProjectConfigSchema - services', () => {
   })
 
   it('should reject service names longer than 64 characters', () => {
-    const name = 'a' + 'b'.repeat(63) + 'c' // 65 chars
+    const name = `a${'b'.repeat(63)}c` // 65 chars
     const config = {
       services: {
         [name]: { command: 'echo test' },

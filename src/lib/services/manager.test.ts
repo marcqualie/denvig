@@ -3,7 +3,6 @@ import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { createMockProject } from '../../test/mock.ts'
-import { projectId } from '../project.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {

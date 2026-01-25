@@ -2,7 +2,6 @@ import {
   access,
   appendFile,
   mkdir,
-  readdir,
   readFile,
   unlink,
   writeFile,
@@ -139,7 +138,14 @@ export class ServiceManager {
       }
     }
 
-    const config = this.getServiceConfig(name)!
+    const config = this.getServiceConfig(name)
+    if (!config) {
+      return {
+        name,
+        success: false,
+        message: `Service "${name}" not found in configuration`,
+      }
+    }
     const label = this.getServiceLabel(name)
     const isBootstrapped = await this.isServiceBootstrapped(name)
 

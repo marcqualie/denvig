@@ -2,7 +2,7 @@ import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { createMockProject } from '../test/mock.ts'
-import { getProjectInfo, type ProjectInfo } from './projectInfo.ts'
+import { getProjectInfo } from './projectInfo.ts'
 
 import type { DenvigProject } from './project.ts'
 
