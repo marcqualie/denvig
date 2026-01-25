@@ -31,10 +31,50 @@ const globalFlags = [
   },
 ]
 
+// Helper function to show root help
+function showRootHelp(commands: Record<string, GenericCommand>) {
+  console.log(`Denvig v${getDenvigVersion()}`)
+  console.log('')
+  console.log('Commands:')
+  // Find the longest usage string for padding
+  const usages = Object.keys(commands)
+    .filter(
+      (cmd) =>
+        !cmd.startsWith('internals:') &&
+        cmd !== 'zsh:__complete__' &&
+        cmd !== 'deps' &&
+        cmd !== 'projects',
+    )
+    .map((cmd) => `denvig ${commands[cmd].usage}`)
+  const maxUsageLength = Math.max(...usages.map((u) => u.length))
+  const padLength = maxUsageLength + 2
+
+  Object.keys(commands).forEach((cmd) => {
+    if (cmd.startsWith('internals:') || cmd === 'zsh:__complete__') return
+    // Skip alias entries that duplicate another command
+    if (cmd === 'deps' || cmd === 'projects') return
+    const usage = `denvig ${commands[cmd].usage}`
+    console.log(
+      `  ${usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
+    )
+  })
+  console.log('')
+  console.log('Options:')
+  console.log('  -h, --help       Show help')
+  console.log('  -v, --version    Show version number')
+}
+
 // Main CLI execution
 async function main() {
   let commandName = process.argv[2]
   let args = process.argv.slice(2)
+  const rootFlags = parseArgs(args)
+
+  // Handle root-level --version/-v
+  if (rootFlags.version || rootFlags.v) {
+    console.log(`v${getDenvigVersion()}`)
+    process.exit(0)
+  }
 
   // Detect project from current directory or --project flag
   const globalConfig = getGlobalConfig()
@@ -214,6 +254,9 @@ async function main() {
   const command = commands[commandName]
   const flags = parseArgs(args)
 
+  // Check if help is requested for this command
+  const helpRequested = flags.help || flags.h
+
   // Parse command arguments
   const parsedArgs: Record<string, string | number> = {}
   let missingArg: string | null = null
@@ -226,7 +269,7 @@ async function main() {
       break
     }
   }
-  if (missingArg) {
+  if (missingArg && !helpRequested) {
     const errorMsg = `Missing required argument: ${missingArg}`
     console.error(errorMsg)
     await cliLogTracker.finish(1, errorMsg)
@@ -253,7 +296,7 @@ async function main() {
       break
     }
   }
-  if (missingFlag) {
+  if (missingFlag && !helpRequested) {
     const errorMsg = `Missing required flag: ${missingFlag}`
     console.error(errorMsg)
     await cliLogTracker.finish(1, errorMsg)
@@ -277,50 +320,18 @@ async function main() {
   // Combine extra positional args and extra flag args
   const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
 
+  // Handle root-level help
   if (!commandName) {
-    const padLength = 20
-    console.log(`Denvig v${getDenvigVersion()}`)
-    console.log('')
-    console.log('Usage: denvig <command> [args] [flags]')
-    console.log('')
-    console.log('Available commands:')
-    Object.keys(commands).forEach((cmd) => {
-      if (cmd.startsWith('internals:') || cmd === 'zsh:__complete__') return
-      // Skip alias entries that duplicate another command
-      if (cmd === 'deps' || cmd === 'projects') return
-      console.log(
-        `  - ${commands[cmd].usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
-      )
-    })
-    console.log('')
-    console.log('Quick Actions:')
-    for (const actionName of quickActions) {
-      const actions = (await project?.actions)?.[actionName]
-      if (!actions) {
-        console.log(`  - ${actionName.padEnd(padLength, ' ')} not defined`)
-        return
-      }
-
-      for (const action of actions) {
-        const lines = action.split('\n')
-        const firstLine = lines[0]
-        const remainingLines = lines.slice(1)
-
-        console.log(`  - ${actionName.padEnd(padLength, ' ')} $ ${firstLine}`)
-        for (const line of remainingLines) {
-          if (line.trim()) {
-            console.log(`${' '.repeat(padLength + 7)}${line}`)
-          }
-        }
-      }
-    }
-    console.log('')
-    console.log('Global flags:')
-    globalFlags.forEach((flag) => {
-      console.log(`  --${flag.name.padEnd(padLength, ' ')} ${flag.description}`)
-    })
+    showRootHelp(commands)
     await cliLogTracker.finish(1, 'No command provided')
     process.exit(1)
+  }
+
+  // Handle --help or -h at root level (no valid command provided)
+  if ((rootFlags.help || rootFlags.h) && !commands[commandName]) {
+    showRootHelp(commands)
+    await cliLogTracker.finish(0, 'Showed help')
+    process.exit(0)
   }
 
   if (!commands[commandName]) {
@@ -328,6 +339,47 @@ async function main() {
     console.error(`${errorMsg}.`)
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
+  }
+
+  // Handle --help flag for individual commands
+  if (helpRequested) {
+    const cmd = commands[commandName]
+    console.log(`Usage: denvig ${cmd.usage}`)
+    console.log('')
+    console.log(cmd.description)
+    if (cmd.args.length > 0) {
+      console.log('')
+      console.log('Arguments:')
+      for (const arg of cmd.args) {
+        const required = arg.required ? '' : ' (optional)'
+        console.log(`  ${arg.name}${required}`)
+        console.log(`      ${arg.description}`)
+      }
+    }
+    const cmdFlags = [...globalFlags, ...cmd.flags]
+    if (cmdFlags.length > 0) {
+      console.log('')
+      console.log('Options:')
+      const flagNames = cmdFlags.map((f) => `--${f.name}`)
+      const maxFlagLength = Math.max(...flagNames.map((f) => f.length))
+      const flagPadLength = maxFlagLength + 2
+      for (const flag of cmdFlags) {
+        const flagName = `--${flag.name}`
+        console.log(
+          `  ${flagName.padEnd(flagPadLength, ' ')} ${flag.description}`,
+        )
+      }
+    }
+    if (cmd.example) {
+      console.log('')
+      console.log('Example:')
+      const example = cmd.example.startsWith('denvig ')
+        ? cmd.example
+        : `denvig ${cmd.example}`
+      console.log(`  ${example}`)
+    }
+    await cliLogTracker.finish(0, 'Showed command help')
+    process.exit(0)
   }
 
   try {

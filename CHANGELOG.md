@@ -5,6 +5,8 @@
 
 ### Added
 
+- `--help` and `-h` flags now work on all commands to show command-specific usage (e.g., `denvig services --help`)
+- `-v` and `--version` flags at root level to show version number
 - CLI usage logging: tracks command execution in JSONL format at `~/.denvig/logs/cli.jsonl` (#110)
   - Logs timestamp, command, path, duration (ms), and exit status
   - Disable with `DENVIG_CLI_LOGS_ENABLED=0` environment variable
@@ -23,6 +25,8 @@
 
 ### Changed
 
+- Root help output now shows commands in `denvig <command>` format (similar to opencode)
+- Removed quick actions and global flags sections from root help output (available via command-specific `--help`)
 - **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output. (#101)
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level (#99)
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files (#98)
