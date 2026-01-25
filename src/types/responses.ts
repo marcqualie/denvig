@@ -5,7 +5,6 @@
  */
 
 import type { ProjectInfo } from '../lib/projectInfo.ts'
-import type { ProjectConfigSchema } from '../schemas/config.ts'
 
 /**
  * Service information for display.

@@ -58,7 +58,7 @@ export const appendCliLog = async (entry: CliLogEntry): Promise<void> => {
   try {
     await ensureLogsDir()
     const logPath = getCliLogsPath()
-    const line = JSON.stringify(entry) + '\n'
+    const line = `${JSON.stringify(entry)}\n`
     await appendFile(logPath, line, 'utf-8')
   } catch {
     // Silently ignore logging errors - logging should never break CLI functionality
