@@ -2,11 +2,17 @@ import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
 import { prettyPath } from '../../lib/path.ts'
 import { DenvigProject, shortProjectId } from '../../lib/project.ts'
-import { getProjectInfo, type ProjectInfo } from '../../lib/projectInfo.ts'
+import {
+  getProjectInfo,
+  type ProjectInfo,
+  type ServiceStatus,
+} from '../../lib/projectInfo.ts'
 import { listProjects } from '../../lib/projects.ts'
 import launchctl from '../../lib/services/launchctl.ts'
 
-const getStatusIcon = (status: ProjectInfo['serviceStatus']): string => {
+type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
+
+const getStatusIcon = (status: ServiceStatus): string => {
   switch (status) {
     case 'running':
       return '🟢'
@@ -45,7 +51,23 @@ export const projectsListCommand = new Command({
       return { success: true, message: 'No projects found.' }
     }
 
-    // Pre-fetch launchctl list once to avoid N shell calls
+    // JSON output: skip launchctl calls for performance
+    if (flags.json) {
+      const projects: ProjectInfoJSON[] = []
+      for (const projectPath of projectPaths) {
+        const proj = new DenvigProject(projectPath.path)
+        const info = await getProjectInfo(proj, { includeServiceStatus: false })
+        const { serviceStatus: _, ...infoWithoutStatus } = info
+        projects.push(infoWithoutStatus)
+      }
+      const sortedProjects = projects.sort((a, b) =>
+        a.path.localeCompare(b.path),
+      )
+      console.log(JSON.stringify(sortedProjects))
+      return { success: true, message: 'Projects listed successfully.' }
+    }
+
+    // CLI output: pre-fetch launchctl list once to avoid N shell calls
     const launchctlList = await launchctl.list('denvig.')
 
     const projects: ProjectInfo[] = []
@@ -58,12 +80,6 @@ export const projectsListCommand = new Command({
 
     // Sort by absolute path ascending
     const sortedProjects = projects.sort((a, b) => a.path.localeCompare(b.path))
-
-    // JSON output
-    if (flags.json) {
-      console.log(JSON.stringify(sortedProjects))
-      return { success: true, message: 'Projects listed successfully.' }
-    }
 
     const lines = formatTable({
       columns: [

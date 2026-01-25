@@ -18,6 +18,8 @@ export type ProjectInfo = {
 export type GetProjectInfoOptions = {
   /** Pre-fetched launchctl list to avoid repeated shell calls */
   launchctlList?: LaunchctlListItem[]
+  /** Include service status in the response (requires launchctl calls) */
+  includeServiceStatus?: boolean
 }
 
 /**
@@ -30,34 +32,37 @@ export const getProjectInfo = async (
   options?: GetProjectInfoOptions,
 ): Promise<ProjectInfo> => {
   const hasConfig = project.config.$sources.length > 0
+  const includeServiceStatus = options?.includeServiceStatus ?? true
 
   // Extract config without internal $sources property
   const { $sources: _, ...configWithoutSources } = project.config
 
-  // Determine service status
+  // Determine service status (only when requested)
   let serviceStatus: ServiceStatus = 'none'
-  const services = project.config.services || {}
-  const serviceNames = Object.keys(services)
+  if (includeServiceStatus) {
+    const services = project.config.services || {}
+    const serviceNames = Object.keys(services)
 
-  if (serviceNames.length > 0) {
-    // Use provided launchctl list or fetch it
-    const launchctlList =
-      options?.launchctlList ?? (await launchctl.list('denvig.'))
+    if (serviceNames.length > 0) {
+      // Use provided launchctl list or fetch it
+      const launchctlList =
+        options?.launchctlList ?? (await launchctl.list('denvig.'))
 
-    const manager = new ServiceManager(project)
-    let hasRunningService = false
+      const manager = new ServiceManager(project)
+      let hasRunningService = false
 
-    for (const serviceName of serviceNames) {
-      const response = await manager.getServiceResponse(serviceName, {
-        launchctlList,
-      })
-      if (response?.status === 'running') {
-        hasRunningService = true
-        break
+      for (const serviceName of serviceNames) {
+        const response = await manager.getServiceResponse(serviceName, {
+          launchctlList,
+        })
+        if (response?.status === 'running') {
+          hasRunningService = true
+          break
+        }
       }
-    }
 
-    serviceStatus = hasRunningService ? 'running' : 'stopped'
+      serviceStatus = hasRunningService ? 'running' : 'stopped'
+    }
   }
 
   return {
