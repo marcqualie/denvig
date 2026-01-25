@@ -2,6 +2,7 @@
 
 import parseArgs from 'minimist'
 
+import { globalFlags, showCommandHelp, showRootHelp } from './lib/cli-help.ts'
 import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
 import { getGitHubSlug } from './lib/git.ts'
@@ -12,29 +13,17 @@ import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
-// Global flags that are available for all commands
-const globalFlags = [
-  {
-    name: 'project',
-    description:
-      'The project slug to run against. Defaults to current directory.',
-    required: false,
-    type: 'string',
-    defaultValue: undefined,
-  },
-  {
-    name: 'json',
-    description: 'Output in JSON format',
-    required: false,
-    type: 'boolean',
-    defaultValue: false,
-  },
-]
-
 // Main CLI execution
 async function main() {
   let commandName = process.argv[2]
   let args = process.argv.slice(2)
+  const rootFlags = parseArgs(args)
+
+  // Handle root-level --version/-v
+  if (rootFlags.version || rootFlags.v) {
+    console.log(`v${getDenvigVersion()}`)
+    process.exit(0)
+  }
 
   // Detect project from current directory or --project flag
   const globalConfig = getGlobalConfig()
@@ -214,6 +203,9 @@ async function main() {
   const command = commands[commandName]
   const flags = parseArgs(args)
 
+  // Check if help is requested for this command
+  const helpRequested = flags.help || flags.h
+
   // Parse command arguments
   const parsedArgs: Record<string, string | number> = {}
   let missingArg: string | null = null
@@ -226,7 +218,7 @@ async function main() {
       break
     }
   }
-  if (missingArg) {
+  if (missingArg && !helpRequested) {
     const errorMsg = `Missing required argument: ${missingArg}`
     console.error(errorMsg)
     await cliLogTracker.finish(1, errorMsg)
@@ -253,7 +245,7 @@ async function main() {
       break
     }
   }
-  if (missingFlag) {
+  if (missingFlag && !helpRequested) {
     const errorMsg = `Missing required flag: ${missingFlag}`
     console.error(errorMsg)
     await cliLogTracker.finish(1, errorMsg)
@@ -277,50 +269,18 @@ async function main() {
   // Combine extra positional args and extra flag args
   const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
 
+  // Handle root-level help
   if (!commandName) {
-    const padLength = 20
-    console.log(`Denvig v${getDenvigVersion()}`)
-    console.log('')
-    console.log('Usage: denvig <command> [args] [flags]')
-    console.log('')
-    console.log('Available commands:')
-    Object.keys(commands).forEach((cmd) => {
-      if (cmd.startsWith('internals:') || cmd === 'zsh:__complete__') return
-      // Skip alias entries that duplicate another command
-      if (cmd === 'deps' || cmd === 'projects') return
-      console.log(
-        `  - ${commands[cmd].usage.padEnd(padLength, ' ')} ${commands[cmd].description}`,
-      )
-    })
-    console.log('')
-    console.log('Quick Actions:')
-    for (const actionName of quickActions) {
-      const actions = (await project?.actions)?.[actionName]
-      if (!actions) {
-        console.log(`  - ${actionName.padEnd(padLength, ' ')} not defined`)
-        return
-      }
-
-      for (const action of actions) {
-        const lines = action.split('\n')
-        const firstLine = lines[0]
-        const remainingLines = lines.slice(1)
-
-        console.log(`  - ${actionName.padEnd(padLength, ' ')} $ ${firstLine}`)
-        for (const line of remainingLines) {
-          if (line.trim()) {
-            console.log(`${' '.repeat(padLength + 7)}${line}`)
-          }
-        }
-      }
-    }
-    console.log('')
-    console.log('Global flags:')
-    globalFlags.forEach((flag) => {
-      console.log(`  --${flag.name.padEnd(padLength, ' ')} ${flag.description}`)
-    })
+    showRootHelp(commands)
     await cliLogTracker.finish(1, 'No command provided')
     process.exit(1)
+  }
+
+  // Handle --help or -h at root level (no valid command provided)
+  if ((rootFlags.help || rootFlags.h) && !commands[commandName]) {
+    showRootHelp(commands)
+    await cliLogTracker.finish(0, 'Showed help')
+    process.exit(0)
   }
 
   if (!commands[commandName]) {
@@ -328,6 +288,13 @@ async function main() {
     console.error(`${errorMsg}.`)
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
+  }
+
+  // Handle --help flag for individual commands
+  if (helpRequested) {
+    showCommandHelp(commands[commandName])
+    await cliLogTracker.finish(0, 'Showed command help')
+    process.exit(0)
   }
 
   try {
