@@ -106,7 +106,7 @@ export type OutdatedDependency = Dependency & {
 }
 
 /**
- * A project from projects:list and info commands.
- * Re-exported from lib/projectInfo.ts for backwards compatibility.
+ * A project from projects:list command.
+ * Note: serviceStatus is not included in JSON output for performance.
  */
-export type ProjectResponse = ProjectInfo
+export type ProjectResponse = Omit<ProjectInfo, 'serviceStatus'>
