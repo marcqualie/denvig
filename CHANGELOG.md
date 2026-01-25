@@ -25,7 +25,6 @@
 
 ### Changed
 
-- **Breaking:** `ServiceResponse.project` changed from `string` (slug) to object `{ id, slug, name, path }` for richer SDK usage
 - **Breaking:** Removed `--format` global flag. Use `--json` instead for JSON output. (#101)
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level (#99)
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files (#98)
