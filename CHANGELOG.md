@@ -20,6 +20,8 @@
 - Environment variable configuration support: (#100)
   - `DENVIG_PROJECT_PATHS` - comma-separated list of project paths
   - `DENVIG_QUICK_ACTIONS` - comma-separated list of quick actions (empty string disables)
+- `--help` and `-h` flags now work on all commands to show command-specific usage (e.g., `denvig services --help`) (#113)
+- `-v` and `--version` flags at root level to show version number (#133)
 
 ### Changed
 
@@ -33,7 +35,8 @@
 - Default `projectPaths` is `['~/src/*/*', '~/.dotfiles']` (#99)
 - All project configuration fields are now optional (#111)
 - `services teardown --global` now removes all `denvig.*.plist` files from LaunchAgents, not just stopped services (#103)
-
+- Root help output now shows commands in `denvig <command>` format (similar to opencode) (#113)
+- Removed quick actions and global flags sections from root help output (available via command-specific `--help`) (#113)
 
 ## [v0.4.3] - 2026-01-22
 

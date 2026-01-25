@@ -4,25 +4,50 @@ import { describe, it } from 'node:test'
 import { runTestCommand } from './test/utils/runTestCommand.ts'
 
 describe('cli', () => {
-  it('should display usage with properly formatted quick actions', async () => {
+  it('should display help with commands list', async () => {
     const result = await runTestCommand('denvig')
 
     strictEqual(result.code, 1)
-    match(result.stdout, /Usage: denvig <command>/)
-    match(result.stdout, /Quick Actions:/)
+    match(result.stdout, /Denvig v/)
+    match(result.stdout, /Commands:/)
+    match(result.stdout, /denvig run \[action\]/)
+    match(result.stdout, /denvig services/)
+    match(result.stdout, /denvig version/)
 
-    // Verify that multi-line quick actions are properly aligned
-    // The "check" action should have subsequent lines aligned properly
-    match(result.stdout, /check\s+\$ pnpm run check-types\n\s{27}pnpm run lint/)
-    match(
-      result.stdout,
-      /compile\s+\$ denvig run compile:darwin-x64\n\s{27}denvig run compile:darwin-arm64/,
-    )
+    // Verify Options section
+    match(result.stdout, /Options:/)
+    match(result.stdout, /-h, --help/)
+    match(result.stdout, /-v, --version/)
 
-    // Ensure single-line actions still work normally
-    match(result.stdout, /build\s+\$ pnpm run build/)
-    match(result.stdout, /test\s+\$ pnpm run test/)
+    strictEqual(result.stderr, '')
+  })
 
+  it('should display help with --help flag and exit 0', async () => {
+    const result = await runTestCommand('denvig --help')
+
+    strictEqual(result.code, 0)
+    match(result.stdout, /Denvig v/)
+    match(result.stdout, /Commands:/)
+    strictEqual(result.stderr, '')
+  })
+
+  it('should display command help with --help flag', async () => {
+    const result = await runTestCommand('denvig services --help')
+
+    strictEqual(result.code, 0)
+    match(result.stdout, /Usage: denvig services/)
+    match(result.stdout, /List all services/)
+    match(result.stdout, /Options:/)
+    strictEqual(result.stderr, '')
+  })
+
+  it('should display command help for commands with required args', async () => {
+    const result = await runTestCommand('denvig services start --help')
+
+    strictEqual(result.code, 0)
+    match(result.stdout, /Usage: denvig services start <name>/)
+    match(result.stdout, /Arguments:/)
+    match(result.stdout, /name/)
     strictEqual(result.stderr, '')
   })
 })
