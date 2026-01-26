@@ -134,7 +134,7 @@ async function main() {
   }
 
   // Handle gateway subcommands (e.g., "gateway generate-certs" -> "gateway:generate-certs")
-  const gatewaySubcommands = ['generate-certs']
+  const gatewaySubcommands = ['status', 'generate-certs']
   if (commandName === 'gateway') {
     const subcommand = process.argv[3]
     if (subcommand && gatewaySubcommands.includes(subcommand)) {
@@ -184,6 +184,7 @@ async function main() {
     './commands/zsh/completions.ts'
   )
   const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
+  const { gatewayStatusCommand } = await import('./commands/gateway/status.ts')
   const { gatewayGenerateCertsCommand } = await import(
     './commands/gateway/generate-certs.ts'
   )
@@ -212,7 +213,8 @@ async function main() {
     'projects:list': projectsListCommand,
     'zsh:completions': zshCompletionsCommand,
     'zsh:__complete__': zshCompleteCommand,
-    gateway: gatewayGenerateCertsCommand,
+    gateway: gatewayStatusCommand,
+    'gateway:status': gatewayStatusCommand,
     'gateway:generate-certs': gatewayGenerateCertsCommand,
   } as Record<string, GenericCommand>
 

@@ -26,7 +26,7 @@ export const SUBCOMMANDS: Record<string, readonly string[]> = {
   services: ['start', 'stop', 'restart', 'status', 'logs', 'teardown'],
   deps: ['list', 'outdated', 'why'],
   config: ['verify'],
-  gateway: ['generate-certs'],
+  gateway: ['status', 'generate-certs'],
   projects: ['list'],
   zsh: ['completions', '__complete__'],
 } as const

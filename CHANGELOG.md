@@ -14,6 +14,11 @@
   - Uses `mkcert` to generate locally-trusted certificates
   - Set `certPath: auto` and `keyPath: auto` in service config for denvig-managed certs in `~/.denvig/certs/{domain}/`
   - Reports status (exists/generated/error) with full paths for each certificate
+- `gateway status` command to show gateway configuration overview (#TBD)
+  - Shows enabled status, handler, and configs path
+  - Lists services with their domains, port, certificate status, and nginx config status
+  - `gateway` without subcommand defaults to `gateway status`
+  - Supports `--json` for JSON output
 
 
 ## [v0.5.0] - 2026-01-25
