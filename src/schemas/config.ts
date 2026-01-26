@@ -18,18 +18,31 @@ const DEFAULT_QUICK_ACTIONS = [
  *
  * This is located in ~/.denvig/config.yml but can be overridden by ENV.DENVIG_GLOBAL_CONFIG_PATH
  */
-export const GlobalConfigSchema = z.object({
-  projectPaths: z
-    .array(z.string())
-    .optional()
-    .default(['~/src/*/*', '~/.dotfiles'])
-    .describe('Paths or patterns where projects are located'),
-  quickActions: z
-    .array(z.string())
-    .default(DEFAULT_QUICK_ACTIONS)
-    .optional()
-    .describe('Quick actions that are available for all projects'),
-})
+export const GlobalConfigSchema = z
+  .object({
+    projectPaths: z
+      .array(z.string())
+      .optional()
+      .default(['~/src/*/*', '~/.dotfiles'])
+      .describe('Paths or patterns where projects are located'),
+    quickActions: z
+      .array(z.string())
+      .default(DEFAULT_QUICK_ACTIONS)
+      .optional()
+      .describe('Quick actions that are available for all projects'),
+    experimental: z
+      .object({
+        gateway: z
+          .object({
+            enabled: z.boolean(),
+            handler: z.enum(['nginx']).default('nginx'),
+            configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
+          })
+          .optional(),
+      })
+      .optional(),
+  })
+  .strict()
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
 
@@ -89,10 +102,28 @@ export const ProjectConfigSchema = z
                   .string()
                   .optional()
                   .describe('Domain to use for the service URL'),
+                cnames: z
+                  .array(z.string())
+                  .optional()
+                  .describe('Additional hosts that cna be used via gateway'),
                 secure: z
                   .boolean()
                   .optional()
                   .describe('Use HTTPS instead of HTTP'),
+                certPath: z
+                  .string()
+                  .describe(
+                    'The certificate including chain (e.g. certs/fullchain.pem)',
+                  )
+                  .default('auto')
+                  .optional(),
+                keyPath: z
+                  .string()
+                  .describe(
+                    'Path to private key for certificate (e.g. certs/privkey.pem',
+                  )
+                  .default('auto')
+                  .optional(),
               })
               .strict()
               .optional()

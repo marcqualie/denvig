@@ -18,6 +18,30 @@
         "type": "string"
       },
       "description": "Quick actions that are available for all projects"
+    },
+    "experimental": {
+      "type": "object",
+      "properties": {
+        "gateway": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "handler": {
+              "type": "object"
+            },
+            "configsPath": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false
