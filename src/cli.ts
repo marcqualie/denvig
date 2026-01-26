@@ -133,6 +133,17 @@ async function main() {
     }
   }
 
+  // Handle gateway subcommands (e.g., "gateway generate-certs" -> "gateway:generate-certs")
+  const gatewaySubcommands = ['generate-certs']
+  if (commandName === 'gateway') {
+    const subcommand = process.argv[3]
+    if (subcommand && gatewaySubcommands.includes(subcommand)) {
+      commandName = `gateway:${subcommand}`
+      // Remove the subcommand from args so it's not treated as an argument
+      args = [process.argv[2], ...process.argv.slice(4)]
+    }
+  }
+
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions ?? []),
@@ -173,6 +184,9 @@ async function main() {
     './commands/zsh/completions.ts'
   )
   const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
+  const { gatewayGenerateCertsCommand } = await import(
+    './commands/gateway/generate-certs.ts'
+  )
 
   const commands = {
     run: runCommand,
@@ -198,6 +212,8 @@ async function main() {
     'projects:list': projectsListCommand,
     'zsh:completions': zshCompletionsCommand,
     'zsh:__complete__': zshCompleteCommand,
+    gateway: gatewayGenerateCertsCommand,
+    'gateway:generate-certs': gatewayGenerateCertsCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]

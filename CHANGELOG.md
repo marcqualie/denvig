@@ -1,6 +1,21 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- Experimental nginx gateway proxy support for local domains (#TBD)
+  - Automatically generates nginx configs when services have `http.domain` configured
+  - Enable via `experimental.gateway.enabled: true` in `~/.denvig/config.yml`
+  - SSL/TLS support with `http.secure`, `http.certPath`, and `http.keyPath` service options
+  - Configs created on service start, removed on service stop/teardown
+- `gateway generate-certs` command to generate SSL certificates for services (#TBD)
+  - Uses `mkcert` to generate locally-trusted certificates
+  - Set `certPath: auto` and `keyPath: auto` in service config for denvig-managed certs in `~/.denvig/certs/{domain}/`
+  - Reports status (exists/generated/error) with full paths for each certificate
+
+
 ## [v0.5.0] - 2026-01-25
 
 ### Added

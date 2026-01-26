@@ -13,6 +13,10 @@ services:
       node -e "require('http').createServer((req, res) => { res.writeHead(200, {'Content-Type': 'text/plain'}); res.end('Hello World\n'); }).listen(process.env.PORT, () => console.log(`Server running at http://localhost:${process.env.PORT}/`))"
     http:
       port: 8080
+      secure: true
+      domain: denvig.localhost
+      cnames:
+        - hello.denvig.localhost
   wontlaunch:
     command: |
       node -e "throw new Error('This service is intended to fail to launch')"

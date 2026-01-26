@@ -9,6 +9,14 @@ import {
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
+import { getGlobalConfig } from '../config.ts'
+import { type CertificateStatus, ensureCertificates } from '../gateway/certs.ts'
+import {
+  reloadNginx,
+  removeNginxConfig,
+  removeProjectNginxConfigs,
+  writeNginxConfig,
+} from '../gateway/nginx.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist } from './plist.ts'
@@ -271,6 +279,8 @@ export class ServiceManager {
       } catch {
         // Ignore errors removing plist file (may not exist)
       }
+      // Teardown gateway config for non-startOnBoot services
+      await this.teardownGatewayConfig(name)
     }
 
     // Append Service Stopped entry to stdout log
@@ -489,6 +499,9 @@ export class ServiceManager {
       )
     }
 
+    // Teardown all gateway configs for this project
+    await this.teardownAllGatewayConfigs()
+
     return results
   }
 
@@ -584,6 +597,143 @@ export class ServiceManager {
    */
   getServiceConfig(name: string): ServiceConfig | undefined {
     return this.project.config.services?.[name]
+  }
+
+  /**
+   * Get gateway configuration if enabled.
+   */
+  private getGatewayConfig(): { enabled: boolean; configsPath: string } | null {
+    const globalConfig = getGlobalConfig()
+    const gateway = globalConfig.experimental?.gateway
+    if (!gateway?.enabled) {
+      return null
+    }
+    return {
+      enabled: true,
+      configsPath: gateway.configsPath,
+    }
+  }
+
+  /**
+   * Gateway setup result returned to caller for display.
+   */
+  public static readonly GatewayNotEnabled = Symbol('GatewayNotEnabled')
+  public static readonly GatewayNoHttpConfig = Symbol('GatewayNoHttpConfig')
+
+  /**
+   * Setup gateway config for a service.
+   * Creates nginx config and reloads nginx.
+   * Returns certificate status for display.
+   */
+  async setupGatewayConfig(
+    name: string,
+  ): Promise<
+    | typeof ServiceManager.GatewayNotEnabled
+    | typeof ServiceManager.GatewayNoHttpConfig
+    | { certificateStatus: CertificateStatus }
+  > {
+    const gatewayConfig = this.getGatewayConfig()
+    if (!gatewayConfig) {
+      return ServiceManager.GatewayNotEnabled
+    }
+
+    const config = this.getServiceConfig(name)
+    if (!config?.http?.domain || !config.http.port) {
+      return ServiceManager.GatewayNoHttpConfig
+    }
+
+    // Ensure certificates exist (generate if needed)
+    const certificateStatus = await ensureCertificates({
+      domain: config.http.domain,
+      cnames: config.http.cnames,
+      certPath: config.http.certPath,
+      keyPath: config.http.keyPath,
+      projectPath: this.project.path,
+    })
+
+    // Write nginx config
+    const writeResult = await writeNginxConfig(
+      {
+        projectId: this.project.id,
+        projectPath: this.project.path,
+        projectSlug: this.project.slug,
+        serviceName: name,
+        port: config.http.port,
+        domain: config.http.domain,
+        cnames: config.http.cnames,
+        secure: config.http.secure,
+        certPath: config.http.certPath,
+        keyPath: config.http.keyPath,
+      },
+      gatewayConfig.configsPath,
+    )
+
+    if (!writeResult.success) {
+      console.warn(`[gateway] ${writeResult.message}`)
+    }
+
+    const reloadResult = await reloadNginx()
+    if (!reloadResult.success) {
+      console.warn(`[gateway] ${reloadResult.message}`)
+    }
+
+    return { certificateStatus }
+  }
+
+  /**
+   * Teardown gateway config for a service.
+   * Removes nginx config and reloads nginx.
+   */
+  private async teardownGatewayConfig(name: string): Promise<void> {
+    const gatewayConfig = this.getGatewayConfig()
+    if (!gatewayConfig) {
+      return // Gateway not enabled, skip silently
+    }
+
+    const removeResult = await removeNginxConfig(
+      this.project.id,
+      name,
+      gatewayConfig.configsPath,
+    )
+
+    if (!removeResult.success) {
+      console.warn(`[gateway] ${removeResult.message}`)
+      return
+    }
+
+    const reloadResult = await reloadNginx()
+    if (!reloadResult.success) {
+      console.warn(`[gateway] ${reloadResult.message}`)
+    }
+  }
+
+  /**
+   * Teardown all gateway configs for this project.
+   */
+  private async teardownAllGatewayConfigs(): Promise<void> {
+    const gatewayConfig = this.getGatewayConfig()
+    if (!gatewayConfig) {
+      return // Gateway not enabled, skip silently
+    }
+
+    const services = this.project.config.services || {}
+    const serviceNames = Object.keys(services)
+
+    const removeResult = await removeProjectNginxConfigs(
+      this.project.id,
+      gatewayConfig.configsPath,
+      serviceNames,
+    )
+
+    if (!removeResult.success) {
+      console.warn(`[gateway] ${removeResult.message}`)
+      return
+    }
+
+    const reloadResult = await reloadNginx()
+    if (!reloadResult.success) {
+      console.warn(`[gateway] ${reloadResult.message}`)
+    }
   }
 
   /**
