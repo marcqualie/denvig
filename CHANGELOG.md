@@ -1,6 +1,14 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Changed
+
+- Removed `.strict()` from Zod config schemas for forward compatibility (#122)
+  - Older Denvig versions now gracefully ignore unknown config properties added by newer versions
+  - VSCode JSON Schema validation still warns about unknown properties via `additionalProperties: false`
+
 ## [v0.5.0] - 2026-01-25
 
 ### Added
