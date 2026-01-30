@@ -199,28 +199,23 @@ export const getServiceCompletions = (
 ): string[] => {
   const completions: string[] = []
 
-  // Add current project services (without prefix)
+  // Add current project services without prefix for convenience
   for (const serviceName of Object.keys(currentProject.services)) {
     completions.push(serviceName)
   }
 
-  // Add services from other projects
+  // Add services from all projects with full paths
   const projects = listProjects({ withConfig: true })
   for (const projectInfo of projects) {
-    // Skip the current project
-    if (projectInfo.slug === currentProject.slug) {
-      continue
-    }
-
     try {
-      const otherProject = new DenvigProject(projectInfo.path)
+      const project = new DenvigProject(projectInfo.path)
       const slugWithoutPrefix = projectInfo.slug.replace(/^(github|local):/, '')
 
-      for (const serviceName of Object.keys(otherProject.services)) {
+      for (const serviceName of Object.keys(project.services)) {
         // Add slug-based completion
         completions.push(`${slugWithoutPrefix}/${serviceName}`)
         // Add id-based completion for exact matching (useful for worktrees)
-        completions.push(`id:${shortProjectId(otherProject.id)}/${serviceName}`)
+        completions.push(`id:${shortProjectId(project.id)}/${serviceName}`)
       }
     } catch {
       // Skip projects that can't be loaded
