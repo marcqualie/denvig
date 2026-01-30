@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Tab completion for services now includes full slug paths for the current project (e.g., `marcqualie/denvig/hello`), allowing autocomplete without checking which directory you're in first
+
 ### Changed
 
 - Removed `.strict()` from Zod config schemas for forward compatibility (#122)
