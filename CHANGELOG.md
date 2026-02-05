@@ -6,6 +6,7 @@
 ### Changed
 
 - Upgraded `@biomejs/biome` from 2.3.13 to 2.3.14
+- Upgraded `semver` from 7.7.3 to 7.7.4
 
 ### Fixed
 
