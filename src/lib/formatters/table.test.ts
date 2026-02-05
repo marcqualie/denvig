@@ -1,7 +1,77 @@
 import { deepStrictEqual, strictEqual } from 'node:assert'
-import { describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it } from 'node:test'
+
+// Enable colors for tests (tests run in non-TTY context)
+process.env.FORCE_COLOR = '1'
 
 import { COLORS, formatTable } from './table.ts'
+
+describe('COLORS', () => {
+  let originalForceColor: string | undefined
+  let originalNoColor: string | undefined
+
+  beforeEach(() => {
+    originalForceColor = process.env.FORCE_COLOR
+    originalNoColor = process.env.NO_COLOR
+  })
+
+  afterEach(() => {
+    // Restore original environment
+    if (originalForceColor !== undefined) {
+      process.env.FORCE_COLOR = originalForceColor
+    } else {
+      delete process.env.FORCE_COLOR
+    }
+    if (originalNoColor !== undefined) {
+      process.env.NO_COLOR = originalNoColor
+    } else {
+      delete process.env.NO_COLOR
+    }
+  })
+
+  it('should return ANSI codes when FORCE_COLOR is set', () => {
+    process.env.FORCE_COLOR = '1'
+    delete process.env.NO_COLOR
+
+    strictEqual(COLORS.reset, '\x1b[0m')
+    strictEqual(COLORS.green, '\x1b[32m')
+    strictEqual(COLORS.yellow, '\x1b[33m')
+    strictEqual(COLORS.red, '\x1b[31m')
+    strictEqual(COLORS.grey, '\x1b[90m')
+    strictEqual(COLORS.white, '\x1b[37m')
+    strictEqual(COLORS.bold, '\x1b[1m')
+  })
+
+  it('should return empty strings when NO_COLOR is set', () => {
+    process.env.NO_COLOR = '1'
+    delete process.env.FORCE_COLOR
+
+    strictEqual(COLORS.reset, '')
+    strictEqual(COLORS.green, '')
+    strictEqual(COLORS.yellow, '')
+    strictEqual(COLORS.red, '')
+    strictEqual(COLORS.grey, '')
+    strictEqual(COLORS.white, '')
+    strictEqual(COLORS.bold, '')
+  })
+
+  it('should prioritize NO_COLOR over FORCE_COLOR', () => {
+    process.env.NO_COLOR = '1'
+    process.env.FORCE_COLOR = '1'
+
+    strictEqual(COLORS.green, '')
+    strictEqual(COLORS.reset, '')
+  })
+
+  it('should return empty strings when neither env var is set (non-TTY)', () => {
+    delete process.env.NO_COLOR
+    delete process.env.FORCE_COLOR
+
+    // In test environment, stdout is not a TTY, so colors should be disabled
+    strictEqual(COLORS.green, '')
+    strictEqual(COLORS.reset, '')
+  })
+})
 
 describe('formatTable()', () => {
   it('should return empty array for empty data', () => {
