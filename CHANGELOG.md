@@ -10,6 +10,9 @@
 ### Fixed
 
 - Tab completion for services now includes full slug paths for the current project (e.g., `marcqualie/denvig/hello`), allowing autocomplete without checking which directory you're in first
+- ANSI color codes are now automatically stripped when output is piped (e.g., `denvig deps outdated | pbcopy`)
+  - Also respects `NO_COLOR` environment variable to disable colors globally
+  - Use `FORCE_COLOR=1` to enable colors even when piped
 
 ### Changed
 
