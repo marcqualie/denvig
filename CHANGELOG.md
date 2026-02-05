@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded `@biomejs/biome` from 2.3.13 to 2.3.14
+
 ### Fixed
 
 - Tab completion for services now includes full slug paths for the current project (e.g., `marcqualie/denvig/hello`), allowing autocomplete without checking which directory you're in first
