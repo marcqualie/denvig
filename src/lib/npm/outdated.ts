@@ -106,7 +106,7 @@ const satisfiesRange = (version: string, specifier: string): boolean => {
 /**
  * Find the highest version that satisfies a specifier.
  */
-const findWantedVersion = (
+export const findWantedVersion = (
   versions: string[],
   specifier: string,
 ): string | null => {
@@ -121,7 +121,7 @@ const findWantedVersion = (
  * Extract dependency info from ProjectDependencySchema versions.
  * Returns the current version, specifier, and whether it's a dev dependency.
  */
-const extractDepInfo = (
+export const extractDepInfo = (
   dep: Pick<ProjectDependencySchema, 'versions'>,
 ): { current: string; specifier: string; isDevDependency: boolean } | null => {
   // Get the first version entry (there should typically be one for direct deps)

@@ -9,6 +9,7 @@ const LOCKFILE_PREFIXES = [
   'yarn.lock:',
   'Gemfile.lock:',
   'uv.lock:',
+  'deno.lock:',
 ]
 
 /**
