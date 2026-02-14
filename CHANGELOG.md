@@ -5,6 +5,10 @@
 
 ### Added
 
+- `certs` command set for local TLS certificate management (`certs init`, `certs list`, `certs generate`, `certs import`, `certs rm`)
+  - Built-in Certificate Authority generation with macOS keychain trust installation
+  - Domain certificate generation with SAN and wildcard support (e.g., `*.denvig.localhost`)
+  - Import existing certificates from external tools
 - Deno dependency support for jsr and npm
 
 ## [0.5.1] - 2026-02-05

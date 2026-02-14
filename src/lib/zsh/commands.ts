@@ -39,6 +39,13 @@ export const getCommands = async (): Promise<
   const { projectsListCommand } = await import(
     '../../commands/projects/list.ts'
   )
+  const { certsListCommand } = await import('../../commands/certs/list.ts')
+  const { certsInitCommand } = await import('../../commands/certs/init.ts')
+  const { certsGenerateCommand } = await import(
+    '../../commands/certs/generate.ts'
+  )
+  const { certsImportCommand } = await import('../../commands/certs/import.ts')
+  const { certsRmCommand } = await import('../../commands/certs/rm.ts')
 
   return {
     run: runCommand,
@@ -60,5 +67,11 @@ export const getCommands = async (): Promise<
     'deps:why': depsWhyCommand,
     projects: projectsListCommand,
     'projects:list': projectsListCommand,
+    certs: certsListCommand,
+    'certs:init': certsInitCommand,
+    'certs:list': certsListCommand,
+    'certs:generate': certsGenerateCommand,
+    'certs:import': certsImportCommand,
+    'certs:rm': certsRmCommand,
   }
 }
