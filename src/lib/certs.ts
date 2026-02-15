@@ -164,6 +164,16 @@ export const installCaToKeychain = (caCertPath: string): void => {
 }
 
 /**
+ * Remove the CA certificate from the macOS system keychain.
+ * Requires sudo for write access to the System keychain.
+ */
+export const uninstallCaFromKeychain = (caCertPath: string): void => {
+  execSync(`sudo security remove-trusted-cert -d ${caCertPath}`, {
+    stdio: 'inherit',
+  })
+}
+
+/**
  * Extract the first PEM certificate from a fullchain bundle.
  */
 const extractFirstCert = (pem: string): string => {

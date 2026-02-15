@@ -23,7 +23,8 @@ export const HIDDEN_COMMANDS = ['internals', 'zsh'] as const
 
 /** Subcommands for each parent command */
 export const SUBCOMMANDS: Record<string, readonly string[]> = {
-  certs: ['init', 'list', 'generate', 'import', 'rm'],
+  certs: ['ca', 'init', 'list', 'generate', 'import', 'rm'],
+  'certs:ca': ['install', 'uninstall', 'info'],
   services: ['start', 'stop', 'restart', 'status', 'logs', 'teardown'],
   deps: ['list', 'outdated', 'why'],
   config: ['verify'],

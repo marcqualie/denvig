@@ -56,6 +56,12 @@ export const zshCompletionsFor = async (
     const partial = words[2]
     // Check if it's a complete subcommand or partial
     if (subcommands.includes(partial)) {
+      // Check if this subcommand itself has sub-subcommands
+      const nestedKey = `${commandName}:${partial}`
+      const nestedSubcommands = SUBCOMMANDS[nestedKey]
+      if (nestedSubcommands) {
+        return [...nestedSubcommands]
+      }
       // Complete subcommand - get command completions
       const fullCommandName = `${commandName}:${partial}`
       const command = context?.commands[fullCommandName]
@@ -68,12 +74,40 @@ export const zshCompletionsFor = async (
     return subcommands.filter((subcmd) => subcmd.startsWith(partial))
   }
 
+  // Handle nested sub-subcommands (e.g., "denvig certs ca install")
+  if (words.length === 4 && subcommands) {
+    const subcommand = words[2]
+    const nestedKey = `${commandName}:${subcommand}`
+    const nestedSubcommands = SUBCOMMANDS[nestedKey]
+    if (nestedSubcommands) {
+      const partial = words[3]
+      if (nestedSubcommands.includes(partial)) {
+        // Complete sub-subcommand - get command completions
+        const fullCommandName = `${commandName}:${subcommand}:${partial}`
+        const command = context?.commands[fullCommandName]
+        if (command?.completions && context?.project) {
+          return await command.completions({ project: context.project }, [])
+        }
+        return []
+      }
+      return nestedSubcommands.filter((subcmd) => subcmd.startsWith(partial))
+    }
+  }
+
   // For deeper completions, find the command and call its completions
   if (context?.commands && context?.project) {
     let command: GenericCommand | undefined
     let inputs: string[]
 
-    if (subcommands) {
+    // Check for nested sub-subcommands first (e.g., "denvig certs ca install <args>")
+    const nestedKey = subcommands ? `${commandName}:${words[2]}` : ''
+    const nestedSubcommands = nestedKey ? SUBCOMMANDS[nestedKey] : undefined
+
+    if (nestedSubcommands && words.length >= 4) {
+      const fullCommandName = `${commandName}:${words[2]}:${words[3]}`
+      command = context.commands[fullCommandName]
+      inputs = words.slice(4)
+    } else if (subcommands) {
       // Command with subcommands: "denvig services start <args>"
       const subcommand = words[2]
       const fullCommandName = `${commandName}:${subcommand}`
