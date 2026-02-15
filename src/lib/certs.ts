@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { X509Certificate } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -254,6 +254,64 @@ export const writeDomainCertFiles = (
  */
 export const isCaInitialized = (): boolean => {
   return existsSync(getCaCertPath()) && existsSync(getCaKeyPath())
+}
+
+/**
+ * Check if the local CA certificate is trusted in the macOS system keychain.
+ * Returns false if CA files don't exist or if the cert fails verification.
+ */
+export const isCaTrustedInKeychain = (): boolean => {
+  const caCertPath = getCaCertPath()
+  if (!existsSync(caCertPath)) return false
+  const result = spawnSync('security', ['verify-cert', '-c', caCertPath], {
+    stdio: 'pipe',
+  })
+  return result.status === 0
+}
+
+/**
+ * Check if a certificate was issued by the given CA certificate.
+ * Uses cryptographic signature verification, not just issuer name matching.
+ * Handles fullchain bundles by extracting the first cert.
+ */
+export const isCertIssuedBy = (certPem: string, caCertPem: string): boolean => {
+  try {
+    const cert = new X509Certificate(extractFirstCert(certPem))
+    const caCert = new X509Certificate(extractFirstCert(caCertPem))
+    return cert.checkIssued(caCert) && cert.verify(caCert.publicKey)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Check if a certificate's issuer matches the Denvig Local CA distinguished name.
+ * This works even when the CA files have been deleted from disk.
+ */
+export const isIssuedByLocalCa = (certPem: string): boolean => {
+  try {
+    const cert = new X509Certificate(extractFirstCert(certPem))
+    return (
+      cert.issuer.includes('CN=Denvig Local CA') &&
+      cert.issuer.includes('O=denvig.com')
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Extract the issuer's Common Name from a PEM certificate.
+ * Returns null if the CN cannot be extracted.
+ */
+export const getCertIssuerCN = (certPem: string): string | null => {
+  try {
+    const cert = new X509Certificate(extractFirstCert(certPem))
+    const match = cert.issuer.match(/CN=([^,\n]+)/)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
 }
 
 /**

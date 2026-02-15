@@ -12,6 +12,8 @@ import {
   getCertDir,
   getCertExpiry,
   getCertsDir,
+  isCertIssuedBy,
+  isIssuedByLocalCa,
   parseCertDomains,
 } from './certs.ts'
 
@@ -230,5 +232,65 @@ describe('getCertExpiry()', () => {
     const daysUntilExpiry =
       (expiry.getTime() - Date.now()) / (24 * 60 * 60 * 1000)
     ok(daysUntilExpiry < 730, `Expected <730 days, got ${daysUntilExpiry}`)
+  })
+})
+
+describe('isCertIssuedBy()', () => {
+  const ca = generateCaCert()
+  const otherCa = generateCaCert()
+
+  it('returns true for a cert signed by the given CA', () => {
+    const { fullchain } = generateDomainCert(
+      'issued.example.com',
+      ca.cert,
+      ca.key,
+    )
+    strictEqual(isCertIssuedBy(fullchain, ca.certPem), true)
+  })
+
+  it('returns false for a cert signed by a different CA', () => {
+    const { fullchain } = generateDomainCert(
+      'other.example.com',
+      ca.cert,
+      ca.key,
+    )
+    strictEqual(isCertIssuedBy(fullchain, otherCa.certPem), false)
+  })
+
+  it('returns false for invalid PEM inputs', () => {
+    strictEqual(isCertIssuedBy('not-a-cert', ca.certPem), false)
+    strictEqual(isCertIssuedBy(ca.certPem, 'not-a-cert'), false)
+    strictEqual(isCertIssuedBy('garbage', 'garbage'), false)
+  })
+})
+
+describe('isIssuedByLocalCa()', () => {
+  const ca = generateCaCert()
+
+  it('returns true for a cert signed by the local CA', () => {
+    const { fullchain } = generateDomainCert(
+      'local.example.com',
+      ca.cert,
+      ca.key,
+    )
+    strictEqual(isIssuedByLocalCa(fullchain), true)
+  })
+
+  it('returns false for a self-signed cert with different issuer', () => {
+    const keys = forge.pki.rsa.generateKeyPair(2048)
+    const cert = forge.pki.createCertificate()
+    cert.publicKey = keys.publicKey
+    cert.serialNumber = '01'
+    cert.validity.notBefore = new Date()
+    cert.validity.notAfter = new Date(Date.now() + 86400000)
+    cert.setSubject([{ name: 'commonName', value: 'external.example.com' }])
+    cert.setIssuer([{ name: 'commonName', value: 'Some Other CA' }])
+    cert.sign(keys.privateKey, forge.md.sha256.create())
+    const pem = forge.pki.certificateToPem(cert)
+    strictEqual(isIssuedByLocalCa(pem), false)
+  })
+
+  it('returns false for invalid PEM input', () => {
+    strictEqual(isIssuedByLocalCa('garbage'), false)
   })
 })

@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- `certs list` status now distinguishes local-ca signed, untrusted, and external certs
+
 ### Added
 
 - `certs` command set for local TLS certificate management (`certs init`, `certs list`, `certs generate`, `certs import`, `certs rm`)

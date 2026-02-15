@@ -2,8 +2,14 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
+  getCaCertPath,
   getCertExpiry,
+  getCertIssuerCN,
   getCertsDir,
+  isCaInitialized,
+  isCaTrustedInKeychain,
+  isCertIssuedBy,
+  isIssuedByLocalCa,
   parseCertDomains,
 } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
@@ -13,13 +19,13 @@ type CertEntry = {
   dir: string
   domains: string[]
   expires: Date
-  status: 'valid' | 'expired'
+  status: string
 }
 
 type CertRow = {
   name: string
   expires: Date
-  status: 'valid' | 'expired'
+  status: string
   depth: number
   isLast: boolean
   hasChildren: boolean
@@ -72,6 +78,13 @@ export const certsListCommand = new Command({
       return { success: true, message: 'No certificates found.' }
     }
 
+    // Load CA state once before iterating certs
+    const caInitialized = isCaInitialized()
+    const caCertPem = caInitialized
+      ? readFileSync(getCaCertPath(), 'utf-8')
+      : null
+    const caTrusted = caInitialized ? isCaTrustedInKeychain() : false
+
     const entries: CertEntry[] = []
 
     for (const dir of dirs) {
@@ -82,7 +95,21 @@ export const certsListCommand = new Command({
         const pem = readFileSync(certFile, 'utf-8')
         const domains = parseCertDomains(pem)
         const expires = getCertExpiry(pem)
-        const status = expires > new Date() ? 'valid' : 'expired'
+
+        const signedByLocalCa = caCertPem
+          ? isCertIssuedBy(pem, caCertPem)
+          : isIssuedByLocalCa(pem)
+        const issuerCN = getCertIssuerCN(pem)
+
+        let status: string
+        if (expires <= new Date()) {
+          status = 'expired'
+        } else if (signedByLocalCa) {
+          status = caTrusted ? 'valid (local-ca)' : 'untrusted'
+        } else {
+          const label = issuerCN ? issuerCN.toLowerCase() : 'unknown'
+          status = `valid (${label})`
+        }
 
         entries.push({
           dir,
@@ -149,9 +176,13 @@ export const certsListCommand = new Command({
           format: (value, row) => {
             const trimmed = value.trim()
             if (!trimmed) return value
-            return row.status === 'valid'
-              ? `${COLORS.green}${trimmed}${COLORS.reset}`
-              : `${COLORS.red}${trimmed}${COLORS.reset}`
+            if (row.status === 'expired')
+              return `${COLORS.red}${trimmed}${COLORS.reset}`
+            if (row.status === 'untrusted')
+              return `${COLORS.yellow}${trimmed}${COLORS.reset}`
+            if (row.status.startsWith('valid'))
+              return `${COLORS.green}${trimmed}${COLORS.reset}`
+            return trimmed
           },
         },
       ],
