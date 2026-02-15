@@ -6,6 +6,7 @@
 ### Changed
 
 - `certs list` status now distinguishes local-ca signed, untrusted, and external certs
+- `certs generate` now prompts for confirmation before overwriting an existing certificate
 
 ### Added
 

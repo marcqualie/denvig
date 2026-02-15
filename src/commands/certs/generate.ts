@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
@@ -8,6 +9,7 @@ import {
   writeDomainCertFiles,
 } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
+import { confirm } from '../../lib/input.ts'
 
 export const certsGenerateCommand = new Command({
   name: 'certs:generate',
@@ -24,7 +26,7 @@ export const certsGenerateCommand = new Command({
     },
   ],
   flags: [],
-  handler: ({ args, flags }) => {
+  handler: async ({ args, flags }) => {
     const domain = args.domain as string
 
     if (!isCaInitialized()) {
@@ -32,9 +34,20 @@ export const certsGenerateCommand = new Command({
       return { success: false, message: 'CA not initialized.' }
     }
 
+    const certDir = getCertDir(domain)
+    if (existsSync(certDir) && !flags.json) {
+      const confirmed = await confirm(
+        `Certificate already exists for ${domain}. Overwrite?`,
+      )
+      if (!confirmed) {
+        console.log('Cancelled.')
+        return { success: true, message: 'Cancelled.' }
+      }
+    }
+
     const { cert: caCert, key: caKey } = loadCaCert()
     const { privkey, fullchain } = generateDomainCert(domain, caCert, caKey)
-    const certDir = writeDomainCertFiles(domain, privkey, fullchain)
+    writeDomainCertFiles(domain, privkey, fullchain)
 
     if (flags.json) {
       console.log(
