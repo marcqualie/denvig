@@ -5,6 +5,7 @@
 
 ### Changed
 
+- Upgrade `@biomejs/biome` from 2.3.14 to 2.4.0
 - `certs list` status now distinguishes local-ca signed, untrusted, and external certs
 - `certs generate` now prompts for confirmation before overwriting an existing certificate
 
