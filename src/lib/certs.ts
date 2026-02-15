@@ -6,25 +6,38 @@ import forge from 'node-forge'
 
 const HOME = process.env.HOME || ''
 
-/** Directory containing the CA key and certificate */
+/**
+ * Directory containing the CA key and certificate.
+ */
 export const getCaDir = (): string => resolve(`${HOME}/.denvig/ca`)
 
-/** Directory containing all domain certificate directories */
+/**
+ * Directory containing all domain certificate directories.
+ */
 export const getCertsDir = (): string => resolve(`${HOME}/.denvig/certs`)
 
-/** Path to the CA private key */
+/**
+ * Path to the CA private key.
+ */
 export const getCaKeyPath = (): string => resolve(getCaDir(), 'rootCA-key.pem')
 
-/** Path to the CA certificate */
+/**
+ * Path to the CA certificate.
+ */
 export const getCaCertPath = (): string => resolve(getCaDir(), 'rootCA.pem')
 
-/** Directory for a specific domain's certificates */
+/**
+ * Directory for a specific domain's certificates.
+ * Wildcards are converted to `_wildcard` (e.g., `*.example.com` → `_wildcard.example.com`).
+ */
 export const getCertDir = (domain: string): string => {
   const dirName = domain.replace(/^\*/, '_wildcard')
   return resolve(getCertsDir(), dirName)
 }
 
-/** Load the CA certificate and private key from disk */
+/**
+ * Load the CA certificate and private key from disk.
+ */
 export const loadCaCert = (): {
   cert: forge.pki.Certificate
   key: forge.pki.rsa.PrivateKey
@@ -37,7 +50,10 @@ export const loadCaCert = (): {
   }
 }
 
-/** Generate a new CA certificate and RSA 2048 key pair */
+/**
+ * Generate a new self-signed CA certificate with an RSA 2048 key pair.
+ * Valid for 10 years with basicConstraints CA:true.
+ */
 export const generateCaCert = (): {
   cert: forge.pki.Certificate
   key: forge.pki.rsa.PrivateKey
@@ -86,7 +102,8 @@ export const generateCaCert = (): {
 }
 
 /**
- * Generate a domain certificate signed by the given CA
+ * Generate a domain certificate signed by the given CA.
+ * Returns PEM-encoded private key and fullchain (domain cert + CA cert).
  */
 export const generateDomainCert = (
   domain: string,
@@ -135,7 +152,10 @@ export const generateDomainCert = (
   }
 }
 
-/** Install the CA certificate into the macOS system keychain */
+/**
+ * Install the CA certificate into the macOS system keychain.
+ * Requires sudo for write access to the System keychain.
+ */
 export const installCaToKeychain = (caCertPath: string): void => {
   execSync(
     `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${caCertPath}`,
@@ -143,7 +163,9 @@ export const installCaToKeychain = (caCertPath: string): void => {
   )
 }
 
-/** Extract the first PEM certificate from a fullchain bundle */
+/**
+ * Extract the first PEM certificate from a fullchain bundle.
+ */
 const extractFirstCert = (pem: string): string => {
   const match = pem.match(
     /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/,
@@ -151,7 +173,10 @@ const extractFirstCert = (pem: string): string => {
   return match ? match[0] : pem
 }
 
-/** Extract domain names from a certificate's SAN and CN */
+/**
+ * Extract domain names from a certificate's SAN extension.
+ * Falls back to the CN field if no SAN DNS entries are found.
+ */
 export const parseCertDomains = (certPem: string): string[] => {
   const cert = new X509Certificate(extractFirstCert(certPem))
   const domains: string[] = []
@@ -178,13 +203,18 @@ export const parseCertDomains = (certPem: string): string[] => {
   return domains
 }
 
-/** Extract the expiry date from a PEM certificate */
+/**
+ * Extract the expiry date from a PEM certificate.
+ */
 export const getCertExpiry = (certPem: string): Date => {
   const cert = new X509Certificate(extractFirstCert(certPem))
   return new Date(cert.validTo)
 }
 
-/** Write CA files to disk, creating directories as needed */
+/**
+ * Write CA files to disk, creating directories as needed.
+ * The private key is written with mode 0600.
+ */
 export const writeCaFiles = (certPem: string, keyPem: string): void => {
   const caDir = getCaDir()
   mkdirSync(caDir, { recursive: true })
@@ -192,7 +222,10 @@ export const writeCaFiles = (certPem: string, keyPem: string): void => {
   writeFileSync(getCaCertPath(), certPem)
 }
 
-/** Write domain cert files to disk, creating directories as needed */
+/**
+ * Write domain cert files to disk, creating directories as needed.
+ * The private key is written with mode 0600.
+ */
 export const writeDomainCertFiles = (
   domain: string,
   privkey: string,
@@ -205,12 +238,17 @@ export const writeDomainCertFiles = (
   return certDir
 }
 
-/** Check if the CA has been initialized */
+/**
+ * Check if the CA has been initialized by verifying both
+ * the certificate and key files exist on disk.
+ */
 export const isCaInitialized = (): boolean => {
   return existsSync(getCaCertPath()) && existsSync(getCaKeyPath())
 }
 
-/** Generate a random serial number for certificates */
+/**
+ * Generate a random serial number for certificates.
+ */
 const generateSerialNumber = (): string => {
   return forge.util.bytesToHex(forge.random.getBytesSync(16))
 }
