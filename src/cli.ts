@@ -122,6 +122,31 @@ async function main() {
     }
   }
 
+  // Handle certs subcommands (e.g., "certs init" -> "certs:init")
+  const certsSubcommands = ['ca', 'init', 'list', 'generate', 'import', 'rm']
+  if (commandName === 'certs') {
+    const subcommand = process.argv[3]
+    if (subcommand && certsSubcommands.includes(subcommand)) {
+      if (subcommand === 'ca') {
+        // Handle nested "certs ca <sub>" subcommands
+        const caSubcommands = ['install', 'uninstall', 'info']
+        const caSub = process.argv[4]
+        if (caSub && caSubcommands.includes(caSub)) {
+          commandName = `certs:ca:${caSub}`
+          args = [process.argv[2], ...process.argv.slice(5)]
+        } else {
+          // Default to "certs:ca:info" when just "certs ca" is run
+          commandName = 'certs:ca:info'
+          args = [process.argv[2], ...process.argv.slice(4)]
+        }
+      } else {
+        commandName = `certs:${subcommand}`
+        // Remove the subcommand from args so it's not treated as an argument
+        args = [process.argv[2], ...process.argv.slice(4)]
+      }
+    }
+  }
+
   // Handle zsh subcommands (e.g., "zsh completions" -> "zsh:completions")
   const zshSubcommands = ['completions', '__complete__']
   if (commandName === 'zsh') {
@@ -173,6 +198,18 @@ async function main() {
     './commands/zsh/completions.ts'
   )
   const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
+  const { certsListCommand } = await import('./commands/certs/list.ts')
+  const { certsInitCommand } = await import('./commands/certs/init.ts')
+  const { certsGenerateCommand } = await import('./commands/certs/generate.ts')
+  const { certsImportCommand } = await import('./commands/certs/import.ts')
+  const { certsRmCommand } = await import('./commands/certs/rm.ts')
+  const { certsCaInstallCommand } = await import(
+    './commands/certs/ca/install.ts'
+  )
+  const { certsCaUninstallCommand } = await import(
+    './commands/certs/ca/uninstall.ts'
+  )
+  const { certsCaInfoCommand } = await import('./commands/certs/ca/info.ts')
 
   const commands = {
     run: runCommand,
@@ -198,6 +235,15 @@ async function main() {
     'projects:list': projectsListCommand,
     'zsh:completions': zshCompletionsCommand,
     'zsh:__complete__': zshCompleteCommand,
+    certs: certsListCommand,
+    'certs:init': certsInitCommand,
+    'certs:list': certsListCommand,
+    'certs:generate': certsGenerateCommand,
+    'certs:import': certsImportCommand,
+    'certs:rm': certsRmCommand,
+    'certs:ca:install': certsCaInstallCommand,
+    'certs:ca:uninstall': certsCaUninstallCommand,
+    'certs:ca:info': certsCaInfoCommand,
   } as Record<string, GenericCommand>
 
   const command = commands[commandName]
