@@ -15,7 +15,7 @@ export const certsCaInstallCommand = new Command({
   example: 'denvig certs ca install',
   args: [],
   flags: [],
-  handler: () => {
+  handler: async () => {
     if (isCaInitialized()) {
       console.log('CA already exists at', getCaCertPath())
       console.log('Reinstalling CA to system keychain...')
@@ -28,7 +28,7 @@ export const certsCaInstallCommand = new Command({
     }
 
     console.log('Generating new Certificate Authority...')
-    const { certPem, keyPem } = generateCaCert()
+    const { certPem, keyPem } = await generateCaCert()
     writeCaFiles(certPem, keyPem)
     console.log('CA certificate written to', getCaCertPath())
 
