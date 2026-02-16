@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
+import { hostname } from 'node:os'
 import { describe, it } from 'node:test'
 
 import { createMockProject } from '../../test/mock.ts'
@@ -71,37 +72,45 @@ describe('ServiceManager', () => {
     })
   })
 
+  describe('getServiceLogDir()', () => {
+    it('should generate correct service log directory path', () => {
+      const project = createMockProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const dir = manager.getServiceLogDir('api')
+
+      ok(dir.includes(`.denvig/services/${project.id}.api/logs`))
+    })
+  })
+
   describe('getLogPath()', () => {
-    it('should generate correct stdout log path using project ID', () => {
+    it('should generate symlink path with hostname under service log dir', () => {
+      const project = createMockProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const path = manager.getLogPath('api')
+
+      ok(path.includes(`.denvig/services/${project.id}.api/logs`))
+      ok(path.includes(`latest.${hostname()}.log`))
+    })
+
+    it('should accept optional type parameter for backward compatibility', () => {
       const project = createMockProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api', 'stdout')
 
-      ok(path.includes('.denvig/logs'))
-      ok(path.includes(`${project.id}.api.log`))
+      ok(path.includes(`latest.${hostname()}.log`))
     })
 
-    // Note: stderr is now merged with stdout via the timestamp wrapper,
-    // but getLogPath still supports 'stderr' for backwards compatibility
-    it('should generate correct stderr log path using project ID', () => {
+    it('should sanitize special characters in log path', () => {
       const project = createMockProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
-      const path = manager.getLogPath('api', 'stderr')
+      const path = manager.getLogPath('dev:watch')
 
-      ok(path.includes('.denvig/logs'))
-      ok(path.includes(`${project.id}.api.error.log`))
-    })
-
-    it('should sanitize special characters in log filename', () => {
-      const project = createMockProject('workspace/my-app')
-      const manager = new ServiceManager(project)
-
-      const path = manager.getLogPath('dev:watch', 'stdout')
-
-      ok(path.includes('.denvig/logs'))
-      ok(path.includes(`${project.id}.dev-watch.log`))
+      ok(path.includes(`.denvig/services/${project.id}.dev-watch/logs`))
+      ok(path.includes(`latest.${hostname()}.log`))
       ok(!path.includes(':'))
     })
   })
