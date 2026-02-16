@@ -99,10 +99,7 @@ async function main() {
     './commands/zsh/completions.ts'
   )
   const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
-  const { gatewayStatusCommand } = await import('./commands/gateway/status.ts')
-  const { gatewayGenerateCertsCommand } = await import(
-    './commands/gateway/generate-certs.ts'
-  )
+  const { gatewayCommand } = await import('./commands/gateway/index.ts')
   const { zshCommand } = await import('./commands/zsh/index.ts')
   const { certsCommand } = await import('./commands/certs/index.ts')
 
@@ -120,9 +117,7 @@ async function main() {
     'projects:list': projectsListCommand,
     'zsh:completions': zshCompletionsCommand,
     'zsh:__complete__': zshCompleteCommand,
-    gateway: gatewayStatusCommand,
-    'gateway:status': gatewayStatusCommand,
-    'gateway:generate-certs': gatewayGenerateCertsCommand,
+    gateway: gatewayCommand,
     zsh: zshCommand,
     certs: certsCommand,
   } as Record<string, GenericCommand>

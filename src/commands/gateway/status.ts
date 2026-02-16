@@ -3,7 +3,10 @@ import { existsSync } from 'node:fs'
 import { Command } from '../../lib/command.ts'
 import { getGlobalConfig } from '../../lib/config.ts'
 import { resolveCertPath } from '../../lib/gateway/certs.ts'
-import { getNginxConfigPath } from '../../lib/gateway/nginx.ts'
+import {
+  getNginxConfigPath,
+  getNginxConfPath,
+} from '../../lib/gateway/nginx.ts'
 
 export const gatewayStatusCommand = new Command({
   name: 'gateway:status',
@@ -58,6 +61,9 @@ export const gatewayStatusCommand = new Command({
         JSON.stringify({
           enabled: gateway?.enabled || false,
           handler: gateway?.handler || 'nginx',
+          nginxConf: gateway?.configsPath
+            ? getNginxConfPath(gateway.configsPath)
+            : null,
           configsPath: gateway?.configsPath || null,
           services: serviceStatuses,
         }),
@@ -83,9 +89,10 @@ export const gatewayStatusCommand = new Command({
       return { success: true, message: 'Gateway is disabled' }
     }
 
-    console.log('Status:  Enabled')
-    console.log(`Handler: ${gateway.handler || 'nginx'}`)
-    console.log(`Configs: ${gateway.configsPath}`)
+    console.log('Status:    Enabled')
+    console.log(`Handler:   ${gateway.handler || 'nginx'}`)
+    console.log(`Nginx:     ${getNginxConfPath(gateway.configsPath)}`)
+    console.log(`Configs:   ${gateway.configsPath}`)
     console.log('')
 
     // Show services with gateway config

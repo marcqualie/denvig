@@ -21,6 +21,12 @@
   - Uses the built-in local CA to generate certificates (requires `denvig certs init`)
   - Set `certPath: auto` and `keyPath: auto` in service config for denvig-managed certs in `~/.denvig/certs/{domain}/`
   - Reports status (exists/generated/error) with full paths for each certificate
+- `gateway configure` command to rebuild all nginx configs from service definitions across all projects (#TBD)
+  - Removes all denvig-managed nginx configs from the servers directory
+  - Scans all projects with `.denvig.yml` and regenerates configs for services with `http.domain` and `http.port`
+  - Verifies configured certificates exist on disk before writing configs
+  - Reloads nginx after reconfiguration
+  - Supports `--json` for JSON output
 - `gateway status` command to show gateway configuration overview (#TBD)
   - Shows enabled status, handler, and configs path
   - Lists services with their domains, port, certificate status, and nginx config status

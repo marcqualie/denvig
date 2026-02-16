@@ -1,5 +1,6 @@
 import { exec } from 'node:child_process'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
@@ -50,7 +51,11 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
     'cert',
   )
   const resolvedKeyPath = resolveCertPath(keyPath, domain, projectPath, 'key')
-  const hasSsl = secure || (resolvedCertPath && resolvedKeyPath)
+  const hasSsl =
+    resolvedCertPath &&
+    resolvedKeyPath &&
+    existsSync(resolvedCertPath) &&
+    existsSync(resolvedKeyPath)
 
   const sslBlock = hasSsl
     ? `
@@ -93,6 +98,14 @@ ${sslBlock}
   }
 }
 `
+}
+
+/**
+ * Get the main nginx.conf path based on the configsPath.
+ * Assumes configsPath is a subdirectory (e.g. servers/) under the nginx config root.
+ */
+export function getNginxConfPath(configsPath: string): string {
+  return resolve(configsPath, '..', 'nginx.conf')
 }
 
 /**
@@ -194,6 +207,37 @@ export async function removeProjectNginxConfigs(
     return {
       success: false,
       message: `Failed to remove project nginx configs: ${message}`,
+    }
+  }
+}
+
+/**
+ * Remove all denvig-managed nginx config files from the configs directory.
+ * Matches any file named denvig.*.conf to catch configs from all projects,
+ * including stale configs from renamed/deleted services or projects.
+ */
+export async function removeAllNginxConfigs(
+  configsPath: string,
+): Promise<{ success: boolean; removed: string[]; message?: string }> {
+  try {
+    const prefix = 'denvig.'
+    const suffix = '.conf'
+    const files = await readdir(configsPath)
+    const matched = files.filter(
+      (f) => f.startsWith(prefix) && f.endsWith(suffix),
+    )
+
+    await Promise.all(
+      matched.map((f) => rm(resolve(configsPath, f), { force: true })),
+    )
+
+    return { success: true, removed: matched }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return {
+      success: false,
+      removed: [],
+      message: `Failed to remove nginx configs: ${message}`,
     }
   }
 }

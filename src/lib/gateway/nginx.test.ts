@@ -35,7 +35,7 @@ describe('nginx gateway', () => {
       ok(!config.includes('ssl_certificate'))
     })
 
-    it('should generate config with SSL when secure is true', () => {
+    it('should not include SSL when cert files do not exist on disk', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
         projectPath: '/Users/test/project',
@@ -48,23 +48,13 @@ describe('nginx gateway', () => {
         keyPath: 'certs/privkey.pem',
       })
 
-      // Check SSL directives
-      ok(config.includes('listen 443 ssl'))
-      ok(config.includes('http2 on'))
-      ok(
-        config.includes(
-          'ssl_certificate /Users/test/project/certs/fullchain.pem',
-        ),
-      )
-      ok(
-        config.includes(
-          'ssl_certificate_key /Users/test/project/certs/privkey.pem',
-        ),
-      )
-      ok(config.includes('ssl_protocols TLSv1.2 TLSv1.3'))
+      // SSL should be omitted since the cert files don't exist
+      ok(!config.includes('listen 443'))
+      ok(!config.includes('ssl_certificate'))
+      ok(config.includes('listen 80;'))
     })
 
-    it('should generate config with SSL when cert paths are provided', () => {
+    it('should not include SSL when cert paths are provided but files missing', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
         projectPath: '/Users/test/project',
@@ -76,9 +66,9 @@ describe('nginx gateway', () => {
         keyPath: 'certs/privkey.pem',
       })
 
-      // Should have SSL directives even without secure: true
-      ok(config.includes('listen 443 ssl'))
-      ok(config.includes('ssl_certificate'))
+      // Should NOT have SSL directives when files don't exist
+      ok(!config.includes('listen 443'))
+      ok(!config.includes('ssl_certificate'))
     })
 
     it('should include WebSocket support headers', () => {
@@ -117,7 +107,7 @@ describe('nginx gateway', () => {
       ok(config.includes('proxy_buffering off'))
     })
 
-    it('should resolve relative cert paths to absolute paths', () => {
+    it('should not include SSL when relative cert paths do not exist', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
         projectPath: '/Users/test/project',
@@ -130,20 +120,12 @@ describe('nginx gateway', () => {
         keyPath: 'certs/privkey.pem',
       })
 
-      // Paths should be absolute
-      ok(
-        config.includes(
-          'ssl_certificate /Users/test/project/certs/fullchain.pem',
-        ),
-      )
-      ok(
-        config.includes(
-          'ssl_certificate_key /Users/test/project/certs/privkey.pem',
-        ),
-      )
+      // SSL should be omitted since the resolved cert files don't exist
+      ok(!config.includes('ssl_certificate'))
+      ok(!config.includes('listen 443'))
     })
 
-    it('should resolve "auto" cert paths to ~/.denvig/certs/{domain}/', () => {
+    it('should not include SSL when "auto" cert files do not exist', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
         projectPath: '/Users/test/project',
@@ -156,9 +138,9 @@ describe('nginx gateway', () => {
         keyPath: 'auto',
       })
 
-      // Paths should resolve to ~/.denvig/certs/{domain}/
-      ok(config.includes('.denvig/certs/api.denvig.localhost/fullchain.pem'))
-      ok(config.includes('.denvig/certs/api.denvig.localhost/privkey.pem'))
+      // SSL should be omitted since the auto cert files don't exist
+      ok(!config.includes('ssl_certificate'))
+      ok(!config.includes('listen 443'))
     })
 
     it('should include cnames in server_name directive', () => {
