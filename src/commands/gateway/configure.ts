@@ -49,8 +49,13 @@ export const gatewayConfigureCommand = new Command({
           console.log(
             `    Domain: ${service.domain}${cnamesInfo} -> localhost:${service.port}`,
           )
+          const certDetail = service.certDir
+            ? ` (${service.certDir.split('/').pop()})`
+            : service.certMessage
+              ? ` (${service.certMessage})`
+              : ''
           console.log(
-            `    Certs:  ${certIcon} ${service.certStatus}${service.certMessage ? ` (${service.certMessage})` : ''}`,
+            `    Certs:  ${certIcon} ${service.certStatus}${certDetail}`,
           )
           console.log(
             `    Nginx:  ${configIcon} ${service.configStatus}${service.configMessage ? ` (${service.configMessage})` : ''}`,

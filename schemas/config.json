@@ -67,14 +67,6 @@
               "secure": {
                 "type": "boolean",
                 "description": "Use HTTPS instead of HTTP"
-              },
-              "certPath": {
-                "type": "string",
-                "description": "The certificate including chain (e.g. certs/fullchain.pem)"
-              },
-              "keyPath": {
-                "type": "string",
-                "description": "Path to private key for certificate (e.g. certs/privkey.pem)"
               }
             },
             "additionalProperties": false,

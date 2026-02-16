@@ -1,154 +1,165 @@
-import { access } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
   generateDomainCert,
+  getCertDir,
+  getCertsDir,
   isCaInitialized,
   loadCaCert,
+  parseCertDomains,
   writeDomainCertFiles,
 } from '../certs.ts'
 
 /**
- * Resolve a cert path, converting 'auto' to the denvig-managed path.
- * @param path - The configured path (may be 'auto' or a relative/absolute path)
- * @param domain - The service domain (used when path is 'auto')
- * @param projectPath - The project root (used for relative paths)
- * @param type - The type of cert file ('cert' or 'key')
- * @returns The resolved absolute path
+ * Check if a domain matches a cert domain (exact or wildcard).
+ * `*.example.com` matches `api.example.com` but not `example.com` or `a.b.example.com`.
  */
-export function resolveCertPath(
-  path: string | undefined,
-  domain: string,
-  projectPath: string,
-  type: 'cert' | 'key',
-): string | null {
-  if (!path) {
+function domainMatchesCert(domain: string, certDomain: string): boolean {
+  if (domain === certDomain) return true
+  if (
+    certDomain.startsWith('*.') &&
+    domain.endsWith(certDomain.slice(1)) &&
+    !domain.slice(0, -certDomain.length + 1).includes('.')
+  ) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Find an existing cert directory that covers the given domain.
+ * Scans all cert directories in `~/.denvig/certs/`, reads each `fullchain.pem`,
+ * and checks for an exact or wildcard match.
+ * @returns The cert directory path if found, null otherwise.
+ */
+export function findCertForDomain(domain: string): string | null {
+  const certsDir = getCertsDir()
+  if (!existsSync(certsDir)) return null
+
+  let entries: string[]
+  try {
+    entries = readdirSync(certsDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+  } catch {
     return null
   }
 
-  if (path === 'auto') {
-    const filename = type === 'cert' ? 'fullchain.pem' : 'privkey.pem'
-    return resolve(homedir(), '.denvig', 'certs', domain, filename)
+  for (const entry of entries) {
+    const certPath = resolve(certsDir, entry, 'fullchain.pem')
+    if (!existsSync(certPath)) continue
+
+    try {
+      const certPem = readFileSync(certPath, 'utf-8')
+      const domains = parseCertDomains(certPem)
+      if (domains.some((certDomain) => domainMatchesCert(domain, certDomain))) {
+        return resolve(certsDir, entry)
+      }
+    } catch {}
   }
 
-  // Resolve relative paths against project path
-  return resolve(projectPath, path)
+  return null
 }
 
 /**
- * Check if a cert path is set to 'auto' (denvig-managed).
+ * Extract the parent domain from a domain name.
+ * `api.marcqualie.dev` → `marcqualie.dev`
+ * `denvig.localhost` → `denvig.localhost` (2-part domains stay as-is)
  */
-export function isAutoCertPath(path: string | undefined): boolean {
-  return path === 'auto'
+export function getParentDomain(domain: string): string {
+  const parts = domain.split('.')
+  if (parts.length <= 2) return domain
+  return parts.slice(1).join('.')
 }
 
 /**
- * Get the denvig-managed certs directory for a domain.
+ * Group domains by parent domain for cert generation.
+ * If 2+ subdomains share a parent, the key is `*.parent.tld` (wildcard cert).
+ * Single subdomain or bare domain uses the domain itself as the key.
+ * @returns Map from cert domain (possibly wildcard) to list of covered domains.
  */
-export function getAutoCertDir(domain: string): string {
-  return resolve(homedir(), '.denvig', 'certs', domain)
-}
+export function groupDomainsForCertGeneration(
+  domains: string[],
+): Map<string, string[]> {
+  const parentMap = new Map<string, string[]>()
 
-/**
- * Check if a file exists.
- */
-async function fileExists(path: string): Promise<boolean> {
-  try {
-    await access(path)
-    return true
-  } catch {
-    return false
+  for (const domain of domains) {
+    const parent = getParentDomain(domain)
+    if (!parentMap.has(parent)) {
+      parentMap.set(parent, [])
+    }
+    parentMap.get(parent)!.push(domain)
   }
-}
 
-export type CertificateStatus = {
-  status: 'exists' | 'generated' | 'error' | 'not_configured'
-  domains: string[]
-  certPath?: string
-  keyPath?: string
-  message?: string
-}
-
-/**
- * Ensure certificates exist for a service, generating them if needed.
- */
-export async function ensureCertificates(options: {
-  domain: string
-  cnames?: string[]
-  certPath?: string
-  keyPath?: string
-  projectPath: string
-}): Promise<CertificateStatus> {
-  const {
-    domain,
-    cnames,
-    certPath: configCertPath,
-    keyPath: configKeyPath,
-    projectPath,
-  } = options
-  const allDomains = [domain, ...(cnames || [])]
-
-  // Resolve cert paths
-  const certPath = resolveCertPath(configCertPath, domain, projectPath, 'cert')
-  const keyPath = resolveCertPath(configKeyPath, domain, projectPath, 'key')
-
-  if (!certPath || !keyPath) {
-    return {
-      status: 'not_configured',
-      domains: allDomains,
-      message: 'No certPath/keyPath configured',
+  const result = new Map<string, string[]>()
+  for (const [parent, children] of parentMap) {
+    // If parent === child, it's a bare domain (e.g. denvig.localhost)
+    const hasSubdomains = children.some((d) => d !== parent)
+    if (hasSubdomains && children.length >= 2) {
+      result.set(`*.${parent}`, children)
+    } else {
+      for (const child of children) {
+        result.set(child, [child])
+      }
     }
   }
 
-  // Check if certs already exist
-  const certExists = await fileExists(certPath)
-  const keyExists = await fileExists(keyPath)
+  return result
+}
 
-  if (certExists && keyExists) {
-    return {
-      status: 'exists',
-      domains: allDomains,
-      certPath,
-      keyPath,
+/**
+ * Generate missing certs for a list of domains.
+ * Checks existing certs first via `findCertForDomain`, then groups uncovered
+ * domains by parent and generates wildcard certs where appropriate.
+ * @returns Map from domain to cert directory path.
+ */
+export async function generateMissingCerts(
+  domains: string[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>()
+  const uncovered: string[] = []
+
+  for (const domain of domains) {
+    const existing = findCertForDomain(domain)
+    if (existing) {
+      result.set(domain, existing)
+    } else {
+      uncovered.push(domain)
     }
   }
 
-  // Check that the local CA is initialized
-  if (!isCaInitialized()) {
-    return {
-      status: 'error',
-      domains: allDomains,
-      certPath,
-      keyPath,
-      message: 'Local CA is not initialized. Run: denvig certs init',
-    }
-  }
+  if (uncovered.length === 0) return result
+  if (!isCaInitialized()) return result
 
-  // Generate certificates using the built-in CA
-  try {
-    const { cert: caCert, key: caKey } = await loadCaCert()
+  const { cert: caCert, key: caKey } = await loadCaCert()
+  const groups = groupDomainsForCertGeneration(uncovered)
+
+  for (const [certDomain, coveredDomains] of groups) {
     const { privkey, fullchain } = await generateDomainCert(
-      domain,
+      certDomain,
       caCert,
       caKey,
     )
-    writeDomainCertFiles(domain, privkey, fullchain)
-
-    return {
-      status: 'generated',
-      domains: allDomains,
-      certPath,
-      keyPath,
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return {
-      status: 'error',
-      domains: allDomains,
-      certPath,
-      keyPath,
-      message: `Failed to generate certificates: ${message}`,
+    const certDir = writeDomainCertFiles(certDomain, privkey, fullchain)
+    for (const domain of coveredDomains) {
+      result.set(domain, certDir)
     }
   }
+
+  return result
+}
+
+/**
+ * Resolve SSL cert and key paths for a domain from a cert directory.
+ */
+export function resolveSslPaths(
+  certDir: string,
+): { sslCertPath: string; sslKeyPath: string } | null {
+  const sslCertPath = resolve(certDir, 'fullchain.pem')
+  const sslKeyPath = resolve(certDir, 'privkey.pem')
+  if (existsSync(sslCertPath) && existsSync(sslKeyPath)) {
+    return { sslCertPath, sslKeyPath }
+  }
+  return null
 }

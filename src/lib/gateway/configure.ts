@@ -1,9 +1,7 @@
-import { existsSync } from 'node:fs'
-
 import { getGlobalConfig } from '../config.ts'
 import { DenvigProject } from '../project.ts'
 import { listProjects } from '../projects.ts'
-import { resolveCertPath } from './certs.ts'
+import { findCertForDomain, resolveSslPaths } from './certs.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
   reloadNginx,
@@ -19,6 +17,7 @@ export type ConfigureServiceResult = {
   cnames: string[]
   port: number
   certStatus: 'valid' | 'missing' | 'not_configured'
+  certDir?: string
   certMessage?: string
   configStatus: 'written' | 'error'
   configMessage?: string
@@ -87,35 +86,31 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
       const domain = config.http.domain
       const cnames = config.http.cnames || []
       const port = config.http.port
+      const secure = config.http.secure ?? false
 
-      // Verify certificates exist if configured
-      const certPath = resolveCertPath(
-        config.http.certPath,
-        domain,
-        project.path,
-        'cert',
-      )
-      const keyPath = resolveCertPath(
-        config.http.keyPath,
-        domain,
-        project.path,
-        'key',
-      )
-
+      // Resolve SSL paths by finding matching certs
+      let sslCertPath: string | undefined
+      let sslKeyPath: string | undefined
       let certStatus: ConfigureServiceResult['certStatus'] = 'not_configured'
+      let resolvedCertDir: string | undefined
       let certMessage: string | undefined
 
-      if (certPath && keyPath) {
-        const certExists = existsSync(certPath)
-        const keyExists = existsSync(keyPath)
-        if (certExists && keyExists) {
-          certStatus = 'valid'
+      if (secure) {
+        const certDir = findCertForDomain(domain)
+        if (certDir) {
+          const sslPaths = resolveSslPaths(certDir)
+          if (sslPaths) {
+            sslCertPath = sslPaths.sslCertPath
+            sslKeyPath = sslPaths.sslKeyPath
+            certStatus = 'valid'
+            resolvedCertDir = certDir
+          } else {
+            certStatus = 'missing'
+            certMessage = 'cert directory found but files missing'
+          }
         } else {
           certStatus = 'missing'
-          const missing = []
-          if (!certExists) missing.push('cert')
-          if (!keyExists) missing.push('key')
-          certMessage = `${missing.join(' and ')} not found`
+          certMessage = 'no matching certificate found'
         }
       }
 
@@ -126,6 +121,7 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
         cnames,
         port,
         certStatus,
+        certDir: resolvedCertDir,
         certMessage,
         configStatus: 'written',
       }
@@ -140,9 +136,8 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
           port,
           domain,
           cnames,
-          secure: config.http.secure,
-          certPath: config.http.certPath,
-          keyPath: config.http.keyPath,
+          sslCertPath,
+          sslKeyPath,
         },
         configsPath,
       )

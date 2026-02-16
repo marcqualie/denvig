@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 
 import { Command } from '../../lib/command.ts'
 import { getGlobalConfig } from '../../lib/config.ts'
-import { resolveCertPath } from '../../lib/gateway/certs.ts'
+import { findCertForDomain, resolveSslPaths } from '../../lib/gateway/certs.ts'
 import {
   getNginxConfigPath,
   getNginxConfPath,
@@ -25,32 +25,22 @@ export const gatewayStatusCommand = new Command({
 
       for (const [name, config] of Object.entries(services)) {
         if (config.http?.domain) {
-          const certPath = resolveCertPath(
-            config.http.certPath,
-            config.http.domain,
-            project.path,
-            'cert',
-          )
-          const keyPath = resolveCertPath(
-            config.http.keyPath,
-            config.http.domain,
-            project.path,
-            'key',
-          )
+          const domain = config.http.domain
+          const secure = config.http.secure ?? false
+          const certDir = secure ? findCertForDomain(domain) : null
+          const sslPaths = certDir ? resolveSslPaths(certDir) : null
           const nginxPath = gateway?.enabled
             ? getNginxConfigPath(project.id, name, gateway.configsPath)
             : null
 
           serviceStatuses.push({
             name,
-            domain: config.http.domain,
+            domain,
             cnames: config.http.cnames || [],
             port: config.http.port,
-            secure: config.http.secure || false,
-            certPath,
-            keyPath,
-            certExists: certPath ? existsSync(certPath) : false,
-            keyExists: keyPath ? existsSync(keyPath) : false,
+            secure,
+            certFound: !!sslPaths,
+            certDir,
             nginxConfigPath: nginxPath,
             nginxConfigExists: nginxPath ? existsSync(nginxPath) : false,
           })
@@ -123,38 +113,25 @@ export const gatewayStatusCommand = new Command({
       const domain = config.http!.domain!
       const cnames = config.http!.cnames || []
       const allDomains = [domain, ...cnames]
+      const secure = config.http!.secure ?? false
 
-      const certPath = resolveCertPath(
-        config.http!.certPath,
-        domain,
-        project.path,
-        'cert',
-      )
-      const keyPath = resolveCertPath(
-        config.http!.keyPath,
-        domain,
-        project.path,
-        'key',
-      )
+      const certDir = secure ? findCertForDomain(domain) : null
+      const sslPaths = certDir ? resolveSslPaths(certDir) : null
       const nginxPath = getNginxConfigPath(
         project.id,
         name,
         gateway.configsPath,
       )
-
-      const certExists = certPath && existsSync(certPath)
-      const keyExists = keyPath && existsSync(keyPath)
       const nginxExists = existsSync(nginxPath)
 
-      const certStatus = certExists && keyExists ? '✓' : '✗'
+      const certStatus = !secure ? '-' : sslPaths ? '✓' : '✗'
+      const certLabel = !secure ? 'not enabled' : sslPaths ? 'found' : 'missing'
       const nginxStatus = nginxExists ? '✓' : '✗'
 
       console.log(`  ${name}:`)
       console.log(`    Domains: ${allDomains.join(', ')}`)
       console.log(`    Port:    ${config.http!.port || '(not set)'}`)
-      console.log(
-        `    Certs:   ${certStatus} ${certExists ? 'configured' : 'missing'}`,
-      )
+      console.log(`    Certs:   ${certStatus} ${certLabel}`)
       console.log(
         `    Nginx:   ${nginxStatus} ${nginxExists ? 'configured' : 'not generated'}`,
       )

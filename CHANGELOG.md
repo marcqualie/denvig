@@ -15,14 +15,14 @@
 - Experimental nginx gateway proxy support for local domains (#TBD)
   - Automatically generates nginx configs when services have `http.domain` configured
   - Enable via `experimental.gateway.enabled: true` in `~/.denvig/config.yml`
-  - SSL/TLS support with `http.secure`, `http.certPath`, and `http.keyPath` service options
+  - SSL/TLS support with `http.secure` — certificates are automatically matched from `~/.denvig/certs/`
   - Manages the main `nginx.conf` with a default server, error pages, and service config includes
   - Custom error pages: 404 (service not found) and 504 (service not running)
   - Default landing page at unmatched domains linking to denvig.com
 - `gateway generate-certs` command to generate SSL certificates for services (#TBD)
   - Uses the built-in local CA to generate certificates (requires `denvig certs init`)
-  - Set `certPath: auto` and `keyPath: auto` in service config for denvig-managed certs in `~/.denvig/certs/{domain}/`
-  - Reports status (exists/generated/error) with full paths for each certificate
+  - Automatically groups subdomains under wildcard certs when 2+ subdomains share a parent domain
+  - Reports status (exists/generated) for each certificate
 - `gateway configure` command to rebuild all nginx configs from service definitions across all projects (#TBD)
   - Removes all denvig-managed nginx configs from the servers directory
   - Scans all projects with `.denvig.yml` and regenerates configs for services with `http.domain` and `http.port`

@@ -108,20 +108,6 @@ export const ProjectConfigSchema = z.object({
               .boolean()
               .optional()
               .describe('Use HTTPS instead of HTTP'),
-            certPath: z
-              .string()
-              .describe(
-                'The certificate including chain (e.g. certs/fullchain.pem)',
-              )
-              .default('auto')
-              .optional(),
-            keyPath: z
-              .string()
-              .describe(
-                'Path to private key for certificate (e.g. certs/privkey.pem)',
-              )
-              .default('auto')
-              .optional(),
           })
           .strict()
           .optional()

@@ -1,106 +1,64 @@
-import { ok, strictEqual } from 'node:assert'
-import { homedir } from 'node:os'
-import { resolve } from 'node:path'
+import { deepStrictEqual, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { getAutoCertDir, isAutoCertPath, resolveCertPath } from './certs.ts'
+import { getParentDomain, groupDomainsForCertGeneration } from './certs.ts'
 
 describe('gateway certs', () => {
-  describe('resolveCertPath()', () => {
-    it('should return null for undefined path', () => {
-      const result = resolveCertPath(
-        undefined,
-        'example.localhost',
-        '/project',
-        'cert',
-      )
-      strictEqual(result, null)
+  describe('getParentDomain()', () => {
+    it('should return the parent for a 3-part domain', () => {
+      strictEqual(getParentDomain('api.marcqualie.dev'), 'marcqualie.dev')
     })
 
-    it('should resolve "auto" to ~/.denvig/certs/{domain}/fullchain.pem', () => {
-      const result = resolveCertPath(
-        'auto',
-        'example.localhost',
-        '/project',
-        'cert',
-      )
-      strictEqual(
-        result,
-        resolve(
-          homedir(),
-          '.denvig',
-          'certs',
-          'example.localhost',
-          'fullchain.pem',
-        ),
-      )
+    it('should return the domain itself for a 2-part domain', () => {
+      strictEqual(getParentDomain('denvig.localhost'), 'denvig.localhost')
     })
 
-    it('should resolve "auto" to ~/.denvig/certs/{domain}/privkey.pem for key type', () => {
-      const result = resolveCertPath(
-        'auto',
-        'example.localhost',
-        '/project',
-        'key',
-      )
-      strictEqual(
-        result,
-        resolve(
-          homedir(),
-          '.denvig',
-          'certs',
-          'example.localhost',
-          'privkey.pem',
-        ),
-      )
+    it('should return the domain itself for a 1-part domain', () => {
+      strictEqual(getParentDomain('localhost'), 'localhost')
     })
 
-    it('should resolve relative paths against project path', () => {
-      const result = resolveCertPath(
-        'certs/fullchain.pem',
-        'example.localhost',
-        '/Users/test/project',
-        'cert',
-      )
-      strictEqual(result, '/Users/test/project/certs/fullchain.pem')
-    })
-
-    it('should keep absolute paths as-is', () => {
-      const result = resolveCertPath(
-        '/etc/ssl/certs/cert.pem',
-        'example.localhost',
-        '/project',
-        'cert',
-      )
-      strictEqual(result, '/etc/ssl/certs/cert.pem')
+    it('should handle deeply nested domains', () => {
+      strictEqual(getParentDomain('a.b.c.example.com'), 'b.c.example.com')
     })
   })
 
-  describe('isAutoCertPath()', () => {
-    it('should return true for "auto"', () => {
-      ok(isAutoCertPath('auto'))
+  describe('groupDomainsForCertGeneration()', () => {
+    it('should group multiple subdomains under a wildcard', () => {
+      const groups = groupDomainsForCertGeneration([
+        'api.example.com',
+        'web.example.com',
+      ])
+      deepStrictEqual(groups.get('*.example.com'), [
+        'api.example.com',
+        'web.example.com',
+      ])
+      strictEqual(groups.size, 1)
     })
 
-    it('should return false for undefined', () => {
-      ok(!isAutoCertPath(undefined))
+    it('should keep a single subdomain as-is', () => {
+      const groups = groupDomainsForCertGeneration(['api.example.com'])
+      deepStrictEqual(groups.get('api.example.com'), ['api.example.com'])
+      strictEqual(groups.size, 1)
     })
 
-    it('should return false for relative paths', () => {
-      ok(!isAutoCertPath('certs/cert.pem'))
+    it('should keep bare domains as-is', () => {
+      const groups = groupDomainsForCertGeneration(['denvig.localhost'])
+      deepStrictEqual(groups.get('denvig.localhost'), ['denvig.localhost'])
+      strictEqual(groups.size, 1)
     })
 
-    it('should return false for absolute paths', () => {
-      ok(!isAutoCertPath('/etc/ssl/cert.pem'))
-    })
-  })
-
-  describe('getAutoCertDir()', () => {
-    it('should return ~/.denvig/certs/{domain}/', () => {
-      const result = getAutoCertDir('example.localhost')
-      strictEqual(
-        result,
-        resolve(homedir(), '.denvig', 'certs', 'example.localhost'),
-      )
+    it('should handle mixed domains from different parents', () => {
+      const groups = groupDomainsForCertGeneration([
+        'api.example.com',
+        'web.example.com',
+        'app.other.dev',
+      ])
+      deepStrictEqual(groups.get('*.example.com'), [
+        'api.example.com',
+        'web.example.com',
+      ])
+      deepStrictEqual(groups.get('app.other.dev'), ['app.other.dev'])
+      strictEqual(groups.size, 2)
     })
   })
 })

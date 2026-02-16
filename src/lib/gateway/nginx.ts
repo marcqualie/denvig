@@ -1,10 +1,8 @@
 import { exec } from 'node:child_process'
-import { existsSync } from 'node:fs'
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
-import { resolveCertPath } from './certs.ts'
 import { getGatewayHtmlDir } from './html.ts'
 
 const execAsync = promisify(exec)
@@ -17,9 +15,8 @@ export type NginxConfigOptions = {
   port: number
   domain: string
   cnames?: string[]
-  secure?: boolean
-  certPath?: string
-  keyPath?: string
+  sslCertPath?: string
+  sslKeyPath?: string
 }
 
 /**
@@ -34,9 +31,8 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
     port,
     domain,
     cnames,
-    secure,
-    certPath,
-    keyPath,
+    sslCertPath,
+    sslKeyPath,
   } = options
 
   const upstreamName = `denvig-${projectId}--${serviceName}`
@@ -44,24 +40,12 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
   // Combine domain and cnames for server_name
   const allDomains = [domain, ...(cnames || [])].join(' ')
 
-  // Resolve cert paths (handles 'auto' and relative paths)
-  const resolvedCertPath = resolveCertPath(
-    certPath,
-    domain,
-    projectPath,
-    'cert',
-  )
-  const resolvedKeyPath = resolveCertPath(keyPath, domain, projectPath, 'key')
-  const hasSsl =
-    resolvedCertPath &&
-    resolvedKeyPath &&
-    existsSync(resolvedCertPath) &&
-    existsSync(resolvedKeyPath)
+  const hasSsl = !!(sslCertPath && sslKeyPath)
 
   const sslBlock = hasSsl
     ? `
-  ssl_certificate ${resolvedCertPath};
-  ssl_certificate_key ${resolvedKeyPath};
+  ssl_certificate ${sslCertPath};
+  ssl_certificate_key ${sslKeyPath};
   ssl_protocols TLSv1.2 TLSv1.3;
   ssl_ciphers HIGH:!aNULL:!MD5;`
     : ''

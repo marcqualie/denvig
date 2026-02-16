@@ -35,7 +35,7 @@ describe('nginx gateway', () => {
       ok(!config.includes('ssl_certificate'))
     })
 
-    it('should not include SSL when cert files do not exist on disk', () => {
+    it('should include SSL when sslCertPath and sslKeyPath are provided', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
         projectPath: '/Users/test/project',
@@ -43,18 +43,26 @@ describe('nginx gateway', () => {
         serviceName: 'api',
         port: 3000,
         domain: 'api.denvig.localhost',
-        secure: true,
-        certPath: 'certs/fullchain.pem',
-        keyPath: 'certs/privkey.pem',
+        sslCertPath:
+          '/home/user/.denvig/certs/api.denvig.localhost/fullchain.pem',
+        sslKeyPath: '/home/user/.denvig/certs/api.denvig.localhost/privkey.pem',
       })
 
-      // SSL should be omitted since the cert files don't exist
-      ok(!config.includes('listen 443'))
-      ok(!config.includes('ssl_certificate'))
-      ok(config.includes('listen 80;'))
+      ok(config.includes('listen 443 ssl'))
+      ok(
+        config.includes(
+          'ssl_certificate /home/user/.denvig/certs/api.denvig.localhost/fullchain.pem',
+        ),
+      )
+      ok(
+        config.includes(
+          'ssl_certificate_key /home/user/.denvig/certs/api.denvig.localhost/privkey.pem',
+        ),
+      )
+      ok(config.includes('http2 on'))
     })
 
-    it('should not include SSL when cert paths are provided but files missing', () => {
+    it('should not include SSL when only sslCertPath is provided', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
         projectPath: '/Users/test/project',
@@ -62,11 +70,23 @@ describe('nginx gateway', () => {
         serviceName: 'api',
         port: 3000,
         domain: 'api.denvig.localhost',
-        certPath: 'certs/fullchain.pem',
-        keyPath: 'certs/privkey.pem',
+        sslCertPath: '/some/path/fullchain.pem',
       })
 
-      // Should NOT have SSL directives when files don't exist
+      ok(!config.includes('listen 443'))
+      ok(!config.includes('ssl_certificate'))
+    })
+
+    it('should not include SSL when neither ssl path is provided', () => {
+      const config = generateNginxConfig({
+        projectId: 'abc123',
+        projectPath: '/Users/test/project',
+        projectSlug: 'test/project',
+        serviceName: 'api',
+        port: 3000,
+        domain: 'api.denvig.localhost',
+      })
+
       ok(!config.includes('listen 443'))
       ok(!config.includes('ssl_certificate'))
     })
@@ -105,42 +125,6 @@ describe('nginx gateway', () => {
       )
       ok(config.includes('proxy_redirect off'))
       ok(config.includes('proxy_buffering off'))
-    })
-
-    it('should not include SSL when relative cert paths do not exist', () => {
-      const config = generateNginxConfig({
-        projectId: 'abc123',
-        projectPath: '/Users/test/project',
-        projectSlug: 'test/project',
-        serviceName: 'api',
-        port: 3000,
-        domain: 'api.denvig.localhost',
-        secure: true,
-        certPath: 'certs/fullchain.pem',
-        keyPath: 'certs/privkey.pem',
-      })
-
-      // SSL should be omitted since the resolved cert files don't exist
-      ok(!config.includes('ssl_certificate'))
-      ok(!config.includes('listen 443'))
-    })
-
-    it('should not include SSL when "auto" cert files do not exist', () => {
-      const config = generateNginxConfig({
-        projectId: 'abc123',
-        projectPath: '/Users/test/project',
-        projectSlug: 'test/project',
-        serviceName: 'api',
-        port: 3000,
-        domain: 'api.denvig.localhost',
-        secure: true,
-        certPath: 'auto',
-        keyPath: 'auto',
-      })
-
-      // SSL should be omitted since the auto cert files don't exist
-      ok(!config.includes('ssl_certificate'))
-      ok(!config.includes('listen 443'))
     })
 
     it('should include cnames in server_name directive', () => {
