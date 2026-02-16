@@ -1,7 +1,7 @@
 import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { getCertDir, parseCertDomains } from '../../lib/certs.ts'
+import { getCertDir, getCertsDir, parseCertDomains } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
 
 export const certsImportCommand = new Command({
@@ -12,10 +12,10 @@ export const certsImportCommand = new Command({
   args: [],
   completions: (_context, inputs) => {
     const prev = inputs[inputs.length - 2]
-    if (prev === '--key' || prev === '--cert') {
+    if (prev === '--key' || prev === '--cert' || prev === '--name') {
       return []
     }
-    return ['--key', '--cert']
+    return ['--key', '--cert', '--name']
   },
   flags: [
     {
@@ -28,6 +28,13 @@ export const certsImportCommand = new Command({
       name: 'cert',
       description: 'Path to the certificate PEM file',
       required: true,
+      type: 'string' as const,
+    },
+    {
+      name: 'name',
+      description:
+        'Override the directory name for the imported certificate (defaults to auto-detected domain)',
+      required: false,
       type: 'string' as const,
     },
   ],
@@ -52,8 +59,11 @@ export const certsImportCommand = new Command({
       }
     }
 
-    const domain = domains[0]
-    const certDir = getCertDir(domain)
+    const nameOverride = flags.name as string | undefined
+    const domain = nameOverride ?? domains[0]
+    const certDir = nameOverride
+      ? resolve(getCertsDir(), nameOverride)
+      : getCertDir(domain)
     mkdirSync(certDir, { recursive: true })
 
     const destPrivkey = resolve(certDir, 'privkey.pem')
