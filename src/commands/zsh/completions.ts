@@ -15,6 +15,8 @@ _denvig() {
 
   if [[ \${#completions[@]} -gt 0 && -n "\${completions[1]}" ]]; then
     _describe 'denvig' completions
+  else
+    _files
   fi
 }
 

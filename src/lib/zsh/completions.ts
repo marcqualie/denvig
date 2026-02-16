@@ -1,4 +1,3 @@
-import { ROOT_COMMANDS, SUBCOMMANDS } from '../commands.ts'
 import {
   getProjectCompletions,
   getProjectFlagPartial,
@@ -10,6 +9,34 @@ import type { DenvigProject } from '../project.ts'
 type CompletionContext = {
   project: DenvigProject
   commands: Record<string, GenericCommand>
+}
+
+/**
+ * Resolve the command and remaining words by walking the subcommand tree.
+ * Returns the resolved command (or undefined) and any unconsumed words.
+ */
+const resolveCommand = (
+  words: string[],
+  commands: Record<string, GenericCommand>,
+): { command: GenericCommand | undefined; remaining: string[] } => {
+  if (words.length === 0) return { command: undefined, remaining: [] }
+
+  const commandName = words[0]
+  let command = commands[commandName]
+  if (!command) return { command: undefined, remaining: words }
+
+  let i = 1
+  while (i < words.length && command.hasSubcommands) {
+    const nextWord = words[i]
+    if (command.subcommands[nextWord]) {
+      command = command.subcommands[nextWord]
+      i++
+    } else {
+      break
+    }
+  }
+
+  return { command, remaining: words.slice(i) }
 }
 
 export const zshCompletionsFor = async (
@@ -24,21 +51,26 @@ export const zshCompletionsFor = async (
     return getProjectCompletions(projectPartial)
   }
 
+  const commands = context?.commands ?? {}
+  const rootCommands = Object.keys(commands).filter(
+    (name) => !name.includes(':'),
+  )
+
   if (words.length === 1) {
-    return [...ROOT_COMMANDS]
+    return rootCommands
   }
 
   const commandName = words[1]
-  const subcommands = SUBCOMMANDS[commandName]
+  const topCommand = commands[commandName]
 
   if (words.length === 2) {
-    // Check if it's a complete command with subcommands
-    if (subcommands) {
-      return [...subcommands]
+    // Complete command with subcommands
+    if (topCommand?.hasSubcommands) {
+      return Object.keys(topCommand.subcommands)
     }
-    // Check if it's a complete direct command (no subcommands)
+    // Complete direct command (no subcommands) - get command completions
     if (
-      ROOT_COMMANDS.includes(commandName as (typeof ROOT_COMMANDS)[number]) &&
+      rootCommands.includes(commandName) &&
       context?.commands &&
       context?.project
     ) {
@@ -49,54 +81,53 @@ export const zshCompletionsFor = async (
       return []
     }
     // Partial command name - filter root commands
-    return ROOT_COMMANDS.filter((cmd) => cmd.startsWith(commandName))
+    return rootCommands.filter((cmd) => cmd.startsWith(commandName))
   }
 
-  if (words.length === 3 && subcommands) {
-    const partial = words[2]
-    // Check if it's a complete subcommand or partial
-    if (subcommands.includes(partial)) {
-      // Complete subcommand - get command completions
-      const fullCommandName = `${commandName}:${partial}`
-      const command = context?.commands[fullCommandName]
-      if (command?.completions && context?.project) {
-        return await command.completions({ project: context.project }, [])
+  // For deeper words, resolve the command tree and handle completion
+  if (!topCommand) return []
+
+  const commandWords = words.slice(1) // everything after "denvig"
+  const { command: resolved, remaining } = resolveCommand(
+    commandWords,
+    commands,
+  )
+
+  if (!resolved) return []
+
+  // If the resolved command has subcommands and we have at most one remaining word
+  // (which may be partial), offer subcommand completions
+  if (resolved.hasSubcommands && remaining.length <= 1) {
+    const partial = remaining[0] || ''
+    const subcmdNames = Object.keys(resolved.subcommands)
+    if (partial && !resolved.subcommands[partial]) {
+      return subcmdNames.filter((name) => name.startsWith(partial))
+    }
+    // If the partial exactly matches a subcommand, descend into it
+    if (partial && resolved.subcommands[partial]) {
+      const child = resolved.subcommands[partial]
+      if (child.hasSubcommands) {
+        return Object.keys(child.subcommands)
+      }
+      if (child.completions && context?.project) {
+        return await child.completions({ project: context.project }, [])
       }
       return []
     }
-    // Partial subcommand - filter subcommands
-    return subcommands.filter((subcmd) => subcmd.startsWith(partial))
+    return subcmdNames
   }
 
-  // For deeper completions, find the command and call its completions
-  if (context?.commands && context?.project) {
-    let command: GenericCommand | undefined
-    let inputs: string[]
-
-    if (subcommands) {
-      // Command with subcommands: "denvig services start <args>"
-      const subcommand = words[2]
-      const fullCommandName = `${commandName}:${subcommand}`
-      command = context.commands[fullCommandName]
-      inputs = words.slice(3) // Args after subcommand
-    } else {
-      // Direct command: "denvig run <args>"
-      command = context.commands[commandName]
-      inputs = words.slice(2) // Args after command
+  // Leaf command with remaining args - call its completions handler
+  if (resolved.completions && context?.project) {
+    const allCompletions = await resolved.completions(
+      { project: context.project },
+      remaining,
+    )
+    const partial = remaining[remaining.length - 1] || ''
+    if (partial) {
+      return allCompletions.filter((c) => c.startsWith(partial))
     }
-
-    if (command?.completions) {
-      const allCompletions = await command.completions(
-        { project: context.project },
-        inputs,
-      )
-      // Filter by partial input if present
-      const partial = inputs[inputs.length - 1] || ''
-      if (partial) {
-        return allCompletions.filter((c) => c.startsWith(partial))
-      }
-      return allCompletions
-    }
+    return allCompletions
   }
 
   return []

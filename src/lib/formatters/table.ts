@@ -1,12 +1,39 @@
-// ANSI color codes
+/**
+ * Check if colors should be used in output.
+ * Returns false when output is being piped or NO_COLOR is set.
+ */
+const shouldUseColors = (): boolean => {
+  // NO_COLOR is a standard convention: https://no-color.org/
+  if (process.env.NO_COLOR !== undefined) return false
+  // FORCE_COLOR enables colors even when not a TTY (useful for tests)
+  if (process.env.FORCE_COLOR !== undefined) return true
+  // Check if stdout is a TTY (not being piped)
+  return process.stdout.isTTY === true
+}
+
+// ANSI color codes - returns empty strings when colors are disabled
 export const COLORS = {
-  reset: '\x1b[0m',
-  white: '\x1b[37m',
-  grey: '\x1b[90m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  bold: '\x1b[1m',
+  get reset() {
+    return shouldUseColors() ? '\x1b[0m' : ''
+  },
+  get white() {
+    return shouldUseColors() ? '\x1b[37m' : ''
+  },
+  get grey() {
+    return shouldUseColors() ? '\x1b[90m' : ''
+  },
+  get green() {
+    return shouldUseColors() ? '\x1b[32m' : ''
+  },
+  get yellow() {
+    return shouldUseColors() ? '\x1b[33m' : ''
+  },
+  get red() {
+    return shouldUseColors() ? '\x1b[31m' : ''
+  },
+  get bold() {
+    return shouldUseColors() ? '\x1b[1m' : ''
+  },
 }
 
 /**

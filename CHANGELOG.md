@@ -5,6 +5,13 @@
 
 ### Added
 
+- `certs` command set for local TLS certificate management (`certs init`, `certs list`, `certs generate`, `certs import`, `certs rm`)
+  - Built-in Certificate Authority generation with macOS keychain trust installation
+  - Domain certificate generation with SAN and wildcard support (e.g., `*.denvig.localhost`)
+  - Import existing certificates from external tools
+- `certs ca` subcommand group for CA lifecycle management (`certs ca install`, `certs ca uninstall`, `certs ca info`)
+  - `certs init` is now an alias for `certs ca install`
+- Deno dependency support for jsr and npm
 - Experimental nginx gateway proxy support for local domains (#TBD)
   - Automatically generates nginx configs when services have `http.domain` configured
   - Enable via `experimental.gateway.enabled: true` in `~/.denvig/config.yml`
@@ -20,6 +27,31 @@
   - `gateway` without subcommand defaults to `gateway status`
   - Supports `--json` for JSON output
 
+### Changed
+
+- Upgrade `@biomejs/biome` from 2.3.14 to 2.4.0
+- `certs list` status now distinguishes local-ca signed, untrusted, and external certs
+- `certs generate` now prompts for confirmation before overwriting an existing certificate
+- Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts`
+  - Each command group now has an `index.ts` that defines its subcommands
+  - `denvig services`, `denvig certs`, `denvig deps` now show subcommand help instead of running implicitly
+  - Subcommand routing is generic: adding a new subcommand only requires updating the parent command's `index.ts`
+  - Completions infrastructure now walks the command tree instead of using static constants
+
+## [0.5.1] - 2026-02-05
+
+### Fixed
+
+- Tab completion for services now includes full slug paths for the current project (e.g., `marcqualie/denvig/hello`), allowing autocomplete without checking which directory you're in first
+- ANSI color codes are now automatically stripped when output is piped (e.g., `denvig deps outdated | pbcopy`)
+  - Also respects `NO_COLOR` environment variable to disable colors globally
+  - Use `FORCE_COLOR=1` to enable colors even when piped
+
+### Changed
+
+- Removed `.strict()` from Zod config schemas for forward compatibility (#122)
+  - Older Denvig versions now gracefully ignore unknown config properties added by newer versions
+  - VSCode JSON Schema validation still warns about unknown properties via `additionalProperties: false`
 
 ## [v0.5.0] - 2026-01-25
 
