@@ -13,22 +13,17 @@ so you get a no config proxy based on your existing denvig services.
 ## Setup
 
 ```bash
-brew install nginx mkcert
+brew install nginx
 ```
 
 ### Optional: Configure local certificates
 
 If you want to use SSL locally then you will need valid certificates. You can either use a real domain (e.g. example.com) and issue
-fully valid certficates, or you can setup a local CA just for your machine. If you don't already have the certificates, use `mkcert`
-as described below.
+fully valid certificates, or you can use the built-in certificate management to set up a local CA for your machine.
 
 ```bash
-mkcert -install
-
-mkcert hello.denvig.localhost
-mkdir -p certs/denvig.localhost
-mv hello.denvig.localhost.pem certs/hello.denvig.localhost/cert.pem
-mv hello.denvig.localhost-key.pem certs/hello.denvig.localhost/privkey.pem
+denvig certs init
+denvig certs generate hello.denvig.localhost
 ```
 
 

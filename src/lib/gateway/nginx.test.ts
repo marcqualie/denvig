@@ -157,7 +157,7 @@ describe('nginx gateway', () => {
       })
 
       // Paths should resolve to ~/.denvig/certs/{domain}/
-      ok(config.includes('.denvig/certs/api.denvig.localhost/cert.pem'))
+      ok(config.includes('.denvig/certs/api.denvig.localhost/fullchain.pem'))
       ok(config.includes('.denvig/certs/api.denvig.localhost/privkey.pem'))
     })
 

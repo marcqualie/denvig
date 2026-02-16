@@ -18,7 +18,7 @@
   - SSL/TLS support with `http.secure`, `http.certPath`, and `http.keyPath` service options
   - Configs created on service start, removed on service stop/teardown
 - `gateway generate-certs` command to generate SSL certificates for services (#TBD)
-  - Uses `mkcert` to generate locally-trusted certificates
+  - Uses the built-in local CA to generate certificates (requires `denvig certs init`)
   - Set `certPath: auto` and `keyPath: auto` in service config for denvig-managed certs in `~/.denvig/certs/{domain}/`
   - Reports status (exists/generated/error) with full paths for each certificate
 - `gateway status` command to show gateway configuration overview (#TBD)

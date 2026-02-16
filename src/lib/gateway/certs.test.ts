@@ -17,7 +17,7 @@ describe('gateway certs', () => {
       strictEqual(result, null)
     })
 
-    it('should resolve "auto" to ~/.denvig/certs/{domain}/cert.pem', () => {
+    it('should resolve "auto" to ~/.denvig/certs/{domain}/fullchain.pem', () => {
       const result = resolveCertPath(
         'auto',
         'example.localhost',
@@ -26,7 +26,13 @@ describe('gateway certs', () => {
       )
       strictEqual(
         result,
-        resolve(homedir(), '.denvig', 'certs', 'example.localhost', 'cert.pem'),
+        resolve(
+          homedir(),
+          '.denvig',
+          'certs',
+          'example.localhost',
+          'fullchain.pem',
+        ),
       )
     })
 

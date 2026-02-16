@@ -1,16 +1,13 @@
-import { exec } from 'node:child_process'
-import { access, mkdir } from 'node:fs/promises'
-import { resolve } from 'node:path'
-import { promisify } from 'node:util'
+import { access } from 'node:fs/promises'
 
-import { Command } from '../../lib/command.ts'
 import {
-  getAutoCertDir,
-  isAutoCertPath,
-  resolveCertPath,
-} from '../../lib/gateway/certs.ts'
-
-const execAsync = promisify(exec)
+  generateDomainCert,
+  isCaInitialized,
+  loadCaCert,
+  writeDomainCertFiles,
+} from '../../lib/certs.ts'
+import { Command } from '../../lib/command.ts'
+import { resolveCertPath } from '../../lib/gateway/certs.ts'
 
 type CertInfo = {
   domain: string
@@ -34,57 +31,6 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
-/**
- * Check if mkcert is installed.
- */
-async function isMkcertInstalled(): Promise<boolean> {
-  try {
-    await execAsync('which mkcert')
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Generate certificates using mkcert.
- * @param domains - Array of domains to include in the certificate (domain + cnames)
- * @param certDir - Directory to write the certificate files
- */
-async function generateCertWithMkcert(
-  domains: string[],
-  certDir: string,
-): Promise<{ success: boolean; message?: string }> {
-  try {
-    // Ensure directory exists
-    await mkdir(certDir, { recursive: true })
-
-    // Run mkcert to generate certs for all domains
-    const domainArgs = domains.map((d) => `"${d}"`).join(' ')
-    await execAsync(
-      `cd "${certDir}" && mkcert -cert-file cert.pem -key-file privkey.pem ${domainArgs}`,
-    )
-
-    // Verify files were created
-    const certPath = resolve(certDir, 'cert.pem')
-    const keyPath = resolve(certDir, 'privkey.pem')
-    const certExists = await fileExists(certPath)
-    const keyExists = await fileExists(keyPath)
-
-    if (!certExists || !keyExists) {
-      return {
-        success: false,
-        message: 'mkcert completed but certificate files were not found',
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, message }
-  }
-}
-
 export const gatewayGenerateCertsCommand = new Command({
   name: 'gateway:generate-certs',
   description: 'Generate SSL certificates for services with http.domain',
@@ -95,14 +41,10 @@ export const gatewayGenerateCertsCommand = new Command({
   handler: async ({ project, flags }) => {
     const services = project.config.services || {}
 
-    // Check for mkcert installation
-    const hasMkcert = await isMkcertInstalled()
-    if (!hasMkcert) {
-      console.error(
-        'mkcert is not installed. Install it with: brew install mkcert',
-      )
-      console.error('Then run: mkcert -install')
-      return { success: false, message: 'mkcert not installed' }
+    // Check that the local CA is initialized
+    if (!isCaInitialized()) {
+      console.error('Local CA is not initialized. Run: denvig certs init')
+      return { success: false, message: 'Local CA not initialized' }
     }
 
     // Find all services with http.domain configured
@@ -135,6 +77,9 @@ export const gatewayGenerateCertsCommand = new Command({
         message: 'No domains to generate certificates for',
       }
     }
+
+    // Load the CA once for all cert generation
+    const { cert: caCert, key: caKey } = await loadCaCert()
 
     const results: CertInfo[] = []
 
@@ -183,18 +128,15 @@ export const gatewayGenerateCertsCommand = new Command({
         continue
       }
 
-      // Determine the cert directory for generation
-      const isAuto = isAutoCertPath(service.certPath)
-      const certDir = isAuto
-        ? getAutoCertDir(service.domain)
-        : resolve(certPath, '..')
+      // Generate certificate using the built-in CA
+      try {
+        const { privkey, fullchain } = await generateDomainCert(
+          service.domain,
+          caCert,
+          caKey,
+        )
+        writeDomainCertFiles(service.domain, privkey, fullchain)
 
-      // Include domain and cnames in the certificate
-      const allDomains = [service.domain, ...(service.cnames || [])]
-
-      const generateResult = await generateCertWithMkcert(allDomains, certDir)
-
-      if (generateResult.success) {
         results.push({
           domain: service.domain,
           cnames: service.cnames,
@@ -203,7 +145,8 @@ export const gatewayGenerateCertsCommand = new Command({
           keyPath,
           status: 'generated',
         })
-      } else {
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
         results.push({
           domain: service.domain,
           cnames: service.cnames,
@@ -211,7 +154,7 @@ export const gatewayGenerateCertsCommand = new Command({
           certPath,
           keyPath,
           status: 'error',
-          message: generateResult.message,
+          message,
         })
       }
     }

@@ -99,60 +99,31 @@ export const ProjectConfigSchema = z.object({
             domain: z
               .string()
               .optional()
-              .describe(
-                'Working directory for the service (relative to project root)',
-              ),
-            command: z.string().describe('Shell command to execute'),
-            http: z
-              .object({
-                port: z
-                  .number()
-                  .optional()
-                  .describe('Port number the service listens on'),
-                domain: z
-                  .string()
-                  .optional()
-                  .describe('Domain to use for the service URL'),
-                cnames: z
-                  .array(z.string())
-                  .optional()
-                  .describe('Additional hosts that cna be used via gateway'),
-                secure: z
-                  .boolean()
-                  .optional()
-                  .describe('Use HTTPS instead of HTTP'),
-                certPath: z
-                  .string()
-                  .describe(
-                    'The certificate including chain (e.g. certs/fullchain.pem)',
-                  )
-                  .default('auto')
-                  .optional(),
-                keyPath: z
-                  .string()
-                  .describe(
-                    'Path to private key for certificate (e.g. certs/privkey.pem',
-                  )
-                  .default('auto')
-                  .optional(),
-              })
-              .strict()
-              .optional()
-              .describe('HTTP configuration for the service URL'),
-            envFiles: z
+              .describe('Domain to use for the service URL'),
+            cnames: z
               .array(z.string())
               .optional()
-              .describe('Paths to .env files (relative to service cwd)'),
-            env: z
-              .record(z.string(), z.string())
-              .optional()
-              .describe('Environment variables'),
-            keepAlive: z.describe('Domain to use for the service URL'),
+              .describe('Additional hosts that can be used via gateway'),
             secure: z
               .boolean()
               .optional()
               .describe('Use HTTPS instead of HTTP'),
+            certPath: z
+              .string()
+              .describe(
+                'The certificate including chain (e.g. certs/fullchain.pem)',
+              )
+              .default('auto')
+              .optional(),
+            keyPath: z
+              .string()
+              .describe(
+                'Path to private key for certificate (e.g. certs/privkey.pem)',
+              )
+              .default('auto')
+              .optional(),
           })
+          .strict()
           .optional()
           .describe('HTTP configuration for the service URL'),
         envFiles: z

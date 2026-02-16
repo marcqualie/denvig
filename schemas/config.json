@@ -62,7 +62,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Additional hosts that cna be used via gateway"
+                "description": "Additional hosts that can be used via gateway"
               },
               "secure": {
                 "type": "boolean",
@@ -74,7 +74,7 @@
               },
               "keyPath": {
                 "type": "string",
-                "description": "Path to private key for certificate (e.g. certs/privkey.pem"
+                "description": "Path to private key for certificate (e.g. certs/privkey.pem)"
               }
             },
             "additionalProperties": false,

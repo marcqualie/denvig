@@ -1,10 +1,13 @@
-import { exec } from 'node:child_process'
-import { access, mkdir } from 'node:fs/promises'
+import { access } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
-import { promisify } from 'node:util'
 
-const execAsync = promisify(exec)
+import {
+  generateDomainCert,
+  isCaInitialized,
+  loadCaCert,
+  writeDomainCertFiles,
+} from '../certs.ts'
 
 /**
  * Resolve a cert path, converting 'auto' to the denvig-managed path.
@@ -25,7 +28,7 @@ export function resolveCertPath(
   }
 
   if (path === 'auto') {
-    const filename = type === 'cert' ? 'cert.pem' : 'privkey.pem'
+    const filename = type === 'cert' ? 'fullchain.pem' : 'privkey.pem'
     return resolve(homedir(), '.denvig', 'certs', domain, filename)
   }
 
@@ -53,18 +56,6 @@ export function getAutoCertDir(domain: string): string {
 async function fileExists(path: string): Promise<boolean> {
   try {
     await access(path)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Check if mkcert is installed.
- */
-async function isMkcertInstalled(): Promise<boolean> {
-  try {
-    await execAsync('which mkcert')
     return true
   } catch {
     return false
@@ -123,43 +114,26 @@ export async function ensureCertificates(options: {
     }
   }
 
-  // Check for mkcert
-  const hasMkcert = await isMkcertInstalled()
-  if (!hasMkcert) {
+  // Check that the local CA is initialized
+  if (!isCaInitialized()) {
     return {
       status: 'error',
       domains: allDomains,
       certPath,
       keyPath,
-      message:
-        'mkcert is not installed. Run: brew install mkcert && mkcert -install',
+      message: 'Local CA is not initialized. Run: denvig certs init',
     }
   }
 
-  // Generate certificates
-  const isAuto = isAutoCertPath(configCertPath)
-  const certDir = isAuto ? getAutoCertDir(domain) : resolve(certPath, '..')
-
+  // Generate certificates using the built-in CA
   try {
-    await mkdir(certDir, { recursive: true })
-    const domainArgs = allDomains.map((d) => `"${d}"`).join(' ')
-    await execAsync(
-      `cd "${certDir}" && mkcert -cert-file cert.pem -key-file privkey.pem ${domainArgs}`,
+    const { cert: caCert, key: caKey } = await loadCaCert()
+    const { privkey, fullchain } = await generateDomainCert(
+      domain,
+      caCert,
+      caKey,
     )
-
-    // Verify files were created
-    const newCertExists = await fileExists(certPath)
-    const newKeyExists = await fileExists(keyPath)
-
-    if (!newCertExists || !newKeyExists) {
-      return {
-        status: 'error',
-        domains: allDomains,
-        certPath,
-        keyPath,
-        message: 'mkcert completed but certificate files were not found',
-      }
-    }
+    writeDomainCertFiles(domain, privkey, fullchain)
 
     return {
       status: 'generated',
