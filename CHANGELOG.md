@@ -9,6 +9,7 @@
   - Built-in Certificate Authority generation with macOS keychain trust installation
   - Domain certificate generation with SAN and wildcard support (e.g., `*.denvig.localhost`)
   - Import existing certificates from external tools
+  - `--name` flag on `certs import` to override the auto-detected directory name
 - `certs ca` subcommand group for CA lifecycle management (`certs ca install`, `certs ca uninstall`, `certs ca info`)
   - `certs init` is now an alias for `certs ca install`
 - Deno dependency support for jsr and npm

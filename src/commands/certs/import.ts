@@ -1,8 +1,16 @@
 import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { z } from 'zod'
 
-import { getCertDir, parseCertDomains } from '../../lib/certs.ts'
+import { getCertDir, getCertsDir, parseCertDomains } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
+
+const DomainSchema = z
+  .string()
+  .regex(
+    /^(\*\.)?([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)*[a-zA-Z]{2,}$/,
+    'Must be a valid domain (e.g., example.com or *.example.com)',
+  )
 
 export const certsImportCommand = new Command({
   name: 'certs:import',
@@ -12,10 +20,10 @@ export const certsImportCommand = new Command({
   args: [],
   completions: (_context, inputs) => {
     const prev = inputs[inputs.length - 2]
-    if (prev === '--key' || prev === '--cert') {
+    if (prev === '--key' || prev === '--cert' || prev === '--name') {
       return []
     }
-    return ['--key', '--cert']
+    return ['--key', '--cert', '--name']
   },
   flags: [
     {
@@ -28,6 +36,13 @@ export const certsImportCommand = new Command({
       name: 'cert',
       description: 'Path to the certificate PEM file',
       required: true,
+      type: 'string' as const,
+    },
+    {
+      name: 'name',
+      description:
+        'Override the directory name for the imported certificate (defaults to auto-detected domain)',
+      required: false,
       type: 'string' as const,
     },
   ],
@@ -52,8 +67,21 @@ export const certsImportCommand = new Command({
       }
     }
 
-    const domain = domains[0]
-    const certDir = getCertDir(domain)
+    let nameOverride: string | undefined
+    if (flags.name) {
+      const result = DomainSchema.safeParse(flags.name)
+      if (!result.success) {
+        const message = result.error.issues[0]?.message ?? 'Invalid domain name'
+        console.error(`Invalid --name value: ${message}`)
+        return { success: false, message }
+      }
+      nameOverride = result.data.replace(/^\*\./, '_wildcard.')
+    }
+
+    const domain = nameOverride ?? domains[0]
+    const certDir = nameOverride
+      ? resolve(getCertsDir(), nameOverride)
+      : getCertDir(domain)
     mkdirSync(certDir, { recursive: true })
 
     const destPrivkey = resolve(certDir, 'privkey.pem')
