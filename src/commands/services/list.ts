@@ -19,11 +19,11 @@ const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   }
 }
 
-export const servicesCommand = new Command({
-  name: 'services',
+export const servicesListCommand = new Command({
+  name: 'services:list',
   description: 'List all services across all projects',
-  usage: 'services',
-  example: 'services',
+  usage: 'services list',
+  example: 'services list',
   args: [],
   flags: [],
   completions: () => {

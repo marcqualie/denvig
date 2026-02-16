@@ -8,6 +8,11 @@
 - Upgrade `@biomejs/biome` from 2.3.14 to 2.4.0
 - `certs list` status now distinguishes local-ca signed, untrusted, and external certs
 - `certs generate` now prompts for confirmation before overwriting an existing certificate
+- Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts`
+  - Each command group now has an `index.ts` that defines its subcommands
+  - `denvig services`, `denvig certs`, `denvig deps` now show subcommand help instead of running implicitly
+  - Subcommand routing is generic: adding a new subcommand only requires updating the parent command's `index.ts`
+  - Completions infrastructure now walks the command tree instead of using static constants
 
 ### Added
 

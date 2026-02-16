@@ -1,8 +1,9 @@
 import { stringify } from 'yaml'
 
-import { Command } from '../lib/command.ts'
-import { getGlobalConfig } from '../lib/config.ts'
-import { prettyPath } from '../lib/path.ts'
+import { Command } from '../../lib/command.ts'
+import { getGlobalConfig } from '../../lib/config.ts'
+import { prettyPath } from '../../lib/path.ts'
+import { configVerifyCommand } from './verify.ts'
 
 const printConfig = (config: Record<string, unknown>) => {
   const configWithoutUndefined = Object.fromEntries(
@@ -27,6 +28,9 @@ export const configCommand = new Command({
   example: 'config',
   args: [],
   flags: [],
+  subcommands: {
+    verify: configVerifyCommand,
+  },
   handler: ({ project, flags }) => {
     const globalConfig = getGlobalConfig()
     const projectConfig = project.config

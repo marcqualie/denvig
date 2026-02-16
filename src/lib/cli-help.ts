@@ -30,8 +30,6 @@ const hiddenCommands = new Set([
   'internals:resource-hash',
   'internals:resource-id',
   'zsh:__complete__',
-  'deps', // alias
-  'projects', // alias
 ])
 
 /**
@@ -140,6 +138,44 @@ export function showCommandHelp(
   additionalFlags: readonly FlagDefinition[] = globalFlags,
 ): void {
   for (const line of formatCommandHelp(command, additionalFlags)) {
+    console.log(line)
+  }
+}
+
+/**
+ * Generate help text for a command that has subcommands.
+ * Returns an array of lines to output.
+ */
+export function formatSubcommandHelp(command: GenericCommand): string[] {
+  const lines: string[] = []
+
+  lines.push(`Usage: denvig ${command.usage}`)
+  lines.push('')
+  lines.push(command.description)
+  lines.push('')
+  lines.push('Subcommands:')
+
+  const visibleSubcommands = Object.entries(command.subcommands).filter(
+    ([name]) => !name.startsWith('__'),
+  )
+
+  const maxNameLength = Math.max(
+    ...visibleSubcommands.map(([name]) => name.length),
+  )
+  const padLength = maxNameLength + 2
+
+  for (const [name, subcmd] of visibleSubcommands) {
+    lines.push(`  ${name.padEnd(padLength, ' ')} ${subcmd.description}`)
+  }
+
+  return lines
+}
+
+/**
+ * Print subcommand help to stdout.
+ */
+export function showSubcommandHelp(command: GenericCommand): void {
+  for (const line of formatSubcommandHelp(command)) {
     console.log(line)
   }
 }

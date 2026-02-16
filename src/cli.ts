@@ -2,7 +2,12 @@
 
 import parseArgs from 'minimist'
 
-import { globalFlags, showCommandHelp, showRootHelp } from './lib/cli-help.ts'
+import {
+  globalFlags,
+  showCommandHelp,
+  showRootHelp,
+  showSubcommandHelp,
+} from './lib/cli-help.ts'
 import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
 import { getGitHubSlug } from './lib/git.ts'
@@ -64,98 +69,9 @@ async function main() {
   })
 
   // Command aliases - map shortcuts to their full commands
-  const commandAliases: Record<string, string> = {
-    outdated: 'deps:outdated',
-  }
-  if (commandAliases[commandName]) {
-    commandName = commandAliases[commandName]
-  }
-
-  // Handle services subcommands (e.g., "services start" -> "services:start")
-  const servicesSubcommands = [
-    'start',
-    'stop',
-    'restart',
-    'status',
-    'logs',
-    'teardown',
-  ]
-  if (commandName === 'services') {
-    const subcommand = process.argv[3]
-    if (subcommand && servicesSubcommands.includes(subcommand)) {
-      commandName = `services:${subcommand}`
-      // Remove the subcommand from args so it's not treated as an argument
-      args = [process.argv[2], ...process.argv.slice(4)]
-    }
-  }
-
-  // Handle deps subcommands (e.g., "deps list" -> "deps:list")
-  const depsSubcommands = ['list', 'outdated', 'why']
-  if (commandName === 'deps') {
-    const subcommand = process.argv[3]
-    if (subcommand && depsSubcommands.includes(subcommand)) {
-      commandName = `deps:${subcommand}`
-      // Remove the subcommand from args so it's not treated as an argument
-      args = [process.argv[2], ...process.argv.slice(4)]
-    }
-  }
-
-  // Handle config subcommands (e.g., "config verify" -> "config:verify")
-  const configSubcommands = ['verify']
-  if (commandName === 'config') {
-    const subcommand = process.argv[3]
-    if (subcommand && configSubcommands.includes(subcommand)) {
-      commandName = `config:${subcommand}`
-      // Remove the subcommand from args so it's not treated as an argument
-      args = [process.argv[2], ...process.argv.slice(4)]
-    }
-  }
-
-  // Handle projects subcommands (e.g., "projects list" -> "projects:list")
-  const projectsSubcommands = ['list']
-  if (commandName === 'projects') {
-    const subcommand = process.argv[3]
-    if (subcommand && projectsSubcommands.includes(subcommand)) {
-      commandName = `projects:${subcommand}`
-      // Remove the subcommand from args so it's not treated as an argument
-      args = [process.argv[2], ...process.argv.slice(4)]
-    }
-  }
-
-  // Handle certs subcommands (e.g., "certs init" -> "certs:init")
-  const certsSubcommands = ['ca', 'init', 'list', 'generate', 'import', 'rm']
-  if (commandName === 'certs') {
-    const subcommand = process.argv[3]
-    if (subcommand && certsSubcommands.includes(subcommand)) {
-      if (subcommand === 'ca') {
-        // Handle nested "certs ca <sub>" subcommands
-        const caSubcommands = ['install', 'uninstall', 'info']
-        const caSub = process.argv[4]
-        if (caSub && caSubcommands.includes(caSub)) {
-          commandName = `certs:ca:${caSub}`
-          args = [process.argv[2], ...process.argv.slice(5)]
-        } else {
-          // Default to "certs:ca:info" when just "certs ca" is run
-          commandName = 'certs:ca:info'
-          args = [process.argv[2], ...process.argv.slice(4)]
-        }
-      } else {
-        commandName = `certs:${subcommand}`
-        // Remove the subcommand from args so it's not treated as an argument
-        args = [process.argv[2], ...process.argv.slice(4)]
-      }
-    }
-  }
-
-  // Handle zsh subcommands (e.g., "zsh completions" -> "zsh:completions")
-  const zshSubcommands = ['completions', '__complete__']
-  if (commandName === 'zsh') {
-    const subcommand = process.argv[3]
-    if (subcommand && zshSubcommands.includes(subcommand)) {
-      commandName = `zsh:${subcommand}`
-      // Remove the subcommand from args so it's not treated as an argument
-      args = [process.argv[2], ...process.argv.slice(4)]
-    }
+  if (commandName === 'outdated') {
+    commandName = 'deps'
+    args = ['deps', 'outdated', ...process.argv.slice(3)]
   }
 
   // Quick actions
@@ -170,87 +86,87 @@ async function main() {
   }
 
   const { runCommand } = await import('./commands/run.ts')
-  const { configCommand } = await import('./commands/config.ts')
+  const { configCommand } = await import('./commands/config/index.ts')
   const { pluginsCommand } = await import('./commands/plugins.ts')
   const { versionCommand } = await import('./commands/version.ts')
   const { infoCommand } = await import('./commands/info.ts')
-  const { servicesCommand } = await import('./commands/services/list.ts')
-  const { servicesStartCommand } = await import('./commands/services/start.ts')
-  const { servicesStopCommand } = await import('./commands/services/stop.ts')
-  const { servicesRestartCommand } = await import(
-    './commands/services/restart.ts'
-  )
-  const { servicesStatusCommand } = await import(
-    './commands/services/status.ts'
-  )
-  const { logsCommand } = await import('./commands/services/logs.ts')
-  const { servicesTeardownCommand } = await import(
-    './commands/services/teardown.ts'
-  )
+  const { servicesCommand } = await import('./commands/services/index.ts')
   const { internalsResourceHashCommand, internalsResourceIdCommand } =
     await import('./commands/internals.ts')
-  const { depsListCommand } = await import('./commands/deps/list.ts')
-  const { depsOutdatedCommand } = await import('./commands/deps/outdated.ts')
-  const { depsWhyCommand } = await import('./commands/deps/why.ts')
-  const { configVerifyCommand } = await import('./commands/config/verify.ts')
+  const { depsCommand } = await import('./commands/deps/index.ts')
   const { projectsListCommand } = await import('./commands/projects/list.ts')
-  const { zshCompletionsCommand } = await import(
-    './commands/zsh/completions.ts'
-  )
-  const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
-  const { certsListCommand } = await import('./commands/certs/list.ts')
-  const { certsInitCommand } = await import('./commands/certs/init.ts')
-  const { certsGenerateCommand } = await import('./commands/certs/generate.ts')
-  const { certsImportCommand } = await import('./commands/certs/import.ts')
-  const { certsRmCommand } = await import('./commands/certs/rm.ts')
-  const { certsCaInstallCommand } = await import(
-    './commands/certs/ca/install.ts'
-  )
-  const { certsCaUninstallCommand } = await import(
-    './commands/certs/ca/uninstall.ts'
-  )
-  const { certsCaInfoCommand } = await import('./commands/certs/ca/info.ts')
+  const { zshCommand } = await import('./commands/zsh/index.ts')
+  const { certsCommand } = await import('./commands/certs/index.ts')
 
   const commands = {
     run: runCommand,
     config: configCommand,
-    'config:verify': configVerifyCommand,
     plugins: pluginsCommand,
     version: versionCommand,
     info: infoCommand,
     services: servicesCommand,
-    'services:start': servicesStartCommand,
-    'services:stop': servicesStopCommand,
-    'services:restart': servicesRestartCommand,
-    'services:status': servicesStatusCommand,
-    'services:logs': logsCommand,
-    'services:teardown': servicesTeardownCommand,
-    deps: depsListCommand,
-    'deps:list': depsListCommand,
-    'deps:outdated': depsOutdatedCommand,
-    'deps:why': depsWhyCommand,
+    deps: depsCommand,
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
     projects: projectsListCommand,
-    'projects:list': projectsListCommand,
-    'zsh:completions': zshCompletionsCommand,
-    'zsh:__complete__': zshCompleteCommand,
-    certs: certsListCommand,
-    'certs:init': certsInitCommand,
-    'certs:list': certsListCommand,
-    'certs:generate': certsGenerateCommand,
-    'certs:import': certsImportCommand,
-    'certs:rm': certsRmCommand,
-    'certs:ca:install': certsCaInstallCommand,
-    'certs:ca:uninstall': certsCaUninstallCommand,
-    'certs:ca:info': certsCaInfoCommand,
+    zsh: zshCommand,
+    certs: certsCommand,
   } as Record<string, GenericCommand>
 
-  const command = commands[commandName]
+  // Handle root-level help
+  if (!commandName) {
+    showRootHelp(commands)
+    await cliLogTracker.finish(1, 'No command provided')
+    process.exit(1)
+  }
+
+  // Handle --help or -h at root level (no valid command provided)
+  if ((rootFlags.help || rootFlags.h) && !commands[commandName]) {
+    showRootHelp(commands)
+    await cliLogTracker.finish(0, 'Showed help')
+    process.exit(0)
+  }
+
+  if (!commands[commandName]) {
+    const errorMsg = `Command "${commandName}" not found`
+    console.error(`${errorMsg}.`)
+    await cliLogTracker.finish(1, errorMsg)
+    process.exit(1)
+  }
+
+  // Resolve subcommands: walk the command tree consuming from args
+  // args[0] is command name, args[1..] are potential subcommands/arguments
+  const helpRequested = rootFlags.help || rootFlags.h
+  let command = commands[commandName]
+  let subArgIndex = 1
+  while (command.hasSubcommands) {
+    const nextArg = args[subArgIndex]
+    if (nextArg && command.subcommands[nextArg]) {
+      command = command.subcommands[nextArg]
+      subArgIndex++
+    } else if (command.defaultSubcommand && !helpRequested) {
+      // Only apply default when not requesting help, so --help shows subcommand list
+      command = command.subcommands[command.defaultSubcommand]
+    } else {
+      break
+    }
+  }
+
+  // Rebuild args: keep the root command name, then any unconsumed args
+  args = [args[0], ...args.slice(subArgIndex)]
+
   const flags = parseArgs(args)
 
-  // Check if help is requested for this command
-  const helpRequested = flags.help || flags.h
+  // If help is requested, show appropriate help
+  if (helpRequested) {
+    if (command.hasSubcommands) {
+      showSubcommandHelp(command)
+    } else {
+      showCommandHelp(command)
+    }
+    await cliLogTracker.finish(0, 'Showed command help')
+    process.exit(0)
+  }
 
   // Parse command arguments
   const parsedArgs: Record<string, string | number> = {}
@@ -264,7 +180,7 @@ async function main() {
       break
     }
   }
-  if (missingArg && !helpRequested) {
+  if (missingArg) {
     const errorMsg = `Missing required argument: ${missingArg}`
     console.error(errorMsg)
     await cliLogTracker.finish(1, errorMsg)
@@ -291,7 +207,7 @@ async function main() {
       break
     }
   }
-  if (missingFlag && !helpRequested) {
+  if (missingFlag) {
     const errorMsg = `Missing required flag: ${missingFlag}`
     console.error(errorMsg)
     await cliLogTracker.finish(1, errorMsg)
@@ -314,34 +230,6 @@ async function main() {
 
   // Combine extra positional args and extra flag args
   const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
-
-  // Handle root-level help
-  if (!commandName) {
-    showRootHelp(commands)
-    await cliLogTracker.finish(1, 'No command provided')
-    process.exit(1)
-  }
-
-  // Handle --help or -h at root level (no valid command provided)
-  if ((rootFlags.help || rootFlags.h) && !commands[commandName]) {
-    showRootHelp(commands)
-    await cliLogTracker.finish(0, 'Showed help')
-    process.exit(0)
-  }
-
-  if (!commands[commandName]) {
-    const errorMsg = `Command "${commandName}" not found`
-    console.error(`${errorMsg}.`)
-    await cliLogTracker.finish(1, errorMsg)
-    process.exit(1)
-  }
-
-  // Handle --help flag for individual commands
-  if (helpRequested) {
-    showCommandHelp(commands[commandName])
-    await cliLogTracker.finish(0, 'Showed command help')
-    process.exit(0)
-  }
 
   try {
     if (!project) {

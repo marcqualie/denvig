@@ -15,6 +15,8 @@ type CommandOptions<
     context: { project: DenvigProject },
     inputs: string[],
   ) => string[] | Promise<string[]>
+  subcommands?: Record<string, GenericCommand>
+  defaultSubcommand?: string
 }
 
 type ArgDefinition = {
@@ -79,6 +81,12 @@ export class Command<
     context: { project: DenvigProject },
     inputs: string[],
   ) => string[] | Promise<string[]>
+  subcommands: Record<string, GenericCommand>
+  defaultSubcommand?: string
+
+  get hasSubcommands(): boolean {
+    return Object.keys(this.subcommands).length > 0
+  }
 
   constructor(options: CommandOptions<ArgDefinitions, FlagDefinitions>) {
     this.name = options.name
@@ -89,6 +97,8 @@ export class Command<
     this.flags = options.flags
     this.handler = options.handler
     this.completions = options.completions
+    this.subcommands = options.subcommands ?? {}
+    this.defaultSubcommand = options.defaultSubcommand
   }
 
   async run(
