@@ -2,7 +2,16 @@ import { execSync, spawnSync } from 'node:child_process'
 import { X509Certificate } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import forge from 'node-forge'
+
+import type forge from 'node-forge'
+
+let _nodeForge: typeof forge | undefined
+const importNodeForge = async (): Promise<typeof forge> => {
+  if (!_nodeForge) {
+    _nodeForge = (await import('node-forge')).default
+  }
+  return _nodeForge
+}
 
 const HOME = process.env.HOME || ''
 
@@ -38,10 +47,11 @@ export const getCertDir = (domain: string): string => {
 /**
  * Load the CA certificate and private key from disk.
  */
-export const loadCaCert = (): {
+export const loadCaCert = async (): Promise<{
   cert: forge.pki.Certificate
   key: forge.pki.rsa.PrivateKey
-} => {
+}> => {
+  const forge = await importNodeForge()
   const certPem = readFileSync(getCaCertPath(), 'utf-8')
   const keyPem = readFileSync(getCaKeyPath(), 'utf-8')
   return {
@@ -54,17 +64,18 @@ export const loadCaCert = (): {
  * Generate a new self-signed CA certificate with an RSA 2048 key pair.
  * Valid for 10 years with basicConstraints CA:true.
  */
-export const generateCaCert = (): {
+export const generateCaCert = async (): Promise<{
   cert: forge.pki.Certificate
   key: forge.pki.rsa.PrivateKey
   certPem: string
   keyPem: string
-} => {
+}> => {
+  const forge = await importNodeForge()
   const keys = forge.pki.rsa.generateKeyPair(2048)
   const cert = forge.pki.createCertificate()
 
   cert.publicKey = keys.publicKey
-  cert.serialNumber = generateSerialNumber()
+  cert.serialNumber = await generateSerialNumber()
 
   const now = new Date()
   cert.validity.notBefore = now
@@ -105,16 +116,17 @@ export const generateCaCert = (): {
  * Generate a domain certificate signed by the given CA.
  * Returns PEM-encoded private key and fullchain (domain cert + CA cert).
  */
-export const generateDomainCert = (
+export const generateDomainCert = async (
   domain: string,
   caCert: forge.pki.Certificate,
   caKey: forge.pki.rsa.PrivateKey,
-): { privkey: string; fullchain: string } => {
+): Promise<{ privkey: string; fullchain: string }> => {
+  const forge = await importNodeForge()
   const keys = forge.pki.rsa.generateKeyPair(2048)
   const cert = forge.pki.createCertificate()
 
   cert.publicKey = keys.publicKey
-  cert.serialNumber = generateSerialNumber()
+  cert.serialNumber = await generateSerialNumber()
 
   const now = new Date()
   cert.validity.notBefore = now
@@ -317,6 +329,7 @@ export const getCertIssuerCN = (certPem: string): string | null => {
 /**
  * Generate a random serial number for certificates.
  */
-const generateSerialNumber = (): string => {
+const generateSerialNumber = async (): Promise<string> => {
+  const forge = await importNodeForge()
   return forge.util.bytesToHex(forge.random.getBytesSync(16))
 }
