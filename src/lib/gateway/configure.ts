@@ -1,6 +1,7 @@
 import { getGlobalConfig } from '../config.ts'
 import { DenvigProject } from '../project.ts'
 import { listProjects } from '../projects.ts'
+import { createGlobalProject } from '../services/global.ts'
 import { findCertForDomain, resolveSslPaths } from './certs.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
@@ -9,6 +10,8 @@ import {
   writeNginxConfig,
   writeNginxMainConfig,
 } from './nginx.ts'
+
+import type { ServiceManagerProject } from '../services/manager.ts'
 
 export type ConfigureServiceResult = {
   projectSlug: string
@@ -30,6 +33,91 @@ export type ConfigureGatewayResult = {
   nginxReload: boolean
   nginxReloadMessage?: string
   message?: string
+}
+
+/**
+ * Process services for a single project and write nginx configs for each.
+ */
+async function configureProjectServices(
+  project: ServiceManagerProject,
+  configsPath: string,
+): Promise<ConfigureServiceResult[]> {
+  const results: ConfigureServiceResult[] = []
+  const projectServices = project.config.services || {}
+
+  for (const [name, config] of Object.entries(projectServices)) {
+    if (!config.http?.domain || !config.http?.port) {
+      continue
+    }
+
+    const domain = config.http.domain
+    const cnames = config.http.cnames || []
+    const port = config.http.port
+    const secure = config.http.secure ?? false
+
+    // Resolve SSL paths by finding matching certs
+    let sslCertPath: string | undefined
+    let sslKeyPath: string | undefined
+    let certStatus: ConfigureServiceResult['certStatus'] = 'not_configured'
+    let resolvedCertDir: string | undefined
+    let certMessage: string | undefined
+
+    if (secure) {
+      const certDir = findCertForDomain(domain)
+      if (certDir) {
+        const sslPaths = resolveSslPaths(certDir)
+        if (sslPaths) {
+          sslCertPath = sslPaths.sslCertPath
+          sslKeyPath = sslPaths.sslKeyPath
+          certStatus = 'valid'
+          resolvedCertDir = certDir
+        } else {
+          certStatus = 'missing'
+          certMessage = 'cert directory found but files missing'
+        }
+      } else {
+        certStatus = 'missing'
+        certMessage = 'no matching certificate found'
+      }
+    }
+
+    const result: ConfigureServiceResult = {
+      projectSlug: project.slug,
+      serviceName: name,
+      domain,
+      cnames,
+      port,
+      certStatus,
+      certDir: resolvedCertDir,
+      certMessage,
+      configStatus: 'written',
+    }
+
+    // Write nginx config
+    const writeResult = await writeNginxConfig(
+      {
+        projectId: project.id,
+        projectPath: project.path,
+        projectSlug: project.slug,
+        serviceName: name,
+        port,
+        domain,
+        cnames,
+        sslCertPath,
+        sslKeyPath,
+      },
+      configsPath,
+    )
+
+    if (!writeResult.success) {
+      result.configStatus = 'error'
+      result.configMessage = writeResult.message
+    }
+
+    results.push(result)
+  }
+
+  return results
 }
 
 /**
@@ -76,80 +164,17 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
 
   for (const projectInfo of projects) {
     const project = new DenvigProject(projectInfo.path)
-    const projectServices = project.config.services || {}
-
-    for (const [name, config] of Object.entries(projectServices)) {
-      if (!config.http?.domain || !config.http?.port) {
-        continue
-      }
-
-      const domain = config.http.domain
-      const cnames = config.http.cnames || []
-      const port = config.http.port
-      const secure = config.http.secure ?? false
-
-      // Resolve SSL paths by finding matching certs
-      let sslCertPath: string | undefined
-      let sslKeyPath: string | undefined
-      let certStatus: ConfigureServiceResult['certStatus'] = 'not_configured'
-      let resolvedCertDir: string | undefined
-      let certMessage: string | undefined
-
-      if (secure) {
-        const certDir = findCertForDomain(domain)
-        if (certDir) {
-          const sslPaths = resolveSslPaths(certDir)
-          if (sslPaths) {
-            sslCertPath = sslPaths.sslCertPath
-            sslKeyPath = sslPaths.sslKeyPath
-            certStatus = 'valid'
-            resolvedCertDir = certDir
-          } else {
-            certStatus = 'missing'
-            certMessage = 'cert directory found but files missing'
-          }
-        } else {
-          certStatus = 'missing'
-          certMessage = 'no matching certificate found'
-        }
-      }
-
-      const result: ConfigureServiceResult = {
-        projectSlug: project.slug,
-        serviceName: name,
-        domain,
-        cnames,
-        port,
-        certStatus,
-        certDir: resolvedCertDir,
-        certMessage,
-        configStatus: 'written',
-      }
-
-      // Write nginx config
-      const writeResult = await writeNginxConfig(
-        {
-          projectId: project.id,
-          projectPath: project.path,
-          projectSlug: project.slug,
-          serviceName: name,
-          port,
-          domain,
-          cnames,
-          sslCertPath,
-          sslKeyPath,
-        },
-        configsPath,
-      )
-
-      if (!writeResult.success) {
-        result.configStatus = 'error'
-        result.configMessage = writeResult.message
-      }
-
-      services.push(result)
-    }
+    const results = await configureProjectServices(project, configsPath)
+    services.push(...results)
   }
+
+  // Include global services
+  const globalProject = createGlobalProject()
+  const globalResults = await configureProjectServices(
+    globalProject,
+    configsPath,
+  )
+  services.push(...globalResults)
 
   // Reload nginx
   const reloadResult = await reloadNginx()
