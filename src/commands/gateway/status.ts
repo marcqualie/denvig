@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
 import { Command } from '../../lib/command.ts'
@@ -7,6 +8,33 @@ import {
   getNginxConfigPath,
   getNginxConfPath,
 } from '../../lib/gateway/nginx.ts'
+
+type NginxServiceStatus = {
+  running: boolean
+  pid: number | null
+  status: string | null
+}
+
+/**
+ * Check if nginx is running via `brew services info nginx --json`.
+ */
+function getNginxServiceStatus(): NginxServiceStatus {
+  try {
+    const output = execSync('brew services info nginx --json', {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: 'utf-8',
+    })
+    const parsed = JSON.parse(output)
+    const info = Array.isArray(parsed) ? parsed[0] : parsed
+    return {
+      running: info.running ?? false,
+      pid: info.pid ?? null,
+      status: info.status ?? null,
+    }
+  } catch {
+    return { running: false, pid: null, status: null }
+  }
+}
 
 export const gatewayStatusCommand = new Command({
   name: 'gateway:status',
@@ -20,6 +48,7 @@ export const gatewayStatusCommand = new Command({
     const gateway = globalConfig.experimental?.gateway
 
     if (flags.json) {
+      const nginxService = getNginxServiceStatus()
       const services = project.config.services || {}
       const serviceStatuses = []
 
@@ -51,6 +80,7 @@ export const gatewayStatusCommand = new Command({
         JSON.stringify({
           enabled: gateway?.enabled || false,
           handler: gateway?.handler || 'nginx',
+          nginx: nginxService,
           nginxConf: gateway?.configsPath
             ? getNginxConfPath(gateway.configsPath)
             : null,
@@ -79,9 +109,14 @@ export const gatewayStatusCommand = new Command({
       return { success: true, message: 'Gateway is disabled' }
     }
 
-    console.log('Status:    Enabled')
+    const nginxService = getNginxServiceStatus()
+    const statusLabel = nginxService.running
+      ? `Started (pid ${nginxService.pid})`
+      : 'Stopped'
+
+    console.log(`Status:    ${statusLabel}`)
     console.log(`Handler:   ${gateway.handler || 'nginx'}`)
-    console.log(`Nginx:     ${getNginxConfPath(gateway.configsPath)}`)
+    console.log(`Config:    ${getNginxConfPath(gateway.configsPath)}`)
     console.log(`Configs:   ${gateway.configsPath}`)
     console.log('')
 
