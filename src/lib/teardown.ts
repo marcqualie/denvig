@@ -1,4 +1,4 @@
-import { readdir, unlink } from 'node:fs/promises'
+import { readdir, rm, unlink } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
@@ -76,7 +76,10 @@ export async function teardownGlobal(
 
   // Optionally remove all denvig log files
   if (options?.removeLogs) {
-    const logsDir = resolve(homedir(), '.denvig', 'logs')
+    const denvigDir = resolve(homedir(), '.denvig')
+
+    // Remove old-format log files from ~/.denvig/logs/
+    const logsDir = resolve(denvigDir, 'logs')
     try {
       const logFiles = await readdir(logsDir)
       await Promise.all(
@@ -87,6 +90,28 @@ export async function teardownGlobal(
             // Ignore errors removing individual log files
           }
         }),
+      )
+    } catch {
+      // Ignore errors reading directory (may not exist)
+    }
+
+    // Remove new-format service log directories from ~/.denvig/services/
+    const servicesDir = resolve(denvigDir, 'services')
+    try {
+      const serviceDirs = await readdir(servicesDir)
+      await Promise.all(
+        serviceDirs
+          .filter((d) => d.startsWith('denvig.') || d.includes('.'))
+          .map(async (dir) => {
+            try {
+              await rm(resolve(servicesDir, dir, 'logs'), {
+                recursive: true,
+                force: true,
+              })
+            } catch {
+              // Ignore errors removing individual service log dirs
+            }
+          }),
       )
     } catch {
       // Ignore errors reading directory (may not exist)

@@ -3,10 +3,12 @@ import {
   appendFile,
   mkdir,
   readFile,
+  rm,
+  symlink,
   unlink,
   writeFile,
 } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { homedir, hostname } from 'node:os'
 import { resolve } from 'node:path'
 
 import { configureGateway } from '../gateway/configure.ts'
@@ -153,6 +155,9 @@ export class ServiceManager {
     // Ensure denvig directories exist
     await this.ensureDenvigDirectories()
 
+    // Create a new timestamped log file for this service run
+    const logFilePath = await this.createLogFile(name)
+
     // Ensure plist file exists
     const plistPath = this.getPlistPath(name)
     const workingDirectory = this.resolveServiceCwd(config)
@@ -162,7 +167,7 @@ export class ServiceManager {
       command: config.command,
       workingDirectory,
       environmentVariables: envResult.env,
-      standardOutPath: this.getLogPath(name, 'stdout'),
+      standardOutPath: logFilePath,
       keepAlive: config.keepAlive ?? true,
       runAtLoad: config.startOnBoot ?? false,
     })
@@ -202,14 +207,10 @@ export class ServiceManager {
       }
     }
 
-    // Append Service Started entry to stdout log
+    // Append Service Started entry to the new log file
     try {
       const timestamp = new Date().toISOString()
-      await appendFile(
-        this.getLogPath(name, 'stdout'),
-        `[${timestamp}] Service Started\n`,
-        'utf-8',
-      )
+      await appendFile(logFilePath, `[${timestamp}] Service Started\n`, 'utf-8')
     } catch {
       // ignore logging errors
     }
@@ -276,11 +277,11 @@ export class ServiceManager {
       await this.reconfigureGateway()
     }
 
-    // Append Service Stopped entry to stdout log
+    // Append Service Stopped entry to current log (via latest symlink)
     try {
       const timestamp = new Date().toISOString()
       await appendFile(
-        this.getLogPath(name, 'stdout'),
+        this.getLogPath(name),
         `[${timestamp}] Service Stopped\n`,
         'utf-8',
       )
@@ -340,7 +341,7 @@ export class ServiceManager {
         running: false,
         command: config.command,
         cwd: this.resolveServiceCwd(config),
-        logPath: this.getLogPath(name, 'stdout'),
+        logPath: this.getLogPath(name),
       }
     }
 
@@ -354,7 +355,7 @@ export class ServiceManager {
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logs,
-      logPath: this.getLogPath(name, 'stdout'),
+      logPath: this.getLogPath(name),
       lastExitCode: info.lastExitCode,
     }
   }
@@ -473,21 +474,24 @@ export class ServiceManager {
 
     // Optionally remove log files for successfully removed services
     if (options?.removeLogs && successfullyRemovedLabels.length > 0) {
-      const logsDir = resolve(this.getDenvigHomeDir(), 'logs')
+      const denvigDir = this.getDenvigHomeDir()
+      const logsDir = resolve(denvigDir, 'logs')
 
-      // Extract log prefixes from labels (format: denvig.{projectId}.{serviceName})
-      const serviceLogPrefixes = successfullyRemovedLabels.map((label) => {
-        // Label format: denvig.{projectId}.{serviceName}
-        // Log format: {projectId}.{serviceName}.log
-        return label.replace('denvig.', '')
-      })
+      // Extract service IDs from labels (format: denvig.{projectId}.{serviceName})
+      const serviceIds = successfullyRemovedLabels.map((label) =>
+        label.replace('denvig.', ''),
+      )
 
       await Promise.all(
-        serviceLogPrefixes.flatMap((prefix) => [
-          // Remove stdout log
-          unlink(resolve(logsDir, `${prefix}.log`)).catch(() => {}),
-          // Remove stderr log
-          unlink(resolve(logsDir, `${prefix}.error.log`)).catch(() => {}),
+        serviceIds.flatMap((serviceId) => [
+          // Remove new-format service log directory
+          rm(resolve(denvigDir, 'services', serviceId), {
+            recursive: true,
+            force: true,
+          }).catch(() => {}),
+          // Remove old-format log files for backward compatibility
+          unlink(resolve(logsDir, `${serviceId}.log`)).catch(() => {}),
+          unlink(resolve(logsDir, `${serviceId}.error.log`)).catch(() => {}),
         ]),
       )
     }
@@ -543,17 +547,49 @@ export class ServiceManager {
   }
 
   /**
-   * Get the log file path.
-   * Format: [projectId].[serviceName].log or [projectId].[serviceName].error.log
+   * Get the service-specific log directory.
+   * Format: ~/.denvig/services/[projectId].[serviceName]/logs/
    */
-  getLogPath(name: string, type: 'stdout' | 'stderr'): string {
+  getServiceLogDir(name: string): string {
     const normalizedName = this.normalizeForLabel(name)
-    const suffix = type === 'stderr' ? '.error' : ''
-    return resolve(
-      this.getDenvigHomeDir(),
-      'logs',
-      `${this.project.id}.${normalizedName}${suffix}.log`,
-    )
+    const serviceId = `${this.project.id}.${normalizedName}`
+    return resolve(this.getDenvigHomeDir(), 'services', serviceId, 'logs')
+  }
+
+  /**
+   * Get the log file path (symlink to latest log for this host).
+   * Format: ~/.denvig/services/[serviceId]/logs/latest.[hostname].log
+   */
+  getLogPath(name: string, _type?: 'stdout' | 'stderr'): string {
+    const host = hostname()
+    return resolve(this.getServiceLogDir(name), `latest.${host}.log`)
+  }
+
+  /**
+   * Create a new timestamped log file and update the latest symlink.
+   * Returns the absolute path to the new log file.
+   */
+  async createLogFile(name: string): Promise<string> {
+    const logDir = this.getServiceLogDir(name)
+    await mkdir(logDir, { recursive: true })
+
+    const timestamp = Math.floor(Date.now() / 1000)
+    const logFilename = `${timestamp}.log`
+    const logPath = resolve(logDir, logFilename)
+
+    // Create empty log file
+    await writeFile(logPath, '', 'utf-8')
+
+    // Create/update latest symlink (relative so it works if home dir moves)
+    const symlinkPath = this.getLogPath(name)
+    try {
+      await unlink(symlinkPath)
+    } catch {
+      // Symlink may not exist yet
+    }
+    await symlink(logFilename, symlinkPath)
+
+    return logPath
   }
 
   /**
@@ -569,7 +605,7 @@ export class ServiceManager {
    */
   async getRecentLogs(name: string, lines: number): Promise<string[]> {
     try {
-      const logPath = this.getLogPath(name, 'stdout')
+      const logPath = this.getLogPath(name)
       const content = await readFile(logPath, 'utf-8')
       const allLines = content.trim().split('\n')
       return allLines.slice(-lines)
@@ -716,7 +752,7 @@ export class ServiceManager {
       url: this.getServiceUrl(name),
       command: config.command,
       cwd: this.resolveServiceCwd(config),
-      logPath: this.getLogPath(name, 'stdout'),
+      logPath: this.getLogPath(name),
       envFiles: (config.envFiles ?? DEFAULT_ENV_FILES).map((f) =>
         resolve(this.resolveServiceCwd(config), f),
       ),

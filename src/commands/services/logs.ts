@@ -44,7 +44,7 @@ export const logsCommand = new Command({
     const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
     const follow = !!flags.follow
 
-    const logPath = manager.getLogPath(name, 'stdout')
+    const logPath = manager.getLogPath(name)
 
     if (follow) {
       if (flags.json) {
