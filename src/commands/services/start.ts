@@ -5,7 +5,6 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
-import { ServiceManager } from '../../lib/services/manager.ts'
 
 export const servicesStartCommand = new Command({
   name: 'services:start',
@@ -70,8 +69,8 @@ export const servicesStartCommand = new Command({
     })
 
     if (response?.status === 'running') {
-      // Setup gateway config and get certificate status
-      const gatewayResult = await manager.setupGatewayConfig(serviceName)
+      // Reconfigure gateway nginx configs
+      await manager.reconfigureGateway()
 
       if (flags.json) {
         console.log(JSON.stringify(response))
@@ -80,25 +79,6 @@ export const servicesStartCommand = new Command({
         console.log(
           `✓ ${projectPrefix}${serviceName} started successfully${urlInfo}`,
         )
-
-        // Display certificate status if gateway is enabled
-        if (
-          gatewayResult !== ServiceManager.GatewayNotEnabled &&
-          gatewayResult !== ServiceManager.GatewayNoHttpConfig
-        ) {
-          const { certificateStatus } = gatewayResult
-          const domainsStr = certificateStatus.domains.join(', ')
-
-          if (certificateStatus.status === 'exists') {
-            console.log(`✓ Certificates configured for: ${domainsStr}`)
-          } else if (certificateStatus.status === 'generated') {
-            console.log(`+ Generated certificates for: ${domainsStr}`)
-          } else if (certificateStatus.status === 'error') {
-            console.log(
-              `✗ Certificate error: ${certificateStatus.message || 'Unknown error'}`,
-            )
-          }
-        }
       }
       return { success: true, message: 'Service started successfully.' }
     }

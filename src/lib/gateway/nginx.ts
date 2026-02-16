@@ -151,27 +151,6 @@ export async function writeNginxConfig(
 }
 
 /**
- * Remove nginx config file for a service.
- */
-export async function removeNginxConfig(
-  projectId: string,
-  serviceName: string,
-  configsPath: string,
-): Promise<{ success: boolean; message?: string }> {
-  try {
-    const configPath = getNginxConfigPath(projectId, serviceName, configsPath)
-    await rm(configPath, { force: true })
-    return { success: true }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return {
-      success: false,
-      message: `Failed to remove nginx config: ${message}`,
-    }
-  }
-}
-
-/**
  * Reload nginx configuration.
  */
 export async function reloadNginx(): Promise<{
@@ -184,30 +163,6 @@ export async function reloadNginx(): Promise<{
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, message: `Failed to reload nginx: ${message}` }
-  }
-}
-
-/**
- * Remove all nginx configs for a project.
- */
-export async function removeProjectNginxConfigs(
-  projectId: string,
-  configsPath: string,
-  serviceNames: string[],
-): Promise<{ success: boolean; message?: string }> {
-  try {
-    await Promise.all(
-      serviceNames.map((serviceName) =>
-        removeNginxConfig(projectId, serviceName, configsPath),
-      ),
-    )
-    return { success: true }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return {
-      success: false,
-      message: `Failed to remove project nginx configs: ${message}`,
-    }
   }
 }
 
