@@ -18,31 +18,29 @@ const DEFAULT_QUICK_ACTIONS = [
  *
  * This is located in ~/.denvig/config.yml but can be overridden by ENV.DENVIG_GLOBAL_CONFIG_PATH
  */
-export const GlobalConfigSchema = z
-  .object({
-    projectPaths: z
-      .array(z.string())
-      .optional()
-      .default(['~/src/*/*', '~/.dotfiles'])
-      .describe('Paths or patterns where projects are located'),
-    quickActions: z
-      .array(z.string())
-      .default(DEFAULT_QUICK_ACTIONS)
-      .optional()
-      .describe('Quick actions that are available for all projects'),
-    experimental: z
-      .object({
-        gateway: z
-          .object({
-            enabled: z.boolean(),
-            handler: z.enum(['nginx']).default('nginx'),
-            configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
-          })
-          .optional(),
-      })
-      .optional(),
-  })
-  .strict()
+export const GlobalConfigSchema = z.object({
+  projectPaths: z
+    .array(z.string())
+    .optional()
+    .default(['~/src/*/*', '~/.dotfiles'])
+    .describe('Paths or patterns where projects are located'),
+  quickActions: z
+    .array(z.string())
+    .default(DEFAULT_QUICK_ACTIONS)
+    .optional()
+    .describe('Quick actions that are available for all projects'),
+  experimental: z
+    .object({
+      gateway: z
+        .object({
+          enabled: z.boolean(),
+          handler: z.enum(['nginx']).default('nginx'),
+          configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
+        })
+        .optional(),
+    })
+    .optional(),
+})
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
 
@@ -109,7 +107,6 @@ export const ProjectConfigSchema = z.object({
               .optional()
               .describe('Use HTTPS instead of HTTP'),
           })
-          .strict()
           .optional()
           .describe('HTTP configuration for the service URL'),
         envFiles: z
