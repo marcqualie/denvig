@@ -3,6 +3,8 @@ import { homedir } from 'node:os'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
+import { getGlobalConfig } from '../../lib/config.ts'
+import { getNginxConfigPath } from '../../lib/gateway/nginx.ts'
 import {
   getServiceCompletions,
   getServiceContext,
@@ -85,6 +87,10 @@ export const servicesStatusCommand = new Command({
       console.log(`PID:     ${response.pid}`)
     }
 
+    if (response.url) {
+      console.log(`URL:     ${response.url}`)
+    }
+
     console.log(`Command: ${response.command}`)
     console.log(`CWD:     ${response.cwd.replace(homedir(), '~')}`)
     console.log(`Logs:    ${response.logPath.replace(homedir(), '~')}`)
@@ -92,6 +98,21 @@ export const servicesStatusCommand = new Command({
     const plistPath = manager.getPlistPath(serviceName)
     if (existsSync(plistPath)) {
       console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
+    }
+
+    // Show nginx config path if gateway is enabled and service has domain
+    const globalConfig = getGlobalConfig()
+    const gateway = globalConfig.experimental?.gateway
+    const serviceConfig = manager.getServiceConfig(serviceName)
+    if (gateway?.enabled && serviceConfig?.http?.domain) {
+      const nginxPath = getNginxConfigPath(
+        targetProject.id,
+        serviceName,
+        gateway.configsPath,
+      )
+      if (existsSync(nginxPath)) {
+        console.log(`Nginx:   ${nginxPath}`)
+      }
     }
 
     if (

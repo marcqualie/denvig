@@ -95,6 +95,11 @@ async function main() {
     await import('./commands/internals.ts')
   const { depsCommand } = await import('./commands/deps/index.ts')
   const { projectsListCommand } = await import('./commands/projects/list.ts')
+  const { zshCompletionsCommand } = await import(
+    './commands/zsh/completions.ts'
+  )
+  const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
+  const { gatewayCommand } = await import('./commands/gateway/index.ts')
   const { zshCommand } = await import('./commands/zsh/index.ts')
   const { certsCommand } = await import('./commands/certs/index.ts')
 
@@ -109,6 +114,10 @@ async function main() {
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
     projects: projectsListCommand,
+    'projects:list': projectsListCommand,
+    'zsh:completions': zshCompletionsCommand,
+    'zsh:__complete__': zshCompleteCommand,
+    gateway: gatewayCommand,
     zsh: zshCommand,
     certs: certsCommand,
   } as Record<string, GenericCommand>

@@ -69,6 +69,9 @@ export const servicesRestartCommand = new Command({
     })
 
     if (response?.status === 'running') {
+      // Reconfigure gateway nginx configs
+      await manager.reconfigureGateway()
+
       if (flags.json) {
         console.log(JSON.stringify(response))
       } else {
