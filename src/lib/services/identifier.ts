@@ -2,7 +2,12 @@ import { expandTilde } from '../config.ts'
 import { DenvigProject, shortProjectId } from '../project.ts'
 import { parseProjectId, resolveProjectPath } from '../project-id.ts'
 import { listProjects } from '../projects.ts'
-import { ServiceManager } from './manager.ts'
+import {
+  createGlobalProject,
+  createGlobalServiceManager,
+  isGlobalSlug,
+} from './global.ts'
+import { ServiceManager, type ServiceManagerProject } from './manager.ts'
 
 export type ServiceIdentifier = {
   projectSlug: string
@@ -15,6 +20,7 @@ export type ServiceIdentifier = {
  *
  * Supported formats:
  * - `serviceName` - uses the current project
+ * - `global:serviceName` - global service (e.g., `global:redis`)
  * - `id:[id]/[serviceName]` - ID lookup (e.g., `id:a1b2c3d4/hello`)
  * - `github:[slug]/[serviceName]` - GitHub slug (e.g., `github:owner/repo/hello`)
  * - `local:/path/to/project` - local path (service name extracted from path if exists)
@@ -24,6 +30,14 @@ export const parseServiceIdentifier = (
   identifier: string,
   currentProjectSlug: string,
 ): ServiceIdentifier => {
+  // Handle global: prefix
+  if (identifier.startsWith('global:')) {
+    return {
+      projectSlug: 'global',
+      serviceName: identifier.slice('global:'.length),
+    }
+  }
+
   // If no slash, it's just a service name in the current project
   if (!identifier.includes('/')) {
     return {
@@ -134,7 +148,19 @@ export const resolveProjectIdToPath = (id: string): string | null => {
 export const getServiceContext = (
   identifier: string,
   currentProject: DenvigProject,
-): { project: DenvigProject; manager: ServiceManager; serviceName: string } => {
+): {
+  project: ServiceManagerProject
+  manager: ServiceManager
+  serviceName: string
+} => {
+  // Handle global: prefix
+  if (identifier.startsWith('global:')) {
+    const serviceName = identifier.slice('global:'.length)
+    const project = createGlobalProject()
+    const manager = createGlobalServiceManager()
+    return { project, manager, serviceName }
+  }
+
   // Try using the unified project ID resolver first
   const parsed = parseProjectId(identifier)
 
@@ -154,7 +180,14 @@ export const getServiceContext = (
     currentProject.slug,
   )
 
-  let project: DenvigProject
+  let project: ServiceManagerProject
+
+  // Handle global slug from parseServiceIdentifier
+  if (isGlobalSlug(projectSlug)) {
+    const globalProject = createGlobalProject()
+    const manager = createGlobalServiceManager()
+    return { project: globalProject, manager, serviceName }
+  }
 
   // Handle project ID lookup first (supports both full and short IDs)
   if (projectId) {
@@ -202,6 +235,13 @@ export const getServiceCompletions = (
   // Add current project services without prefix for convenience
   for (const serviceName of Object.keys(currentProject.services)) {
     completions.push(serviceName)
+  }
+
+  // Add global services with global: prefix
+  const globalProject = createGlobalProject()
+  const globalServices = globalProject.config.services || {}
+  for (const serviceName of Object.keys(globalServices)) {
+    completions.push(`global:${serviceName}`)
   }
 
   // Add services from all projects with full paths

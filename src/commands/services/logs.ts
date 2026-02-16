@@ -2,8 +2,10 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
 import { Command } from '../../lib/command.ts'
-import { getServiceCompletions } from '../../lib/services/identifier.ts'
-import { ServiceManager } from '../../lib/services/manager.ts'
+import {
+  getServiceCompletions,
+  getServiceContext,
+} from '../../lib/services/identifier.ts'
 
 export const logsCommand = new Command({
   name: 'services:logs',
@@ -38,8 +40,8 @@ export const logsCommand = new Command({
     return getServiceCompletions(project)
   },
   handler: async ({ project, args, flags }) => {
-    const manager = new ServiceManager(project)
-    const name = args.name as string
+    const nameArg = args.name as string
+    const { manager, serviceName: name } = getServiceContext(nameArg, project)
     // Support alias `-n` through `flags.n` for compatibility with common CLI usage
     const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
     const follow = !!flags.follow
