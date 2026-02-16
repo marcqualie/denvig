@@ -9,6 +9,7 @@ import {
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
+import { configureGateway } from '../gateway/configure.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist } from './plist.ts'
@@ -271,6 +272,8 @@ export class ServiceManager {
       } catch {
         // Ignore errors removing plist file (may not exist)
       }
+      // Reconfigure gateway to remove this service's nginx config
+      await this.reconfigureGateway()
     }
 
     // Append Service Stopped entry to stdout log
@@ -489,6 +492,9 @@ export class ServiceManager {
       )
     }
 
+    // Reconfigure gateway to remove this project's nginx configs
+    await this.reconfigureGateway()
+
     return results
   }
 
@@ -584,6 +590,17 @@ export class ServiceManager {
    */
   getServiceConfig(name: string): ServiceConfig | undefined {
     return this.project.config.services?.[name]
+  }
+
+  /**
+   * Rebuild all gateway nginx configs across all projects.
+   * Removes stale configs and regenerates from current service definitions.
+   */
+  async reconfigureGateway(): Promise<void> {
+    const result = await configureGateway()
+    if (result && !result.success) {
+      console.warn(`[gateway] ${result.message}`)
+    }
   }
 
   /**

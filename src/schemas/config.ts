@@ -29,6 +29,17 @@ export const GlobalConfigSchema = z.object({
     .default(DEFAULT_QUICK_ACTIONS)
     .optional()
     .describe('Quick actions that are available for all projects'),
+  experimental: z
+    .object({
+      gateway: z
+        .object({
+          enabled: z.boolean(),
+          handler: z.enum(['nginx']).default('nginx'),
+          configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
+        })
+        .optional(),
+    })
+    .optional(),
 })
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
@@ -87,6 +98,10 @@ export const ProjectConfigSchema = z.object({
               .string()
               .optional()
               .describe('Domain to use for the service URL'),
+            cnames: z
+              .array(z.string())
+              .optional()
+              .describe('Additional hosts that can be used via gateway'),
             secure: z
               .boolean()
               .optional()

@@ -57,6 +57,13 @@
                 "type": "string",
                 "description": "Domain to use for the service URL"
               },
+              "cnames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Additional hosts that can be used via gateway"
+              },
               "secure": {
                 "type": "boolean",
                 "description": "Use HTTPS instead of HTTP"
