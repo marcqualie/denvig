@@ -2,6 +2,7 @@ import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
 import { DenvigProject } from '../../lib/project.ts'
 import { listProjects } from '../../lib/projects.ts'
+import { createGlobalProject } from '../../lib/services/global.ts'
 import launchctl from '../../lib/services/launchctl.ts'
 import {
   ServiceManager,
@@ -62,6 +63,22 @@ export const servicesListCommand = new Command({
       }
     }
 
+    // Include global services
+    const globalProject = createGlobalProject()
+    const globalServices = globalProject.config.services || {}
+    if (Object.keys(globalServices).length > 0) {
+      const globalManager = new ServiceManager(globalProject)
+      const globalServiceList = await globalManager.listServices()
+      for (const service of globalServiceList) {
+        const response = await globalManager.getServiceResponse(service.name, {
+          launchctlList,
+        })
+        if (response) {
+          allServices.push(response)
+        }
+      }
+    }
+
     if (allServices.length === 0) {
       if (flags.json) {
         console.log(JSON.stringify([]))
@@ -108,9 +125,12 @@ export const servicesListCommand = new Command({
       console.log(line)
     }
 
+    const totalProjects =
+      projectInfos.length +
+      (Object.keys(globalProject.config.services || {}).length > 0 ? 1 : 0)
     console.log('')
     console.log(
-      `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${projectInfos.length} project${projectInfos.length === 1 ? '' : 's'}`,
+      `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${totalProjects} project${totalProjects === 1 ? '' : 's'}`,
     )
 
     return { success: true, message: 'Services listed successfully.' }

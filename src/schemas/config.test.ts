@@ -42,6 +42,49 @@ describe('GlobalConfigSchema', () => {
       ok(result.data.quickActions.includes('build'))
     }
   })
+
+  it('should parse global configuration with services', () => {
+    const config = {
+      services: {
+        redis: {
+          command: 'redis-server',
+          http: { port: 6379 },
+        },
+        postgres: {
+          command: 'pg_ctl start',
+        },
+      },
+    }
+
+    const result = GlobalConfigSchema.safeParse(config)
+    ok(result.success)
+    if (result.success) {
+      ok(result.data.services)
+      ok(result.data.services!.redis)
+      ok(result.data.services!.postgres)
+    }
+  })
+
+  it('should default services to undefined when not specified', () => {
+    const config = {}
+
+    const result = GlobalConfigSchema.safeParse(config)
+    ok(result.success)
+    if (result.success) {
+      ok(result.data.services === undefined)
+    }
+  })
+
+  it('should reject invalid service names in global config', () => {
+    const config = {
+      services: {
+        'Invalid-Name': { command: 'echo test' },
+      },
+    }
+
+    const result = GlobalConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
 })
 
 describe('ProjectConfigSchema', () => {

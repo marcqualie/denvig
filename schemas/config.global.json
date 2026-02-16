@@ -19,6 +19,80 @@
       },
       "description": "Quick actions that are available for all projects"
     },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "cwd": {
+            "type": "string",
+            "description": "Working directory for the service (relative to project root)"
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command to execute"
+          },
+          "http": {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "number",
+                "description": "Port number the service listens on"
+              },
+              "domain": {
+                "type": "string",
+                "description": "Domain to use for the service URL"
+              },
+              "cnames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Additional hosts that can be used via gateway"
+              },
+              "secure": {
+                "type": "boolean",
+                "description": "Use HTTPS instead of HTTP"
+              }
+            },
+            "additionalProperties": false,
+            "description": "HTTP configuration for the service URL"
+          },
+          "envFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Paths to .env files (relative to service cwd)"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables"
+          },
+          "keepAlive": {
+            "type": "boolean",
+            "description": "Restart service if it exits"
+          },
+          "startOnBoot": {
+            "type": "boolean",
+            "description": "Start service automatically when system boots"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "command"
+        ]
+      },
+      "propertyNames": {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^[a-z]([a-z0-9-]*[a-z0-9])?$"
+      },
+      "description": "Global services that can be managed from any directory"
+    },
     "experimental": {
       "type": "object",
       "properties": {

@@ -17,7 +17,6 @@ import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist } from './plist.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
-import type { DenvigProject } from '../project.ts'
 
 // Re-export service types from shared types file
 export type {
@@ -37,12 +36,24 @@ import type {
 type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
 
 /**
+ * Minimal project shape required by ServiceManager.
+ * DenvigProject structurally satisfies this type.
+ */
+export type ServiceManagerProject = {
+  id: string
+  slug: string
+  name: string
+  path: string
+  config: { services?: ProjectConfigSchema['services'] }
+}
+
+/**
  * Manager for project services.
  */
 export class ServiceManager {
-  private project: DenvigProject
+  private project: ServiceManagerProject
 
-  constructor(project: DenvigProject) {
+  constructor(project: ServiceManagerProject) {
     this.project = project
   }
 
@@ -161,6 +172,9 @@ export class ServiceManager {
     // Ensure plist file exists
     const plistPath = this.getPlistPath(name)
     const workingDirectory = this.resolveServiceCwd(config)
+
+    // Ensure working directory exists (e.g. global services use auto-generated paths)
+    await mkdir(workingDirectory, { recursive: true })
 
     const plistContent = generatePlist({
       label,

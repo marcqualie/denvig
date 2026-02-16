@@ -5,6 +5,11 @@
 
 ### Added
 
+- Global services support: define services in `~/.denvig/config.yml` under `services:` that work from any directory
+  - Target global services with the `global:` prefix (e.g., `denvig services start global:redis`)
+  - Global services appear in `denvig services list` with project slug `global`
+  - Tab completions include global services with `global:` prefix
+  - Gateway nginx config generation includes global services
 - `certs` command set for local TLS certificate management (`certs init`, `certs list`, `certs generate`, `certs import`, `certs rm`)
   - Built-in Certificate Authority generation with macOS keychain trust installation
   - Domain certificate generation with SAN and wildcard support (e.g., `*.denvig.localhost`)
