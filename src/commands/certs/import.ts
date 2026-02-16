@@ -1,8 +1,16 @@
 import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { z } from 'zod'
 
 import { getCertDir, getCertsDir, parseCertDomains } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
+
+const DomainSchema = z
+  .string()
+  .regex(
+    /^(\*\.)?([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)*[a-zA-Z]{2,}$/,
+    'Must be a valid domain (e.g., example.com or *.example.com)',
+  )
 
 export const certsImportCommand = new Command({
   name: 'certs:import',
@@ -59,7 +67,17 @@ export const certsImportCommand = new Command({
       }
     }
 
-    const nameOverride = flags.name as string | undefined
+    let nameOverride: string | undefined
+    if (flags.name) {
+      const result = DomainSchema.safeParse(flags.name)
+      if (!result.success) {
+        const message = result.error.issues[0]?.message ?? 'Invalid domain name'
+        console.error(`Invalid --name value: ${message}`)
+        return { success: false, message }
+      }
+      nameOverride = result.data.replace(/^\*\./, '_wildcard.')
+    }
+
     const domain = nameOverride ?? domains[0]
     const certDir = nameOverride
       ? resolve(getCertsDir(), nameOverride)
