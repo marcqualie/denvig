@@ -29,7 +29,10 @@
               "type": "boolean"
             },
             "handler": {
-              "type": "object"
+              "type": "string",
+              "enum": [
+                "nginx"
+              ]
             },
             "configsPath": {
               "type": "string"
