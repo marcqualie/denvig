@@ -1,15 +1,15 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { servicesCommand } from './list.ts'
+import { servicesListCommand } from './list.ts'
 
-describe('servicesCommand', () => {
+describe('servicesListCommand', () => {
   it('should be defined', () => {
-    ok(servicesCommand)
-    ok(servicesCommand.name === 'services')
+    ok(servicesListCommand)
+    ok(servicesListCommand.name === 'services:list')
   })
 
   it('should have correct usage', () => {
-    ok(servicesCommand.usage === 'services')
+    ok(servicesListCommand.usage === 'services list')
   })
 })
