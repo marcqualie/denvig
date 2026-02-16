@@ -1,6 +1,6 @@
 import { deepStrictEqual, ok, strictEqual } from 'node:assert'
 import { X509Certificate } from 'node:crypto'
-import { describe, it } from 'node:test'
+import { before, describe, it } from 'node:test'
 import forge from 'node-forge'
 
 import {
@@ -59,7 +59,11 @@ describe('getCertDir()', () => {
 })
 
 describe('generateCaCert()', () => {
-  const ca = generateCaCert()
+  let ca: Awaited<ReturnType<typeof generateCaCert>>
+
+  before(async () => {
+    ca = await generateCaCert()
+  })
 
   it('returns PEM-encoded certificate', () => {
     ok(ca.certPem.startsWith('-----BEGIN CERTIFICATE-----'))
@@ -117,8 +121,13 @@ describe('generateCaCert()', () => {
 })
 
 describe('generateDomainCert()', () => {
-  const ca = generateCaCert()
-  const result = generateDomainCert('test.example.com', ca.cert, ca.key)
+  let ca: Awaited<ReturnType<typeof generateCaCert>>
+  let result: Awaited<ReturnType<typeof generateDomainCert>>
+
+  before(async () => {
+    ca = await generateCaCert()
+    result = await generateDomainCert('test.example.com', ca.cert, ca.key)
+  })
 
   it('returns PEM-encoded private key', () => {
     ok(result.privkey.startsWith('-----BEGIN RSA PRIVATE KEY-----'))
@@ -154,8 +163,8 @@ describe('generateDomainCert()', () => {
     strictEqual(ext?.cA, false)
   })
 
-  it('supports wildcard domains', () => {
-    const wildcard = generateDomainCert('*.example.com', ca.cert, ca.key)
+  it('supports wildcard domains', async () => {
+    const wildcard = await generateDomainCert('*.example.com', ca.cert, ca.key)
     const x509 = new X509Certificate(wildcard.fullchain)
     ok(x509.subjectAltName?.includes('DNS:*.example.com'))
     ok(x509.subject.includes('CN=*.example.com'))
@@ -163,16 +172,28 @@ describe('generateDomainCert()', () => {
 })
 
 describe('parseCertDomains()', () => {
-  const ca = generateCaCert()
+  let ca: Awaited<ReturnType<typeof generateCaCert>>
 
-  it('extracts domain from SAN', () => {
-    const { fullchain } = generateDomainCert('app.example.com', ca.cert, ca.key)
+  before(async () => {
+    ca = await generateCaCert()
+  })
+
+  it('extracts domain from SAN', async () => {
+    const { fullchain } = await generateDomainCert(
+      'app.example.com',
+      ca.cert,
+      ca.key,
+    )
     const domains = parseCertDomains(fullchain)
     deepStrictEqual(domains, ['app.example.com'])
   })
 
-  it('extracts wildcard domain from SAN', () => {
-    const { fullchain } = generateDomainCert('*.example.com', ca.cert, ca.key)
+  it('extracts wildcard domain from SAN', async () => {
+    const { fullchain } = await generateDomainCert(
+      '*.example.com',
+      ca.cert,
+      ca.key,
+    )
     const domains = parseCertDomains(fullchain)
     deepStrictEqual(domains, ['*.example.com'])
   })
@@ -194,8 +215,8 @@ describe('parseCertDomains()', () => {
     deepStrictEqual(domains, ['fallback.example.com'])
   })
 
-  it('extracts only the first cert from a fullchain', () => {
-    const { fullchain } = generateDomainCert(
+  it('extracts only the first cert from a fullchain', async () => {
+    const { fullchain } = await generateDomainCert(
       'first.example.com',
       ca.cert,
       ca.key,
@@ -207,10 +228,14 @@ describe('parseCertDomains()', () => {
 })
 
 describe('getCertExpiry()', () => {
-  const ca = generateCaCert()
+  let ca: Awaited<ReturnType<typeof generateCaCert>>
 
-  it('returns a Date in the future for a valid cert', () => {
-    const { fullchain } = generateDomainCert(
+  before(async () => {
+    ca = await generateCaCert()
+  })
+
+  it('returns a Date in the future for a valid cert', async () => {
+    const { fullchain } = await generateDomainCert(
       'expiry.example.com',
       ca.cert,
       ca.key,
@@ -220,8 +245,8 @@ describe('getCertExpiry()', () => {
     ok(expiry > new Date())
   })
 
-  it('returns expiry from the first cert in fullchain', () => {
-    const { fullchain } = generateDomainCert(
+  it('returns expiry from the first cert in fullchain', async () => {
+    const { fullchain } = await generateDomainCert(
       'expiry.example.com',
       ca.cert,
       ca.key,
@@ -236,11 +261,16 @@ describe('getCertExpiry()', () => {
 })
 
 describe('isCertIssuedBy()', () => {
-  const ca = generateCaCert()
-  const otherCa = generateCaCert()
+  let ca: Awaited<ReturnType<typeof generateCaCert>>
+  let otherCa: Awaited<ReturnType<typeof generateCaCert>>
 
-  it('returns true for a cert signed by the given CA', () => {
-    const { fullchain } = generateDomainCert(
+  before(async () => {
+    ca = await generateCaCert()
+    otherCa = await generateCaCert()
+  })
+
+  it('returns true for a cert signed by the given CA', async () => {
+    const { fullchain } = await generateDomainCert(
       'issued.example.com',
       ca.cert,
       ca.key,
@@ -248,8 +278,8 @@ describe('isCertIssuedBy()', () => {
     strictEqual(isCertIssuedBy(fullchain, ca.certPem), true)
   })
 
-  it('returns false for a cert signed by a different CA', () => {
-    const { fullchain } = generateDomainCert(
+  it('returns false for a cert signed by a different CA', async () => {
+    const { fullchain } = await generateDomainCert(
       'other.example.com',
       ca.cert,
       ca.key,
@@ -265,10 +295,14 @@ describe('isCertIssuedBy()', () => {
 })
 
 describe('isIssuedByLocalCa()', () => {
-  const ca = generateCaCert()
+  let ca: Awaited<ReturnType<typeof generateCaCert>>
 
-  it('returns true for a cert signed by the local CA', () => {
-    const { fullchain } = generateDomainCert(
+  before(async () => {
+    ca = await generateCaCert()
+  })
+
+  it('returns true for a cert signed by the local CA', async () => {
+    const { fullchain } = await generateDomainCert(
       'local.example.com',
       ca.cert,
       ca.key,

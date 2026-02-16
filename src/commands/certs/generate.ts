@@ -45,8 +45,12 @@ export const certsGenerateCommand = new Command({
       }
     }
 
-    const { cert: caCert, key: caKey } = loadCaCert()
-    const { privkey, fullchain } = generateDomainCert(domain, caCert, caKey)
+    const { cert: caCert, key: caKey } = await loadCaCert()
+    const { privkey, fullchain } = await generateDomainCert(
+      domain,
+      caCert,
+      caKey,
+    )
     writeDomainCertFiles(domain, privkey, fullchain)
 
     if (flags.json) {
