@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 import { resolveCertPath } from './certs.ts'
+import { getGatewayHtmlDir } from './html.ts'
 
 const execAsync = promisify(exec)
 
@@ -71,6 +72,8 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
   http2 on;`
     : `  listen 80;`
 
+  const htmlDir = getGatewayHtmlDir()
+
   return `# denvig:
 # slug: ${projectSlug}
 # path: ${projectPath}
@@ -83,6 +86,12 @@ ${listenBlock}
   index index.html;
   client_max_body_size 100M;
 ${sslBlock}
+
+  error_page 502 503 504 /denvig-errors/504.html;
+  location /denvig-errors/ {
+    alias ${htmlDir}/errors/;
+    internal;
+  }
 
   location / {
     proxy_pass http://${upstreamName};
@@ -106,6 +115,66 @@ ${sslBlock}
  */
 export function getNginxConfPath(configsPath: string): string {
   return resolve(configsPath, '..', 'nginx.conf')
+}
+
+/**
+ * Generate the main nginx.conf content.
+ * Includes a default server with the denvig landing page and error pages,
+ * plus an include directive for service configs in the servers directory.
+ */
+export function generateNginxMainConfig(configsPath: string): string {
+  const htmlDir = getGatewayHtmlDir()
+  const nginxDir = resolve(configsPath, '..')
+
+  return `# Managed by denvig — do not edit manually
+# https://denvig.com
+
+worker_processes 4;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include ${nginxDir}/mime.types;
+  default_type application/octet-stream;
+
+  sendfile on;
+  keepalive_timeout 65;
+
+  server {
+    listen 80 default_server;
+    server_name _;
+
+    root ${htmlDir};
+    index index.html;
+
+    error_page 404 /errors/404.html;
+  }
+
+  include ${configsPath}/*;
+}
+`
+}
+
+/**
+ * Write the main nginx.conf file.
+ */
+export async function writeNginxMainConfig(
+  configsPath: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const confPath = getNginxConfPath(configsPath)
+    const content = generateNginxMainConfig(configsPath)
+    await writeFile(confPath, content, 'utf-8')
+    return { success: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return {
+      success: false,
+      message: `Failed to write nginx.conf: ${message}`,
+    }
+  }
 }
 
 /**

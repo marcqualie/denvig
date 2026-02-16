@@ -16,7 +16,9 @@
   - Automatically generates nginx configs when services have `http.domain` configured
   - Enable via `experimental.gateway.enabled: true` in `~/.denvig/config.yml`
   - SSL/TLS support with `http.secure`, `http.certPath`, and `http.keyPath` service options
-  - Configs created on service start, removed on service stop/teardown
+  - Manages the main `nginx.conf` with a default server, error pages, and service config includes
+  - Custom error pages: 404 (service not found) and 504 (service not running)
+  - Default landing page at unmatched domains linking to denvig.com
 - `gateway generate-certs` command to generate SSL certificates for services (#TBD)
   - Uses the built-in local CA to generate certificates (requires `denvig certs init`)
   - Set `certPath: auto` and `keyPath: auto` in service config for denvig-managed certs in `~/.denvig/certs/{domain}/`

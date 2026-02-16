@@ -4,10 +4,12 @@ import { getGlobalConfig } from '../config.ts'
 import { DenvigProject } from '../project.ts'
 import { listProjects } from '../projects.ts'
 import { resolveCertPath } from './certs.ts'
+import { writeGatewayHtmlFiles } from './html.ts'
 import {
   reloadNginx,
   removeAllNginxConfigs,
   writeNginxConfig,
+  writeNginxMainConfig,
 } from './nginx.ts'
 
 export type ConfigureServiceResult = {
@@ -43,6 +45,19 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
   }
 
   const configsPath = gateway.configsPath
+
+  // Write gateway HTML files and nginx.conf
+  await writeGatewayHtmlFiles()
+  const mainConfigResult = await writeNginxMainConfig(configsPath)
+  if (!mainConfigResult.success) {
+    return {
+      success: false,
+      removed: [],
+      services: [],
+      nginxReload: false,
+      message: mainConfigResult.message || 'Failed to write nginx.conf',
+    }
+  }
 
   // Remove all existing denvig nginx configs
   const removeResult = await removeAllNginxConfigs(configsPath)
