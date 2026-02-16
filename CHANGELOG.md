@@ -34,6 +34,10 @@
 
 ### Changed
 
+- Service logs now use timestamp-based files per run instead of a single shared log file
+  - New path: `~/.denvig/services/{serviceId}/logs/{unixtimestamp}.log`
+  - Each `services start` creates a new log file with a `latest.{hostname}.log` symlink
+  - Prevents conflicts when syncing `.denvig` across multiple machines
 - Upgrade `@biomejs/biome` from 2.3.14 to 2.4.0
 - `certs list` status now distinguishes local-ca signed, untrusted, and external certs
 - `certs generate` now prompts for confirmation before overwriting an existing certificate
