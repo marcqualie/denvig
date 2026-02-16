@@ -1,6 +1,5 @@
 import { Command } from '../../lib/command.ts'
 import { gatewayConfigureCommand } from './configure.ts'
-import { gatewayGenerateCertsCommand } from './generate-certs.ts'
 import { gatewayStatusCommand } from './status.ts'
 
 export const gatewayCommand = new Command({
@@ -13,7 +12,6 @@ export const gatewayCommand = new Command({
   subcommands: {
     status: gatewayStatusCommand,
     configure: gatewayConfigureCommand,
-    'generate-certs': gatewayGenerateCertsCommand,
   },
   defaultSubcommand: 'status',
   handler: () => ({ success: true }),
