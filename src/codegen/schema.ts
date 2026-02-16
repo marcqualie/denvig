@@ -121,6 +121,19 @@ export const zodToJsonSchema = (schema: z.ZodTypeAny): JsonSchemaIsh => {
     return result
   }
 
+  // Handle ZodEnum (has entries object mapping values to themselves)
+  if (def.type === 'enum' && def.entries) {
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic JSON Schema object construction
+    const result: any = {
+      type: 'string',
+      enum: Object.keys(def.entries),
+    }
+    if (description) {
+      result.description = description
+    }
+    return result
+  }
+
   // Handle ZodString (has just type property with no other props)
   if (
     def.typeName === 'ZodString' ||
