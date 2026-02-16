@@ -64,6 +64,39 @@ describe('zodToJsonSchema()', () => {
     })
   })
 
+  describe('enum types', () => {
+    it('should convert ZodEnum to JSON Schema', () => {
+      const schema = z.enum(['nginx', 'caddy'])
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'string',
+        enum: ['nginx', 'caddy'],
+      })
+    })
+
+    it('should convert ZodEnum with description to JSON Schema', () => {
+      const schema = z.enum(['nginx']).describe('The handler type')
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'string',
+        enum: ['nginx'],
+        description: 'The handler type',
+      })
+    })
+
+    it('should convert ZodEnum with default to JSON Schema', () => {
+      const schema = z.enum(['nginx', 'caddy']).default('nginx')
+      const result = zodToJsonSchema(schema)
+
+      deepStrictEqual(result, {
+        type: 'string',
+        enum: ['nginx', 'caddy'],
+      })
+    })
+  })
+
   describe('object types', () => {
     it('should convert simple ZodObject to JSON Schema', () => {
       const schema = z.object({
