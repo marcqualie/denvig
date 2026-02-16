@@ -1,56 +1,19 @@
 # Denvig Changelog
 
 
-## [Unreleased]
+## [0.6.0-alpha.1] - 2026-02-16
 
 ### Added
 
-- Global services support: define services in `~/.denvig/config.yml` under `services:` that work from any directory
-  - Target global services with the `global:` prefix (e.g., `denvig services start global:redis`)
-  - Global services appear in `denvig services list` with project slug `global`
-  - Tab completions include global services with `global:` prefix
-  - Gateway nginx config generation includes global services
-- `certs` command set for local TLS certificate management (`certs init`, `certs list`, `certs generate`, `certs import`, `certs rm`)
-  - Built-in Certificate Authority generation with macOS keychain trust installation
-  - Domain certificate generation with SAN and wildcard support (e.g., `*.denvig.localhost`)
-  - Import existing certificates from external tools
-  - `--name` flag on `certs import` to override the auto-detected directory name
-- `certs ca` subcommand group for CA lifecycle management (`certs ca install`, `certs ca uninstall`, `certs ca info`)
-  - `certs init` is now an alias for `certs ca install`
-- Deno dependency support for jsr and npm
-- Experimental nginx gateway proxy support for local domains (#TBD)
-  - Automatically generates nginx configs when services have `http.domain` configured
-  - Enable via `experimental.gateway.enabled: true` in `~/.denvig/config.yml`
-  - SSL/TLS support with `http.secure` — certificates are automatically matched from `~/.denvig/certs/`
-  - Manages the main `nginx.conf` with a default server, error pages, and service config includes
-  - Custom error pages: 404 (service not found) and 504 (service not running)
-  - Default landing page at unmatched domains linking to denvig.com
-- `gateway configure` command to rebuild all nginx configs from service definitions across all projects (#TBD)
-  - Removes all denvig-managed nginx configs from the servers directory
-  - Scans all projects with `.denvig.yml` and regenerates configs for services with `http.domain` and `http.port`
-  - Verifies configured certificates exist on disk before writing configs
-  - Reloads nginx after reconfiguration
-  - Supports `--json` for JSON output
-- `gateway status` command to show gateway configuration overview (#TBD)
-  - Shows enabled status, handler, and configs path
-  - Lists services with their domains, port, certificate status, and nginx config status
-  - `gateway` without subcommand defaults to `gateway status`
-  - Supports `--json` for JSON output
+- Global services support: define services in `~/.denvig/config.yml` under `services:` that work from any directory (#135)
+- `certs ca` subcommand group for CA lifecycle management (`certs ca install`, `certs ca uninstall`, `certs ca info`) (#128)
+- Experimental nginx gateway proxy support for local domains (#120)
+- Deno dependency support for jsr and npm (#127)
 
 ### Changed
 
-- Service logs now use timestamp-based files per run instead of a single shared log file
-  - New path: `~/.denvig/services/{serviceId}/logs/{unixtimestamp}.log`
-  - Each `services start` creates a new log file with a `latest.{hostname}.log` symlink
-  - Prevents conflicts when syncing `.denvig` across multiple machines
-- Upgrade `@biomejs/biome` from 2.3.14 to 2.4.0
-- `certs list` status now distinguishes local-ca signed, untrusted, and external certs
-- `certs generate` now prompts for confirmation before overwriting an existing certificate
-- Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts`
-  - Each command group now has an `index.ts` that defines its subcommands
-  - `denvig services`, `denvig certs`, `denvig deps` now show subcommand help instead of running implicitly
-  - Subcommand routing is generic: adding a new subcommand only requires updating the parent command's `index.ts`
-  - Completions infrastructure now walks the command tree instead of using static constants
+- Service logs now use timestamp-based files per run instead of a single shared log file (#134)
+- Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts` (#130)
 
 ## [0.5.1] - 2026-02-05
 
