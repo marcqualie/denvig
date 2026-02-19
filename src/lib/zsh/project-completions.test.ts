@@ -92,13 +92,13 @@ describe('getProjectFlagPartial()', () => {
 describe('getProjectCompletions()', () => {
   it('returns empty array for / prefix (path completion not yet supported)', async () => {
     const { getProjectCompletions } = await import('./project-completions.ts')
-    const result = getProjectCompletions('/usr/')
+    const result = await getProjectCompletions('/usr/')
     deepStrictEqual(result, [])
   })
 
   it('returns empty array for ~ prefix (path completion not yet supported)', async () => {
     const { getProjectCompletions } = await import('./project-completions.ts')
-    const result = getProjectCompletions('~/src')
+    const result = await getProjectCompletions('~/src')
     deepStrictEqual(result, [])
   })
 })

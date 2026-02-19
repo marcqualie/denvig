@@ -1,8 +1,9 @@
-import * as fs from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
 import { Command } from '../../lib/command.ts'
+import { pathExists } from '../../lib/safeReadFile.ts'
 
 const completionScript = `#compdef denvig
 
@@ -38,18 +39,18 @@ export const zshCompletionsCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: ({ flags }) => {
+  handler: async ({ flags }) => {
     if (flags.install) {
       const homeDir = os.homedir()
       const completionsDir = path.join(homeDir, '.zsh', 'completions')
       const completionsFile = path.join(completionsDir, '_denvig')
 
       // Ensure directory exists
-      if (!fs.existsSync(completionsDir)) {
-        fs.mkdirSync(completionsDir, { recursive: true })
+      if (!(await pathExists(completionsDir))) {
+        await mkdir(completionsDir, { recursive: true })
       }
 
-      fs.writeFileSync(completionsFile, completionScript)
+      await writeFile(completionsFile, completionScript)
       console.log(`Installed completions to ${completionsFile}`)
       return { success: true }
     }

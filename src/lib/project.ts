@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import fs from 'node:fs'
+import { readdir } from 'node:fs/promises'
 
 import { detectActions } from './actions/actions.ts'
 import { type ConfigWithSourcePaths, getProjectConfig } from './config.ts'
@@ -37,11 +37,31 @@ export class DenvigProject {
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
 
-  constructor(projectPath: string) {
+  private constructor(
+    projectPath: string,
+    slug: string,
+    config: ConfigWithSourcePaths<ProjectConfigSchema>,
+    rootFiles?: string[],
+  ) {
     this._path = projectPath
-    this._slug = getProjectSlug(projectPath)
+    this._slug = slug
     this._id = projectId(projectPath)
-    this.config = getProjectConfig(projectPath)
+    this.config = config
+    if (rootFiles) {
+      this._rootFilesCache = rootFiles
+    }
+  }
+
+  /**
+   * Retrieve a DenvigProject by looking up its config and metadata.
+   */
+  static async retrieve(projectPath: string): Promise<DenvigProject> {
+    const [slug, config, rootFiles] = await Promise.all([
+      getProjectSlug(projectPath),
+      getProjectConfig(projectPath),
+      readdir(projectPath).catch(() => [] as string[]),
+    ])
+    return new DenvigProject(projectPath, slug, config, rootFiles)
   }
 
   get slug(): string {
@@ -121,27 +141,24 @@ export class DenvigProject {
 
   /**
    * List all files in the root of a project.
-   * Cached on first access to avoid repeated filesystem calls.
+   * Pre-loaded during create(), falls back to empty array.
    */
   get rootFiles(): string[] {
-    if (this._rootFilesCache === null) {
-      this._rootFilesCache = fs.readdirSync(this.path)
-    }
-    return this._rootFilesCache
+    return this._rootFilesCache ?? []
   }
 
   /**
    * Find all files recursively with a given name in the project.
    */
-  findFilesByName(fileName: string): string[] {
+  async findFilesByName(fileName: string): Promise<string[]> {
     const results: string[] = []
 
-    const walk = (dir: string) => {
-      const files = fs.readdirSync(dir, { withFileTypes: true })
+    const walk = async (dir: string) => {
+      const files = await readdir(dir, { withFileTypes: true })
       for (const file of files) {
         if (file.isDirectory()) {
           if (file.name !== 'node_modules') {
-            walk(`${dir}/${file.name}`)
+            await walk(`${dir}/${file.name}`)
           }
         } else if (file.name === fileName) {
           results.push(`${dir}/${file.name}`)

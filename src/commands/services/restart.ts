@@ -31,7 +31,7 @@ export const servicesRestartCommand = new Command({
       manager,
       serviceName,
       project: targetProject,
-    } = getServiceContext(serviceArg, project)
+    } = await getServiceContext(serviceArg, project)
 
     const projectPrefix =
       targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''

@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { access, readFile, stat } from 'node:fs/promises'
 
 /**
  * Returns the contents of a file asynchronously if it exists, or null if it does not.
@@ -24,21 +23,25 @@ export const safeReadTextFile = async (
 }
 
 /**
- * Returns the contents of a file synchronously if it exists, or null if it does not.
+ * Check if a path exists on the filesystem.
  */
-export const safeReadTextFileSync = (path: string): string | null => {
+export const pathExists = async (path: string): Promise<boolean> => {
   try {
-    const content = readFileSync(path, 'utf8')
-    return content.trim() || null // Return null if the file is empty
-  } catch (error) {
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === 'ENOENT'
-    ) {
-      return null
-    }
-    throw error
+    await access(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Check if a path is a directory.
+ */
+export const isDirectory = async (path: string): Promise<boolean> => {
+  try {
+    const stats = await stat(path)
+    return stats.isDirectory()
+  } catch {
+    return false
   }
 }

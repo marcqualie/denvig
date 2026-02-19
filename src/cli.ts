@@ -31,7 +31,7 @@ async function main() {
   }
 
   // Detect project from current directory or --project flag
-  const globalConfig = getGlobalConfig()
+  const globalConfig = await getGlobalConfig()
   const currentDir = process.cwd()
   const projectFlag = parseArgs(process.argv.slice(2)).project?.toString()
 
@@ -40,11 +40,11 @@ async function main() {
 
   if (projectFlag) {
     // Use the unified project ID resolver
-    const resolved = resolveProjectId(projectFlag, expandTilde)
+    const resolved = await resolveProjectId(projectFlag, expandTilde)
     projectPath = resolved.path
   } else {
     // Check if current directory matches any projectPaths pattern
-    const projects = listProjects()
+    const projects = await listProjects()
     const match = projects.find(
       (p) => currentDir === p.path || currentDir.startsWith(`${p.path}/`),
     )
@@ -56,10 +56,10 @@ async function main() {
     }
   }
 
-  const project = projectPath ? new DenvigProject(projectPath) : null
+  const project = projectPath ? await DenvigProject.retrieve(projectPath) : null
 
   // Initialize CLI logging (after project detection for slug)
-  const slug = projectPath ? getGitHubSlug(projectPath) : null
+  const slug = projectPath ? await getGitHubSlug(projectPath) : null
   const cliLogTracker = createCliLogTracker({
     version: getDenvigVersion(),
     command: `denvig ${process.argv.slice(2).join(' ')}`,

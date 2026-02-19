@@ -90,17 +90,17 @@ export const parseProjectId = (identifier: string): ParsedProjectId => {
  * @param expandTilde - Function to expand ~ to home directory
  * @returns The resolved project path, or null if not found
  */
-export const resolveProjectPath = (
+export const resolveProjectPath = async (
   parsed: ParsedProjectId,
   expandTilde: (path: string) => string,
-): string | null => {
-  const projects = listProjects()
+): Promise<string | null> => {
+  const projects = await listProjects()
 
   switch (parsed.type) {
     case 'id': {
       // Match by full ID or prefix
       for (const p of projects) {
-        const project = new DenvigProject(p.path)
+        const project = await DenvigProject.retrieve(p.path)
         if (
           project.id === parsed.value ||
           project.id.startsWith(parsed.value)
@@ -148,11 +148,11 @@ export const resolveProjectPath = (
  * @param expandTilde - Function to expand ~ to home directory
  * @returns Object with the resolved path (or null) and optional service name
  */
-export const resolveProjectId = (
+export const resolveProjectId = async (
   identifier: string,
   expandTilde: (path: string) => string,
-): { path: string | null; serviceName?: string } => {
+): Promise<{ path: string | null; serviceName?: string }> => {
   const parsed = parseProjectId(identifier)
-  const path = resolveProjectPath(parsed, expandTilde)
+  const path = await resolveProjectPath(parsed, expandTilde)
   return { path, serviceName: parsed.serviceName }
 }
