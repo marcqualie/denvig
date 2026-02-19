@@ -1,4 +1,4 @@
-import fs from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 /**
@@ -34,15 +34,13 @@ export const parseGitHubRemoteUrl = (url: string): string | null => {
  * Get GitHub owner/repo from git remote, or null if not a GitHub repo.
  * Reads from .git/config to avoid spawning a subprocess.
  */
-export const getGitHubSlug = (projectPath: string): string | null => {
+export const getGitHubSlug = async (
+  projectPath: string,
+): Promise<string | null> => {
   const gitConfigPath = path.join(projectPath, '.git', 'config')
 
-  if (!fs.existsSync(gitConfigPath)) {
-    return null
-  }
-
   try {
-    const gitConfig = fs.readFileSync(gitConfigPath, 'utf-8')
+    const gitConfig = await readFile(gitConfigPath, 'utf-8')
 
     // Parse git config to find remotes
     // Look for [remote "origin"] section and its url
@@ -65,8 +63,8 @@ export const getGitHubSlug = (projectPath: string): string | null => {
  * Generate the full slug for a project path.
  * Returns 'github:owner/repo' for GitHub projects, 'local:/absolute/path' otherwise.
  */
-export const getProjectSlug = (projectPath: string): string => {
-  const githubSlug = getGitHubSlug(projectPath)
+export const getProjectSlug = async (projectPath: string): Promise<string> => {
+  const githubSlug = await getGitHubSlug(projectPath)
   if (githubSlug) {
     return `github:${githubSlug}`
   }

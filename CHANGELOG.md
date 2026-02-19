@@ -1,6 +1,16 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Changed
+
+- Convert synchronous filesystem operations to async across the codebase for improved CLI responsiveness
+  - All `readFileSync`, `existsSync`, `readdirSync`, `writeFileSync`, `statSync` calls replaced with `node:fs/promises` equivalents
+  - `DenvigProject` uses a static `create()` factory method for async initialization
+  - `listProjects()`, `createGlobalProject()`, config and git utilities are now async
+  - Test files retain sync operations as intended
+
 ## [0.6.0-alpha.1] - 2026-02-16
 
 ### Added

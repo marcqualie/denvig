@@ -195,28 +195,28 @@ describe('getGitHubSlug()', () => {
     fs.writeFileSync(path.join(gitDir, 'config'), content)
   }
 
-  it('should return null for directory without .git folder', () => {
+  it('should return null for directory without .git folder', async () => {
     const tempDir = createTempDir()
     try {
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, null)
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should return null for directory with empty .git/config', () => {
+  it('should return null for directory with empty .git/config', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(tempDir, '')
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, null)
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should return null for .git/config without origin remote', () => {
+  it('should return null for .git/config without origin remote', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -230,14 +230,14 @@ describe('getGitHubSlug()', () => {
 	fetch = +refs/heads/*:refs/remotes/upstream/*
 `,
       )
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, null)
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should parse GitHub SSH remote from .git/config', () => {
+  it('should parse GitHub SSH remote from .git/config', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -254,14 +254,14 @@ describe('getGitHubSlug()', () => {
 	merge = refs/heads/main
 `,
       )
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, 'marcqualie/denvig')
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should parse GitHub HTTPS remote from .git/config', () => {
+  it('should parse GitHub HTTPS remote from .git/config', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -272,14 +272,14 @@ describe('getGitHubSlug()', () => {
 	fetch = +refs/heads/*:refs/remotes/origin/*
 `,
       )
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, 'owner/repo')
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should return null for non-GitHub remote', () => {
+  it('should return null for non-GitHub remote', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -290,14 +290,14 @@ describe('getGitHubSlug()', () => {
 	fetch = +refs/heads/*:refs/remotes/origin/*
 `,
       )
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, null)
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should handle .git/config with multiple remotes', () => {
+  it('should handle .git/config with multiple remotes', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -311,15 +311,15 @@ describe('getGitHubSlug()', () => {
 	fetch = +refs/heads/*:refs/remotes/origin/*
 `,
       )
-      const result = getGitHubSlug(tempDir)
+      const result = await getGitHubSlug(tempDir)
       strictEqual(result, 'fork/repo')
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should return null for non-existent directory', () => {
-    const result = getGitHubSlug('/non/existent/path/that/does/not/exist')
+  it('should return null for non-existent directory', async () => {
+    const result = await getGitHubSlug('/non/existent/path/that/does/not/exist')
     strictEqual(result, null)
   })
 })
@@ -335,7 +335,7 @@ describe('getProjectSlug()', () => {
     fs.writeFileSync(path.join(gitDir, 'config'), content)
   }
 
-  it('should return github: slug for GitHub project', () => {
+  it('should return github: slug for GitHub project', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -345,17 +345,17 @@ describe('getProjectSlug()', () => {
 	url = git@github.com:owner/repo.git
 `,
       )
-      const result = getProjectSlug(tempDir)
+      const result = await getProjectSlug(tempDir)
       strictEqual(result, 'github:owner/repo')
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
   })
 
-  it('should return local: slug for directory without git', () => {
+  it('should return local: slug for directory without git', async () => {
     const tempDir = createTempDir()
     try {
-      const result = getProjectSlug(tempDir)
+      const result = await getProjectSlug(tempDir)
       ok(result.startsWith('local:'))
       ok(result.includes(tempDir))
     } finally {
@@ -363,7 +363,7 @@ describe('getProjectSlug()', () => {
     }
   })
 
-  it('should return local: slug for non-GitHub remote', () => {
+  it('should return local: slug for non-GitHub remote', async () => {
     const tempDir = createTempDir()
     try {
       createGitConfig(
@@ -373,7 +373,7 @@ describe('getProjectSlug()', () => {
 	url = git@gitlab.com:owner/repo.git
 `,
       )
-      const result = getProjectSlug(tempDir)
+      const result = await getProjectSlug(tempDir)
       ok(result.startsWith('local:'))
       ok(result.includes(tempDir))
     } finally {
@@ -381,8 +381,8 @@ describe('getProjectSlug()', () => {
     }
   })
 
-  it('should return local: slug with absolute path', () => {
-    const result = getProjectSlug('/Users/marc/dotfiles')
+  it('should return local: slug with absolute path', async () => {
+    const result = await getProjectSlug('/Users/marc/dotfiles')
     strictEqual(result, 'local:/Users/marc/dotfiles')
   })
 })

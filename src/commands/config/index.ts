@@ -31,8 +31,8 @@ export const configCommand = new Command({
   subcommands: {
     verify: configVerifyCommand,
   },
-  handler: ({ project, flags }) => {
-    const globalConfig = getGlobalConfig()
+  handler: async ({ project, flags }) => {
+    const globalConfig = await getGlobalConfig()
     const projectConfig = project.config
 
     if (flags.json) {

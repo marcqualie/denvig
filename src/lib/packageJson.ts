@@ -1,4 +1,4 @@
-import fs from 'node:fs'
+import { readFile } from 'node:fs/promises'
 
 import type { DenvigProject } from './project'
 
@@ -12,12 +12,14 @@ export type PackageJson = {
 /**
  * Read the contents of a package.json file in a given project.
  */
-export const readPackageJson = (project: DenvigProject): PackageJson | null => {
+export const readPackageJson = async (
+  project: DenvigProject,
+): Promise<PackageJson | null> => {
   const packageJsonPath = `${project.path}/package.json`
-  if (!fs.existsSync(packageJsonPath)) {
+  try {
+    const content = await readFile(packageJsonPath, 'utf-8')
+    return JSON.parse(content) as PackageJson
+  } catch {
     return null
   }
-
-  const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
-  return JSON.parse(packageJsonContent) as PackageJson
 }

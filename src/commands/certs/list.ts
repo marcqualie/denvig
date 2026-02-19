@@ -53,7 +53,7 @@ export const certsListCommand = new Command({
   example: 'denvig certs list',
   args: [],
   flags: [],
-  handler: ({ flags }) => {
+  handler: async ({ flags }) => {
     const certsDir = getCertsDir()
 
     let dirs: string[]
@@ -79,11 +79,11 @@ export const certsListCommand = new Command({
     }
 
     // Load CA state once before iterating certs
-    const caInitialized = isCaInitialized()
+    const caInitialized = await isCaInitialized()
     const caCertPem = caInitialized
       ? readFileSync(getCaCertPath(), 'utf-8')
       : null
-    const caTrusted = caInitialized ? isCaTrustedInKeychain() : false
+    const caTrusted = caInitialized ? await isCaTrustedInKeychain() : false
 
     const entries: CertEntry[] = []
 

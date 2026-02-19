@@ -101,8 +101,10 @@ export const parseServiceIdentifier = (
  *
  * @returns The project path, or null if not found
  */
-export const resolveProjectSlugToPath = (slug: string): string | null => {
-  const projects = listProjects({ withConfig: true })
+export const resolveProjectSlugToPath = async (
+  slug: string,
+): Promise<string | null> => {
+  const projects = await listProjects({ withConfig: true })
 
   // Try exact match first
   const exactMatch = projects.find((p) => p.slug === slug)
@@ -128,11 +130,13 @@ export const resolveProjectSlugToPath = (slug: string): string | null => {
  *
  * @returns The project path, or null if not found
  */
-export const resolveProjectIdToPath = (id: string): string | null => {
-  const projects = listProjects({ withConfig: true })
+export const resolveProjectIdToPath = async (
+  id: string,
+): Promise<string | null> => {
+  const projects = await listProjects({ withConfig: true })
 
   for (const p of projects) {
-    const project = new DenvigProject(p.path)
+    const project = await DenvigProject.retrieve(p.path)
     // Match full ID or short ID prefix
     if (project.id === id || project.id.startsWith(id)) {
       return p.path
@@ -145,19 +149,19 @@ export const resolveProjectIdToPath = (id: string): string | null => {
 /**
  * Get project and service manager for a service identifier.
  */
-export const getServiceContext = (
+export const getServiceContext = async (
   identifier: string,
   currentProject: DenvigProject,
-): {
+): Promise<{
   project: ServiceManagerProject
   manager: ServiceManager
   serviceName: string
-} => {
+}> => {
   // Handle global: prefix
   if (identifier.startsWith('global:')) {
     const serviceName = identifier.slice('global:'.length)
-    const project = createGlobalProject()
-    const manager = createGlobalServiceManager()
+    const project = await createGlobalProject()
+    const manager = await createGlobalServiceManager()
     return { project, manager, serviceName }
   }
 
@@ -166,9 +170,9 @@ export const getServiceContext = (
 
   // If the identifier has a service name from parsing
   if (parsed.serviceName !== undefined && parsed.serviceName !== '') {
-    const projectPath = resolveProjectPath(parsed, expandTilde)
+    const projectPath = await resolveProjectPath(parsed, expandTilde)
     if (projectPath) {
-      const project = new DenvigProject(projectPath)
+      const project = await DenvigProject.retrieve(projectPath)
       const manager = new ServiceManager(project)
       return { project, manager, serviceName: parsed.serviceName }
     }
@@ -184,8 +188,8 @@ export const getServiceContext = (
 
   // Handle global slug from parseServiceIdentifier
   if (isGlobalSlug(projectSlug)) {
-    const globalProject = createGlobalProject()
-    const manager = createGlobalServiceManager()
+    const globalProject = await createGlobalProject()
+    const manager = await createGlobalServiceManager()
     return { project: globalProject, manager, serviceName }
   }
 
@@ -197,9 +201,9 @@ export const getServiceContext = (
     ) {
       project = currentProject
     } else {
-      const projectPath = resolveProjectIdToPath(projectId)
+      const projectPath = await resolveProjectIdToPath(projectId)
       if (projectPath) {
-        project = new DenvigProject(projectPath)
+        project = await DenvigProject.retrieve(projectPath)
       } else {
         throw new Error(`Project with ID "${projectId}" not found`)
       }
@@ -208,12 +212,12 @@ export const getServiceContext = (
     project = currentProject
   } else {
     // Try to resolve the slug to a path
-    const projectPath = resolveProjectSlugToPath(projectSlug)
+    const projectPath = await resolveProjectSlugToPath(projectSlug)
     if (projectPath) {
-      project = new DenvigProject(projectPath)
+      project = await DenvigProject.retrieve(projectPath)
     } else {
       // Fallback: treat as path (original behavior)
-      project = new DenvigProject(projectSlug)
+      project = await DenvigProject.retrieve(projectSlug)
     }
   }
 
@@ -227,9 +231,9 @@ export const getServiceContext = (
  * Current project services are returned without a prefix.
  * Other project services are returned with both slug and id formats for tab completion.
  */
-export const getServiceCompletions = (
+export const getServiceCompletions = async (
   currentProject: DenvigProject,
-): string[] => {
+): Promise<string[]> => {
   const completions: string[] = []
 
   // Add current project services without prefix for convenience
@@ -238,17 +242,17 @@ export const getServiceCompletions = (
   }
 
   // Add global services with global: prefix
-  const globalProject = createGlobalProject()
+  const globalProject = await createGlobalProject()
   const globalServices = globalProject.config.services || {}
   for (const serviceName of Object.keys(globalServices)) {
     completions.push(`global:${serviceName}`)
   }
 
   // Add services from all projects with full paths
-  const projects = listProjects({ withConfig: true })
+  const projects = await listProjects({ withConfig: true })
   for (const projectInfo of projects) {
     try {
-      const project = new DenvigProject(projectInfo.path)
+      const project = await DenvigProject.retrieve(projectInfo.path)
       const slugWithoutPrefix = projectInfo.slug.replace(/^(github|local):/, '')
 
       for (const serviceName of Object.keys(project.services)) {

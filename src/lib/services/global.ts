@@ -14,8 +14,8 @@ const GLOBAL_ID = createHash('sha1').update('denvig-global').digest('hex')
  * Services without an explicit `cwd` default to `~/.denvig/services/{serviceId}/cwd`
  * so they each get an isolated working directory instead of using $HOME.
  */
-export function createGlobalProject(): ServiceManagerProject {
-  const globalConfig = getGlobalConfig()
+export async function createGlobalProject(): Promise<ServiceManagerProject> {
+  const globalConfig = await getGlobalConfig()
   const denvigDir = resolve(homedir(), '.denvig')
 
   // Inject default cwd for services that don't specify one
@@ -49,8 +49,8 @@ export function createGlobalProject(): ServiceManagerProject {
 /**
  * Create a ServiceManager for global services.
  */
-export function createGlobalServiceManager(): ServiceManager {
-  return new ServiceManager(createGlobalProject())
+export async function createGlobalServiceManager(): Promise<ServiceManager> {
+  return new ServiceManager(await createGlobalProject())
 }
 
 /**

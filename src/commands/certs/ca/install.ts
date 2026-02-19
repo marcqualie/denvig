@@ -16,7 +16,7 @@ export const certsCaInstallCommand = new Command({
   args: [],
   flags: [],
   handler: async () => {
-    if (isCaInitialized()) {
+    if (await isCaInitialized()) {
       console.log('CA already exists at', getCaCertPath())
       console.log('Reinstalling CA to system keychain...')
       installCaToKeychain(getCaCertPath())

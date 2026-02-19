@@ -124,19 +124,19 @@ describe('getEnvOverrides()', () => {
 
 describe('getGlobalConfig()', () => {
   describe('root config file does not exist', () => {
-    it('should return the default config', () => {
-      const config = getGlobalConfig()
+    it('should return the default config', async () => {
+      const config = await getGlobalConfig()
       ok(config.projectPaths !== undefined)
       ok(Array.isArray(config.projectPaths))
     })
   })
 
   describe('environment variable overrides', () => {
-    it('should override projectPaths from DENVIG_PROJECT_PATHS', () => {
+    it('should override projectPaths from DENVIG_PROJECT_PATHS', async () => {
       const original = process.env.DENVIG_PROJECT_PATHS
       process.env.DENVIG_PROJECT_PATHS = '~/custom/path/*'
 
-      const config = getGlobalConfig()
+      const config = await getGlobalConfig()
 
       deepStrictEqual(config.projectPaths, ['~/custom/path/*'])
 
@@ -148,11 +148,11 @@ describe('getGlobalConfig()', () => {
       }
     })
 
-    it('should override quickActions from DENVIG_QUICK_ACTIONS', () => {
+    it('should override quickActions from DENVIG_QUICK_ACTIONS', async () => {
       const original = process.env.DENVIG_QUICK_ACTIONS
       process.env.DENVIG_QUICK_ACTIONS = 'build,test'
 
-      const config = getGlobalConfig()
+      const config = await getGlobalConfig()
 
       deepStrictEqual(config.quickActions, ['build', 'test'])
 
@@ -164,11 +164,11 @@ describe('getGlobalConfig()', () => {
       }
     })
 
-    it('should disable quickActions with empty DENVIG_QUICK_ACTIONS', () => {
+    it('should disable quickActions with empty DENVIG_QUICK_ACTIONS', async () => {
       const original = process.env.DENVIG_QUICK_ACTIONS
       process.env.DENVIG_QUICK_ACTIONS = ''
 
-      const config = getGlobalConfig()
+      const config = await getGlobalConfig()
 
       deepStrictEqual(config.quickActions, [])
 
@@ -183,9 +183,9 @@ describe('getGlobalConfig()', () => {
 })
 
 describe('getProjectConfig()', () => {
-  it('should return empty config if no config file exists', () => {
+  it('should return empty config if no config file exists', async () => {
     const projectPath = '/tmp/test-project'
-    const config = getProjectConfig(projectPath)
+    const config = await getProjectConfig(projectPath)
     strictEqual(config.name, undefined)
     strictEqual(config.$sources.length, 0)
   })

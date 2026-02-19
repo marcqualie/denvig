@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
 import { sanitizePackageName } from '../npm/info.ts'
@@ -13,24 +7,22 @@ import { sanitizePackageName } from '../npm/info.ts'
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
 /** Cache directory for JSR package info */
-const getCacheDir = (): string => {
+const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/jsr`
-  if (!existsSync(cacheDir)) {
-    mkdirSync(cacheDir, { recursive: true })
-  }
+  await mkdir(cacheDir, { recursive: true })
   return cacheDir
 }
 
 /** Get cache file path for a package */
-const getCacheFilePath = (packageName: string): string => {
+const getCacheFilePath = async (packageName: string): Promise<string> => {
   const safeFileName = sanitizePackageName(packageName)
-  return `${getCacheDir()}/${safeFileName}.json`
+  return `${await getCacheDir()}/${safeFileName}.json`
 }
 
 /** Check if cache file is still valid */
-const isCacheValid = (filePath: string): boolean => {
+const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
-    const stats = statSync(filePath)
+    const stats = await stat(filePath)
     const age = Date.now() - stats.mtimeMs
     return age < CACHE_DURATION_MS
   } catch {
@@ -44,13 +36,15 @@ export type JsrPackageInfo = {
 }
 
 /** Read cached package info */
-const readCache = (packageName: string): JsrPackageInfo | null => {
-  const filePath = getCacheFilePath(packageName)
-  if (!existsSync(filePath) || !isCacheValid(filePath)) {
+const readCache = async (
+  packageName: string,
+): Promise<JsrPackageInfo | null> => {
+  const filePath = await getCacheFilePath(packageName)
+  if (!(await isCacheValid(filePath))) {
     return null
   }
   try {
-    const content = readFileSync(filePath, 'utf-8')
+    const content = await readFile(filePath, 'utf-8')
     return JSON.parse(content) as JsrPackageInfo
   } catch {
     return null
@@ -58,10 +52,13 @@ const readCache = (packageName: string): JsrPackageInfo | null => {
 }
 
 /** Write package info to cache */
-const writeCache = (packageName: string, data: JsrPackageInfo): void => {
+const writeCache = async (
+  packageName: string,
+  data: JsrPackageInfo,
+): Promise<void> => {
   try {
-    const filePath = getCacheFilePath(packageName)
-    writeFileSync(filePath, JSON.stringify(data), 'utf-8')
+    const filePath = await getCacheFilePath(packageName)
+    await writeFile(filePath, JSON.stringify(data), 'utf-8')
   } catch {
     // Ignore cache write errors
   }
@@ -76,7 +73,7 @@ export const fetchJsrPackageInfo = async (
   noCache = false,
 ): Promise<JsrPackageInfo | null> => {
   if (!noCache) {
-    const cached = readCache(packageName)
+    const cached = await readCache(packageName)
     if (cached) {
       return cached
     }
@@ -99,7 +96,7 @@ export const fetchJsrPackageInfo = async (
     const latest = data.latest
 
     const result = { versions, latest }
-    writeCache(packageName, result)
+    await writeCache(packageName, result)
 
     return result
   } catch {

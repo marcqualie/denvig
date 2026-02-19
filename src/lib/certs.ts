@@ -1,7 +1,9 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { X509Certificate } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+
+import { pathExists } from './safeReadFile.ts'
 
 import type forge from 'node-forge'
 
@@ -52,8 +54,10 @@ export const loadCaCert = async (): Promise<{
   key: forge.pki.rsa.PrivateKey
 }> => {
   const forge = await importNodeForge()
-  const certPem = readFileSync(getCaCertPath(), 'utf-8')
-  const keyPem = readFileSync(getCaKeyPath(), 'utf-8')
+  const [certPem, keyPem] = await Promise.all([
+    readFile(getCaCertPath(), 'utf-8'),
+    readFile(getCaKeyPath(), 'utf-8'),
+  ])
   return {
     cert: forge.pki.certificateFromPem(certPem),
     key: forge.pki.privateKeyFromPem(keyPem) as forge.pki.rsa.PrivateKey,
@@ -237,26 +241,33 @@ export const getCertExpiry = (certPem: string): Date => {
  * Write CA files to disk, creating directories as needed.
  * The private key is written with mode 0600.
  */
-export const writeCaFiles = (certPem: string, keyPem: string): void => {
+export const writeCaFiles = async (
+  certPem: string,
+  keyPem: string,
+): Promise<void> => {
   const caDir = getCaDir()
-  mkdirSync(caDir, { recursive: true })
-  writeFileSync(getCaKeyPath(), keyPem, { mode: 0o600 })
-  writeFileSync(getCaCertPath(), certPem)
+  await mkdir(caDir, { recursive: true })
+  await Promise.all([
+    writeFile(getCaKeyPath(), keyPem, { mode: 0o600 }),
+    writeFile(getCaCertPath(), certPem),
+  ])
 }
 
 /**
  * Write domain cert files to disk, creating directories as needed.
  * The private key is written with mode 0600.
  */
-export const writeDomainCertFiles = (
+export const writeDomainCertFiles = async (
   domain: string,
   privkey: string,
   fullchain: string,
-): string => {
+): Promise<string> => {
   const certDir = getCertDir(domain)
-  mkdirSync(certDir, { recursive: true })
-  writeFileSync(resolve(certDir, 'privkey.pem'), privkey, { mode: 0o600 })
-  writeFileSync(resolve(certDir, 'fullchain.pem'), fullchain)
+  await mkdir(certDir, { recursive: true })
+  await Promise.all([
+    writeFile(resolve(certDir, 'privkey.pem'), privkey, { mode: 0o600 }),
+    writeFile(resolve(certDir, 'fullchain.pem'), fullchain),
+  ])
   return certDir
 }
 
@@ -264,17 +275,21 @@ export const writeDomainCertFiles = (
  * Check if the CA has been initialized by verifying both
  * the certificate and key files exist on disk.
  */
-export const isCaInitialized = (): boolean => {
-  return existsSync(getCaCertPath()) && existsSync(getCaKeyPath())
+export const isCaInitialized = async (): Promise<boolean> => {
+  const [certExists, keyExists] = await Promise.all([
+    pathExists(getCaCertPath()),
+    pathExists(getCaKeyPath()),
+  ])
+  return certExists && keyExists
 }
 
 /**
  * Check if the local CA certificate is trusted in the macOS system keychain.
  * Returns false if CA files don't exist or if the cert fails verification.
  */
-export const isCaTrustedInKeychain = (): boolean => {
+export const isCaTrustedInKeychain = async (): Promise<boolean> => {
   const caCertPath = getCaCertPath()
-  if (!existsSync(caCertPath)) return false
+  if (!(await pathExists(caCertPath))) return false
   const result = spawnSync('security', ['verify-cert', '-c', caCertPath], {
     stdio: 'pipe',
   })

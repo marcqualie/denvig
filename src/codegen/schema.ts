@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
@@ -216,13 +216,13 @@ export function generateGlobalConfigSchema() {
 /**
  * Write the generated schemas to schemas directory
  */
-export function writeConfigSchema() {
+export async function writeConfigSchema() {
   // Write project config schema
   const projectSchema = generateConfigSchema()
   const projectOutputPath = resolve(process.cwd(), 'schemas', 'config.json')
   const projectContent = JSON.stringify(projectSchema, null, 2)
 
-  writeFileSync(projectOutputPath, `${projectContent}\n`, 'utf-8')
+  await writeFile(projectOutputPath, `${projectContent}\n`, 'utf-8')
 
   console.log(`Generated JSON schema: ${projectOutputPath}`)
 
@@ -235,7 +235,7 @@ export function writeConfigSchema() {
   )
   const globalContent = JSON.stringify(globalSchema, null, 2)
 
-  writeFileSync(globalOutputPath, `${globalContent}\n`, 'utf-8')
+  await writeFile(globalOutputPath, `${globalContent}\n`, 'utf-8')
 
   console.log(`Generated JSON schema: ${globalOutputPath}`)
 }

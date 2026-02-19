@@ -1,8 +1,7 @@
-import fs from 'node:fs'
-
 import { definePlugin } from '../lib/plugin.ts'
 import { rubygemsOutdated } from '../lib/rubygems/outdated.ts'
 import { parseRubyDependencies } from '../lib/rubygems/parse.ts'
+import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
@@ -14,11 +13,13 @@ const plugin = definePlugin({
   name: 'ruby',
 
   actions: async (project: DenvigProject) => {
-    const rootFiles = fs.readdirSync(project.path)
+    const rootFiles = project.rootFiles
     const hasGemfile = rootFiles.includes('Gemfile')
     const hasRakefile = rootFiles.includes('Rakefile')
     const hasConfigRu = rootFiles.includes('config.ru')
-    const hasRailsApp = fs.existsSync(`${project.path}/config/application.rb`)
+    const hasRailsApp = await pathExists(
+      `${project.path}/config/application.rb`,
+    )
 
     const canHandle = hasGemfile || hasRakefile
 
