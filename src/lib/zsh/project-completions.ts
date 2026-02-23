@@ -9,24 +9,29 @@ import { listProjects } from '../projects.ts'
  * - `id:` prefix: returns project IDs in `id:[shortId]` format
  * - `/` or `~` prefix: returns empty (path completion not yet supported)
  */
-export const getProjectCompletions = (partial: string = ''): string[] => {
+export const getProjectCompletions = async (
+  partial: string = '',
+): Promise<string[]> => {
   // Path completions not yet supported
   if (partial.startsWith('/') || partial.startsWith('~')) {
     return []
   }
 
-  const projects = listProjects()
+  const projects = await listProjects()
 
   // ID completion mode
   if (partial.startsWith('id:')) {
     const _idPrefix = partial.slice(3)
-    return projects
-      .map((p) => {
-        const project = new DenvigProject(p.path)
-        const shortId = shortProjectId(project.id)
-        return `id:${shortId}`
-      })
-      .filter((completion) => completion.startsWith(partial))
+    const completions: string[] = []
+    for (const p of projects) {
+      const project = await DenvigProject.retrieve(p.path)
+      const shortId = shortProjectId(project.id)
+      const completion = `id:${shortId}`
+      if (completion.startsWith(partial)) {
+        completions.push(completion)
+      }
+    }
+    return completions
   }
 
   // Default: slug completion (without github: prefix)

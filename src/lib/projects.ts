@@ -1,7 +1,8 @@
-import fs from 'node:fs'
+import { readdir } from 'node:fs/promises'
 
 import { expandTilde, getGlobalConfig } from './config.ts'
 import { getProjectSlug } from './git.ts'
+import { isDirectory, pathExists } from './safeReadFile.ts'
 
 export type ProjectInfo = {
   slug: string
@@ -17,7 +18,7 @@ export type ListProjectsOptions = {
  * Expand a path pattern containing * wildcards into matching directories.
  * Each * matches a single directory level (not recursive).
  */
-const expandPattern = (pattern: string): string[] => {
+const expandPattern = async (pattern: string): Promise<string[]> => {
   const expandedPattern = expandTilde(pattern)
   const parts = expandedPattern.split('/')
   let paths = ['']
@@ -34,10 +35,10 @@ const expandPattern = (pattern: string): string[] => {
       const newPaths: string[] = []
       for (const basePath of paths) {
         const fullPath = basePath || '/'
-        if (!fs.existsSync(fullPath)) continue
+        if (!(await pathExists(fullPath))) continue
 
         try {
-          const entries = fs.readdirSync(fullPath, { withFileTypes: true })
+          const entries = await readdir(fullPath, { withFileTypes: true })
           for (const entry of entries) {
             if (!entry.isDirectory()) continue
             if (entry.name.startsWith('.')) continue
@@ -58,15 +59,14 @@ const expandPattern = (pattern: string): string[] => {
   }
 
   // Remove trailing slashes and filter to existing directories
-  return paths
-    .map((p) => p.replace(/\/$/, ''))
-    .filter((p) => {
-      try {
-        return fs.existsSync(p) && fs.statSync(p).isDirectory()
-      } catch {
-        return false
-      }
-    })
+  const results: string[] = []
+  for (const p of paths) {
+    const cleaned = p.replace(/\/$/, '')
+    if (await isDirectory(cleaned)) {
+      results.push(cleaned)
+    }
+  }
+  return results
 }
 
 /**
@@ -75,8 +75,10 @@ const expandPattern = (pattern: string): string[] => {
  * @param options - Optional filters for project listing
  * @returns Array of ProjectInfo objects with slug and path
  */
-export const listProjects = (options?: ListProjectsOptions): ProjectInfo[] => {
-  const globalConfig = getGlobalConfig()
+export const listProjects = async (
+  options?: ListProjectsOptions,
+): Promise<ProjectInfo[]> => {
+  const globalConfig = await getGlobalConfig()
   const projectPaths = globalConfig.projectPaths
   const withConfig = options?.withConfig ?? false
 
@@ -84,7 +86,7 @@ export const listProjects = (options?: ListProjectsOptions): ProjectInfo[] => {
   const projects: ProjectInfo[] = []
 
   for (const pattern of projectPaths) {
-    const expandedPaths = expandPattern(pattern)
+    const expandedPaths = await expandPattern(pattern)
 
     for (const projectPath of expandedPaths) {
       // Skip duplicates
@@ -94,10 +96,10 @@ export const listProjects = (options?: ListProjectsOptions): ProjectInfo[] => {
       // Check for config file if required
       if (withConfig) {
         const configPath = `${projectPath}/.denvig.yml`
-        if (!fs.existsSync(configPath)) continue
+        if (!(await pathExists(configPath))) continue
       }
 
-      const slug = getProjectSlug(projectPath)
+      const slug = await getProjectSlug(projectPath)
       projects.push({ slug, path: projectPath })
     }
   }

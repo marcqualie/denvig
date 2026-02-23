@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
 import type { DenvigProject } from '../project.ts'
@@ -194,7 +194,10 @@ export const parseRubyDependencies = async (
   const gemfilePath = `${project.path}/Gemfile`
   const lockfilePath = `${project.path}/Gemfile.lock`
 
-  if (!existsSync(gemfilePath)) {
+  let gemfileContent: string
+  try {
+    gemfileContent = await readFile(gemfilePath, 'utf-8')
+  } catch {
     return []
   }
 
@@ -202,7 +205,6 @@ export const parseRubyDependencies = async (
   const directDependencyNames: Set<string> = new Set()
 
   // Parse Gemfile for direct dependencies
-  const gemfileContent = readFileSync(gemfilePath, 'utf-8')
   const gemfileDeps = parseGemfile(gemfileContent)
 
   // Helper to add a dependency version entry
@@ -244,8 +246,14 @@ export const parseRubyDependencies = async (
   }
 
   // If lockfile exists, use it for resolved versions
-  if (existsSync(lockfilePath)) {
-    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+  let lockfileContent: string | null = null
+  try {
+    lockfileContent = await readFile(lockfilePath, 'utf-8')
+  } catch {
+    // No lockfile
+  }
+
+  if (lockfileContent) {
     const lockData = parseGemfileLock(lockfileContent)
 
     // Add direct dependencies with their resolved versions

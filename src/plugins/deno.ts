@@ -1,10 +1,11 @@
-import fs, { existsSync, readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 
 import { mergeActions } from '../lib/actions/mergeActions.ts'
 import { jsrOutdated } from '../lib/jsr/outdated.ts'
 import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
+import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
@@ -83,11 +84,25 @@ const findNpmVersionInLockfile = (
   return null
 }
 
+/**
+ * Safely read and parse a JSON file, returning a default on failure.
+ */
+const readJsonFile = async (
+  filePath: string,
+): Promise<Record<string, unknown>> => {
+  try {
+    const content = await readFile(filePath, 'utf-8')
+    return JSON.parse(content) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
 const plugin = definePlugin({
   name: 'deno',
 
   actions: async (project: DenvigProject) => {
-    const rootFiles = fs.readdirSync(project.path)
+    const rootFiles = project.rootFiles
     const hasDenoConfig =
       rootFiles.includes('deno.json') || rootFiles.includes('deno.jsonc')
 
@@ -95,7 +110,7 @@ const plugin = definePlugin({
       return {}
     }
 
-    const packageJson = readPackageJson(project)
+    const packageJson = await readPackageJson(project)
     const scripts = packageJson?.scripts || ({} as Record<string, string>)
     let actions: Record<string, string[]> = {
       ...Object.entries(scripts)
@@ -111,11 +126,13 @@ const plugin = definePlugin({
       outdated: ['deno outdated'],
     }
 
-    const denoJson = existsSync(`${project.path}/deno.json`)
-      ? JSON.parse(readFileSync(`${project.path}/deno.json`, 'utf8'))
-      : existsSync(`${project.path}/deno.jsonc`)
-        ? JSON.parse(readFileSync(`${project.path}/deno.jsonc`, 'utf8'))
-        : {}
+    const denoJsonPath = (await pathExists(`${project.path}/deno.json`))
+      ? `${project.path}/deno.json`
+      : (await pathExists(`${project.path}/deno.jsonc`))
+        ? `${project.path}/deno.jsonc`
+        : null
+
+    const denoJson = denoJsonPath ? await readJsonFile(denoJsonPath) : {}
     const tasks = (denoJson.tasks || {}) as Record<string, string>
     actions = mergeActions(actions, {
       test: [tasks?.test ? `deno task test` : 'deno test'],
@@ -140,7 +157,7 @@ const plugin = definePlugin({
   dependencies: async (
     project: DenvigProject,
   ): Promise<ProjectDependencySchema[]> => {
-    if (!existsSync(`${project.path}/deno.lock`)) {
+    if (!(await pathExists(`${project.path}/deno.lock`))) {
       return []
     }
 
@@ -178,7 +195,7 @@ const plugin = definePlugin({
     }
 
     const lockfilePath = `${project.path}/deno.lock`
-    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+    const lockfileContent = await readFile(lockfilePath, 'utf-8')
     const lockfile = JSON.parse(lockfileContent) as DenoLockfile
 
     // Process direct dependencies from workspace section
@@ -270,7 +287,7 @@ const plugin = definePlugin({
   },
 
   outdatedDependencies: async (project: DenvigProject, options) => {
-    if (!existsSync(`${project.path}/deno.lock`)) {
+    if (!(await pathExists(`${project.path}/deno.lock`))) {
       return []
     }
     const dependencies = await plugin.dependencies?.(project)

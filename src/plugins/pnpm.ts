@@ -1,9 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { parse } from 'yaml'
 
 import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
+import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
@@ -52,7 +53,7 @@ const plugin = definePlugin({
       return {}
     }
 
-    const packageJson = readPackageJson(project)
+    const packageJson = await readPackageJson(project)
     const scripts = packageJson?.scripts || ({} as Record<string, string>)
     const isWorkspace = project.rootFiles.includes('pnpm-workspace.yaml')
     const actions: Record<string, string[]> = {
@@ -75,7 +76,7 @@ const plugin = definePlugin({
   dependencies: async (
     project: DenvigProject,
   ): Promise<ProjectDependencySchema[]> => {
-    if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
+    if (!(await pathExists(`${project.path}/pnpm-lock.yaml`))) {
       return []
     }
 
@@ -123,7 +124,7 @@ const plugin = definePlugin({
 
     // Parse the lockfile to get resolved versions
     const lockfilePath = `${project.path}/pnpm-lock.yaml`
-    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+    const lockfileContent = await readFile(lockfilePath, 'utf-8')
     const lockfile = parse(lockfileContent) as PnpmLockfile
 
     // Iterate through importers (workspace packages)
@@ -207,7 +208,7 @@ const plugin = definePlugin({
   },
 
   outdatedDependencies: async (project: DenvigProject, options) => {
-    if (!existsSync(`${project.path}/pnpm-lock.yaml`)) {
+    if (!(await pathExists(`${project.path}/pnpm-lock.yaml`))) {
       return []
     }
     const dependencies = await plugin.dependencies?.(project)

@@ -41,7 +41,10 @@ export const logsCommand = new Command({
   },
   handler: async ({ project, args, flags }) => {
     const nameArg = args.name as string
-    const { manager, serviceName: name } = getServiceContext(nameArg, project)
+    const { manager, serviceName: name } = await getServiceContext(
+      nameArg,
+      project,
+    )
     // Support alias `-n` through `flags.n` for compatibility with common CLI usage
     const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
     const follow = !!flags.follow

@@ -1,21 +1,13 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
 /** Cache duration in milliseconds */
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
 /** Cache directory for npm package info */
-const getCacheDir = (): string => {
+const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/npm`
-  if (!existsSync(cacheDir)) {
-    mkdirSync(cacheDir, { recursive: true })
-  }
+  await mkdir(cacheDir, { recursive: true })
   return cacheDir
 }
 
@@ -50,15 +42,17 @@ export const sanitizePackageName = (packageName: string): string => {
 }
 
 /** Get cache file path for a package */
-export const getCacheFilePath = (packageName: string): string => {
+export const getCacheFilePath = async (
+  packageName: string,
+): Promise<string> => {
   const safeFileName = sanitizePackageName(packageName)
-  return `${getCacheDir()}/${safeFileName}.json`
+  return `${await getCacheDir()}/${safeFileName}.json`
 }
 
 /** Check if cache file is still valid (less than 30 minutes old) */
-const isCacheValid = (filePath: string): boolean => {
+const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
-    const stats = statSync(filePath)
+    const stats = await stat(filePath)
     const age = Date.now() - stats.mtimeMs
     return age < CACHE_DURATION_MS
   } catch {
@@ -72,13 +66,15 @@ export type NpmPackageInfo = {
 }
 
 /** Read cached package info */
-const readCache = (packageName: string): NpmPackageInfo | null => {
-  const filePath = getCacheFilePath(packageName)
-  if (!existsSync(filePath) || !isCacheValid(filePath)) {
+const readCache = async (
+  packageName: string,
+): Promise<NpmPackageInfo | null> => {
+  const filePath = await getCacheFilePath(packageName)
+  if (!(await isCacheValid(filePath))) {
     return null
   }
   try {
-    const content = readFileSync(filePath, 'utf-8')
+    const content = await readFile(filePath, 'utf-8')
     return JSON.parse(content) as NpmPackageInfo
   } catch {
     return null
@@ -86,10 +82,13 @@ const readCache = (packageName: string): NpmPackageInfo | null => {
 }
 
 /** Write package info to cache */
-const writeCache = (packageName: string, data: NpmPackageInfo): void => {
+const writeCache = async (
+  packageName: string,
+  data: NpmPackageInfo,
+): Promise<void> => {
   try {
-    const filePath = getCacheFilePath(packageName)
-    writeFileSync(filePath, JSON.stringify(data), 'utf-8')
+    const filePath = await getCacheFilePath(packageName)
+    await writeFile(filePath, JSON.stringify(data), 'utf-8')
   } catch {
     // Ignore cache write errors
   }
@@ -104,7 +103,7 @@ export const fetchNpmPackageInfo = async (
 ): Promise<NpmPackageInfo | null> => {
   // Try to read from cache first (unless noCache is set)
   if (!noCache) {
-    const cached = readCache(packageName)
+    const cached = await readCache(packageName)
     if (cached) {
       return cached
     }
@@ -128,7 +127,7 @@ export const fetchNpmPackageInfo = async (
     const result = { versions, latest }
 
     // Write to cache
-    writeCache(packageName, result)
+    await writeCache(packageName, result)
 
     return result
   } catch {

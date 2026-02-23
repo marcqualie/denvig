@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
 import { Command } from '../../lib/command.ts'
-import { safeReadTextFileSync } from '../../lib/safeReadFile.ts'
+import { safeReadTextFile } from '../../lib/safeReadFile.ts'
 import { ProjectConfigSchema } from '../../schemas/config.ts'
 
 export const configVerifyCommand = new Command({
@@ -20,12 +20,12 @@ export const configVerifyCommand = new Command({
     },
   ],
   flags: [],
-  handler: ({ project, args, flags }) => {
+  handler: async ({ project, args, flags }) => {
     const configPath = resolve(
       project.path,
       args.path?.toString() || '.denvig.yml',
     )
-    const configRaw = safeReadTextFileSync(configPath)
+    const configRaw = await safeReadTextFile(configPath)
 
     if (!configRaw) {
       if (flags.json) {

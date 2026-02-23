@@ -1,5 +1,4 @@
 import { execSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
 
 import { Command } from '../../lib/command.ts'
 import { getGlobalConfig } from '../../lib/config.ts'
@@ -8,6 +7,7 @@ import {
   getNginxConfigPath,
   getNginxConfPath,
 } from '../../lib/gateway/nginx.ts'
+import { pathExists } from '../../lib/safeReadFile.ts'
 
 type NginxServiceStatus = {
   running: boolean
@@ -44,7 +44,7 @@ export const gatewayStatusCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ project, flags }) => {
-    const globalConfig = getGlobalConfig()
+    const globalConfig = await getGlobalConfig()
     const gateway = globalConfig.experimental?.gateway
 
     if (flags.json) {
@@ -56,8 +56,8 @@ export const gatewayStatusCommand = new Command({
         if (config.http?.domain) {
           const domain = config.http.domain
           const secure = config.http.secure ?? false
-          const certDir = secure ? findCertForDomain(domain) : null
-          const sslPaths = certDir ? resolveSslPaths(certDir) : null
+          const certDir = secure ? await findCertForDomain(domain) : null
+          const sslPaths = certDir ? await resolveSslPaths(certDir) : null
           const nginxPath = gateway?.enabled
             ? getNginxConfigPath(project.id, name, gateway.configsPath)
             : null
@@ -71,7 +71,7 @@ export const gatewayStatusCommand = new Command({
             certFound: !!sslPaths,
             certDir,
             nginxConfigPath: nginxPath,
-            nginxConfigExists: nginxPath ? existsSync(nginxPath) : false,
+            nginxConfigExists: nginxPath ? await pathExists(nginxPath) : false,
           })
         }
       }
@@ -150,14 +150,14 @@ export const gatewayStatusCommand = new Command({
       const allDomains = [domain, ...cnames]
       const secure = config.http!.secure ?? false
 
-      const certDir = secure ? findCertForDomain(domain) : null
-      const sslPaths = certDir ? resolveSslPaths(certDir) : null
+      const certDir = secure ? await findCertForDomain(domain) : null
+      const sslPaths = certDir ? await resolveSslPaths(certDir) : null
       const nginxPath = getNginxConfigPath(
         project.id,
         name,
         gateway.configsPath,
       )
-      const nginxExists = existsSync(nginxPath)
+      const nginxExists = await pathExists(nginxPath)
 
       const certStatus = !secure ? '-' : sslPaths ? '✓' : '✗'
       const certLabel = !secure ? 'not enabled' : sslPaths ? 'found' : 'missing'

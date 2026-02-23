@@ -32,7 +32,7 @@ export const servicesListCommand = new Command({
   },
   handler: async ({ project, flags }) => {
     const currentProjectSlug = project.slug
-    const projectInfos = listProjects()
+    const projectInfos = await listProjects()
 
     if (projectInfos.length === 0) {
       if (flags.json) {
@@ -49,7 +49,7 @@ export const servicesListCommand = new Command({
     const allServices: ServiceResponse[] = []
 
     for (const projectInfo of projectInfos) {
-      const proj = new DenvigProject(projectInfo.path)
+      const proj = await DenvigProject.retrieve(projectInfo.path)
       const manager = new ServiceManager(proj)
       const services = await manager.listServices()
 
@@ -64,7 +64,7 @@ export const servicesListCommand = new Command({
     }
 
     // Include global services
-    const globalProject = createGlobalProject()
+    const globalProject = await createGlobalProject()
     const globalServices = globalProject.config.services || {}
     if (Object.keys(globalServices).length > 0) {
       const globalManager = new ServiceManager(globalProject)

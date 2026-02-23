@@ -1,21 +1,13 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
 /** Cache duration in milliseconds */
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
 /** Cache directory for rubygems package info */
-const getCacheDir = (): string => {
+const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/rubygems`
-  if (!existsSync(cacheDir)) {
-    mkdirSync(cacheDir, { recursive: true })
-  }
+  await mkdir(cacheDir, { recursive: true })
   return cacheDir
 }
 
@@ -45,15 +37,15 @@ export const sanitizeGemName = (gemName: string): string => {
 }
 
 /** Get cache file path for a gem */
-export const getCacheFilePath = (gemName: string): string => {
+export const getCacheFilePath = async (gemName: string): Promise<string> => {
   const safeFileName = sanitizeGemName(gemName)
-  return `${getCacheDir()}/${safeFileName}.json`
+  return `${await getCacheDir()}/${safeFileName}.json`
 }
 
 /** Check if cache file is still valid (less than 30 minutes old) */
-const isCacheValid = (filePath: string): boolean => {
+const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
-    const stats = statSync(filePath)
+    const stats = await stat(filePath)
     const age = Date.now() - stats.mtimeMs
     return age < CACHE_DURATION_MS
   } catch {
@@ -67,13 +59,13 @@ export type RubygemInfo = {
 }
 
 /** Read cached gem info */
-const readCache = (gemName: string): RubygemInfo | null => {
-  const filePath = getCacheFilePath(gemName)
-  if (!existsSync(filePath) || !isCacheValid(filePath)) {
+const readCache = async (gemName: string): Promise<RubygemInfo | null> => {
+  const filePath = await getCacheFilePath(gemName)
+  if (!(await isCacheValid(filePath))) {
     return null
   }
   try {
-    const content = readFileSync(filePath, 'utf-8')
+    const content = await readFile(filePath, 'utf-8')
     return JSON.parse(content) as RubygemInfo
   } catch {
     return null
@@ -81,10 +73,13 @@ const readCache = (gemName: string): RubygemInfo | null => {
 }
 
 /** Write gem info to cache */
-const writeCache = (gemName: string, data: RubygemInfo): void => {
+const writeCache = async (
+  gemName: string,
+  data: RubygemInfo,
+): Promise<void> => {
   try {
-    const filePath = getCacheFilePath(gemName)
-    writeFileSync(filePath, JSON.stringify(data), 'utf-8')
+    const filePath = await getCacheFilePath(gemName)
+    await writeFile(filePath, JSON.stringify(data), 'utf-8')
   } catch {
     // Ignore cache write errors
   }
@@ -100,7 +95,7 @@ export const fetchRubygemInfo = async (
 ): Promise<RubygemInfo | null> => {
   // Try to read from cache first (unless noCache is set)
   if (!noCache) {
-    const cached = readCache(gemName)
+    const cached = await readCache(gemName)
     if (cached) {
       return cached
     }
@@ -131,7 +126,7 @@ export const fetchRubygemInfo = async (
     const result = { versions: allVersions, latest }
 
     // Write to cache
-    writeCache(gemName, result)
+    await writeCache(gemName, result)
 
     return result
   } catch {

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { readdir, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import {
@@ -10,6 +10,7 @@ import {
   parseCertDomains,
   writeDomainCertFiles,
 } from '../certs.ts'
+import { pathExists } from '../safeReadFile.ts'
 
 /**
  * Check if a domain matches a cert domain (exact or wildcard).
@@ -33,25 +34,26 @@ function domainMatchesCert(domain: string, certDomain: string): boolean {
  * and checks for an exact or wildcard match.
  * @returns The cert directory path if found, null otherwise.
  */
-export function findCertForDomain(domain: string): string | null {
+export async function findCertForDomain(
+  domain: string,
+): Promise<string | null> {
   const certsDir = getCertsDir()
-  if (!existsSync(certsDir)) return null
+  if (!(await pathExists(certsDir))) return null
 
   let entries: string[]
   try {
-    entries = readdirSync(certsDir, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => d.name)
+    const dirents = await readdir(certsDir, { withFileTypes: true })
+    entries = dirents.filter((d) => d.isDirectory()).map((d) => d.name)
   } catch {
     return null
   }
 
   for (const entry of entries) {
     const certPath = resolve(certsDir, entry, 'fullchain.pem')
-    if (!existsSync(certPath)) continue
+    if (!(await pathExists(certPath))) continue
 
     try {
-      const certPem = readFileSync(certPath, 'utf-8')
+      const certPem = await readFile(certPath, 'utf-8')
       const domains = parseCertDomains(certPem)
       if (domains.some((certDomain) => domainMatchesCert(domain, certDomain))) {
         return resolve(certsDir, entry)
@@ -121,7 +123,7 @@ export async function generateMissingCerts(
   const uncovered: string[] = []
 
   for (const domain of domains) {
-    const existing = findCertForDomain(domain)
+    const existing = await findCertForDomain(domain)
     if (existing) {
       result.set(domain, existing)
     } else {
@@ -130,7 +132,7 @@ export async function generateMissingCerts(
   }
 
   if (uncovered.length === 0) return result
-  if (!isCaInitialized()) return result
+  if (!(await isCaInitialized())) return result
 
   const { cert: caCert, key: caKey } = await loadCaCert()
   const groups = groupDomainsForCertGeneration(uncovered)
@@ -141,7 +143,7 @@ export async function generateMissingCerts(
       caCert,
       caKey,
     )
-    const certDir = writeDomainCertFiles(certDomain, privkey, fullchain)
+    const certDir = await writeDomainCertFiles(certDomain, privkey, fullchain)
     for (const domain of coveredDomains) {
       result.set(domain, certDir)
     }
@@ -153,12 +155,16 @@ export async function generateMissingCerts(
 /**
  * Resolve SSL cert and key paths for a domain from a cert directory.
  */
-export function resolveSslPaths(
+export async function resolveSslPaths(
   certDir: string,
-): { sslCertPath: string; sslKeyPath: string } | null {
+): Promise<{ sslCertPath: string; sslKeyPath: string } | null> {
   const sslCertPath = resolve(certDir, 'fullchain.pem')
   const sslKeyPath = resolve(certDir, 'privkey.pem')
-  if (existsSync(sslCertPath) && existsSync(sslKeyPath)) {
+  const [certExists, keyExists] = await Promise.all([
+    pathExists(sslCertPath),
+    pathExists(sslKeyPath),
+  ])
+  if (certExists && keyExists) {
     return { sslCertPath, sslKeyPath }
   }
   return null

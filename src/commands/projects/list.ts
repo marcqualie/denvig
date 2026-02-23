@@ -40,7 +40,7 @@ export const projectsListCommand = new Command({
   ],
   handler: async ({ flags }) => {
     const withConfig = flags['with-config'] as boolean
-    const projectPaths = listProjects({ withConfig })
+    const projectPaths = await listProjects({ withConfig })
 
     if (projectPaths.length === 0) {
       if (flags.json) {
@@ -55,7 +55,7 @@ export const projectsListCommand = new Command({
     if (flags.json) {
       const projects: ProjectInfoJSON[] = []
       for (const projectPath of projectPaths) {
-        const proj = new DenvigProject(projectPath.path)
+        const proj = await DenvigProject.retrieve(projectPath.path)
         const info = await getProjectInfo(proj, { includeServiceStatus: false })
         const { serviceStatus: _, ...infoWithoutStatus } = info
         projects.push(infoWithoutStatus)
@@ -73,7 +73,7 @@ export const projectsListCommand = new Command({
     const projects: ProjectInfo[] = []
 
     for (const projectPath of projectPaths) {
-      const proj = new DenvigProject(projectPath.path)
+      const proj = await DenvigProject.retrieve(projectPath.path)
       const info = await getProjectInfo(proj, { launchctlList })
       projects.push(info)
     }
