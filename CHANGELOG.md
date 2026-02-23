@@ -5,7 +5,6 @@
 
 ### Changed
 
-- Upgrade `@biomejs/biome` from 2.4.0 to 2.4.4
 - Convert synchronous filesystem operations to async across the codebase for improved CLI responsiveness
   - All `readFileSync`, `existsSync`, `readdirSync`, `writeFileSync`, `statSync` calls replaced with `node:fs/promises` equivalents
   - `DenvigProject` uses a static `create()` factory method for async initialization
