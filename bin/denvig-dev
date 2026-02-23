@@ -1,4 +1,4 @@
 #!/bin/sh
 
 # shellcheck disable=SC2068
-node --experimental-strip-types src/cli.ts $@
+node --cpu-prof --experimental-strip-types src/cli.ts $@

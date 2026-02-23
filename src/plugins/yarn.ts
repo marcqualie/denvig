@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { parse } from 'yaml'
 
 import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { parseYarnLockContent } from '../lib/parsers/yarn.ts'
 import { definePlugin } from '../lib/plugin.ts'
+import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { DenvigProject } from '../lib/project.ts'
@@ -66,7 +67,7 @@ const plugin = definePlugin({
       return {}
     }
 
-    const packageJson = readPackageJson(project)
+    const packageJson = await readPackageJson(project)
     const scripts = packageJson?.scripts || ({} as Record<string, string>)
     const actions: Record<string, string[]> = {
       ...Object.entries(scripts)
@@ -91,7 +92,10 @@ const plugin = definePlugin({
     const lockfilePath = `${project.path}/yarn.lock`
     const packageJsonPath = `${project.path}/package.json`
 
-    if (!existsSync(lockfilePath) || !existsSync(packageJsonPath)) {
+    if (
+      !(await pathExists(lockfilePath)) ||
+      !(await pathExists(packageJsonPath))
+    ) {
       return []
     }
 
@@ -139,7 +143,7 @@ const plugin = definePlugin({
     })
 
     // Read and parse lockfile
-    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+    const lockfileContent = await readFile(lockfilePath, 'utf-8')
     const isBerry = isYarnBerryLockfile(lockfileContent)
 
     // Build a map of name -> resolved versions from lockfile
@@ -205,13 +209,13 @@ const plugin = definePlugin({
 
     // Find all package.json files (root + workspaces)
     const packageJsonFiles = [packageJsonPath]
-    const workspacePackageJsons = project.findFilesByName('package.json')
+    const workspacePackageJsons = await project.findFilesByName('package.json')
     packageJsonFiles.push(...workspacePackageJsons)
 
     // Process each package.json
     for (const pkgJsonPath of packageJsonFiles) {
       try {
-        const pkgContent = readFileSync(pkgJsonPath, 'utf-8')
+        const pkgContent = await readFile(pkgJsonPath, 'utf-8')
         const pkg = JSON.parse(pkgContent) as {
           dependencies?: Record<string, string>
           devDependencies?: Record<string, string>
@@ -340,7 +344,7 @@ const plugin = definePlugin({
   },
 
   outdatedDependencies: async (project: DenvigProject, options) => {
-    if (!existsSync(`${project.path}/yarn.lock`)) {
+    if (!(await pathExists(`${project.path}/yarn.lock`))) {
       return []
     }
     const dependencies = await plugin.dependencies?.(project)

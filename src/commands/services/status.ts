@@ -1,10 +1,10 @@
-import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
 import { getGlobalConfig } from '../../lib/config.ts'
 import { getNginxConfigPath } from '../../lib/gateway/nginx.ts'
+import { pathExists } from '../../lib/safeReadFile.ts'
 import {
   getServiceCompletions,
   getServiceContext,
@@ -34,7 +34,7 @@ export const servicesStatusCommand = new Command({
       manager,
       serviceName,
       project: targetProject,
-    } = getServiceContext(serviceArg, project)
+    } = await getServiceContext(serviceArg, project)
 
     const response = await manager.getServiceResponse(serviceName, {
       includeLogs: true,
@@ -96,12 +96,12 @@ export const servicesStatusCommand = new Command({
     console.log(`Logs:    ${response.logPath.replace(homedir(), '~')}`)
 
     const plistPath = manager.getPlistPath(serviceName)
-    if (existsSync(plistPath)) {
+    if (await pathExists(plistPath)) {
       console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
     }
 
     // Show nginx config path if gateway is enabled and service has domain
-    const globalConfig = getGlobalConfig()
+    const globalConfig = await getGlobalConfig()
     const gateway = globalConfig.experimental?.gateway
     const serviceConfig = manager.getServiceConfig(serviceName)
     if (gateway?.enabled && serviceConfig?.http?.domain) {
@@ -110,7 +110,7 @@ export const servicesStatusCommand = new Command({
         serviceName,
         gateway.configsPath,
       )
-      if (existsSync(nginxPath)) {
+      if (await pathExists(nginxPath)) {
         console.log(`Nginx:   ${nginxPath}`)
       }
     }

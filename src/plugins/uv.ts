@@ -1,5 +1,3 @@
-import fs from 'node:fs'
-
 import { definePlugin } from '../lib/plugin.ts'
 import { uvOutdated } from '../lib/uv/outdated.ts'
 import { parseUvDependencies } from '../lib/uv/parse.ts'
@@ -14,7 +12,7 @@ const plugin = definePlugin({
   name: 'uv',
 
   actions: async (project: DenvigProject) => {
-    const rootFiles = fs.readdirSync(project.path)
+    const rootFiles = project.rootFiles
     const hasPyProject = rootFiles.includes('pyproject.toml')
     const hasUvLock = rootFiles.includes('uv.lock')
     const canHandle = hasUvLock || hasPyProject

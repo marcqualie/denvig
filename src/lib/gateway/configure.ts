@@ -63,9 +63,9 @@ async function configureProjectServices(
     let certMessage: string | undefined
 
     if (secure) {
-      const certDir = findCertForDomain(domain)
+      const certDir = await findCertForDomain(domain)
       if (certDir) {
-        const sslPaths = resolveSslPaths(certDir)
+        const sslPaths = await resolveSslPaths(certDir)
         if (sslPaths) {
           sslCertPath = sslPaths.sslCertPath
           sslKeyPath = sslPaths.sslKeyPath
@@ -125,7 +125,7 @@ async function configureProjectServices(
  * across all projects. Returns null if gateway is not enabled.
  */
 export async function configureGateway(): Promise<ConfigureGatewayResult | null> {
-  const globalConfig = getGlobalConfig()
+  const globalConfig = await getGlobalConfig()
   const gateway = globalConfig.experimental?.gateway
   if (!gateway?.enabled) {
     return null
@@ -159,17 +159,17 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
   }
 
   // Iterate all projects that have a .denvig.yml
-  const projects = listProjects({ withConfig: true })
+  const projects = await listProjects({ withConfig: true })
   const services: ConfigureServiceResult[] = []
 
   for (const projectInfo of projects) {
-    const project = new DenvigProject(projectInfo.path)
+    const project = await DenvigProject.retrieve(projectInfo.path)
     const results = await configureProjectServices(project, configsPath)
     services.push(...results)
   }
 
   // Include global services
-  const globalProject = createGlobalProject()
+  const globalProject = await createGlobalProject()
   const globalResults = await configureProjectServices(
     globalProject,
     configsPath,

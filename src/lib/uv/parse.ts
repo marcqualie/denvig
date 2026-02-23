@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 
 import { parseToml } from './toml.ts'
 
@@ -164,7 +164,10 @@ export const parseUvDependencies = async (
   const pyprojectPath = `${project.path}/pyproject.toml`
   const lockfilePath = `${project.path}/uv.lock`
 
-  if (!existsSync(pyprojectPath)) {
+  let pyprojectContent: string
+  try {
+    pyprojectContent = await readFile(pyprojectPath, 'utf-8')
+  } catch {
     return []
   }
 
@@ -206,7 +209,6 @@ export const parseUvDependencies = async (
   })
 
   // Parse pyproject.toml for direct dependencies
-  const pyprojectContent = readFileSync(pyprojectPath, 'utf-8')
   const pyprojectDeps = parsePyProject(pyprojectContent)
 
   for (const dep of pyprojectDeps) {
@@ -214,8 +216,14 @@ export const parseUvDependencies = async (
   }
 
   // If lockfile exists, use it for resolved versions
-  if (existsSync(lockfilePath)) {
-    const lockfileContent = readFileSync(lockfilePath, 'utf-8')
+  let lockfileContent: string | null = null
+  try {
+    lockfileContent = await readFile(lockfilePath, 'utf-8')
+  } catch {
+    // No lockfile
+  }
+
+  if (lockfileContent) {
     const lockData = parseUvLock(lockfileContent)
 
     // Add direct dependencies with their resolved versions

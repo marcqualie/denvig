@@ -51,7 +51,7 @@ export const createMockProjectFromPath = (
   return {
     path: projectPath,
     rootFiles: fs.readdirSync(projectPath),
-    findFilesByName(fileName: string): string[] {
+    async findFilesByName(fileName: string): Promise<string[]> {
       const results: string[] = []
       const walk = (dir: string) => {
         const files = fs.readdirSync(dir, { withFileTypes: true })

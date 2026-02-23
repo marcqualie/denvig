@@ -264,26 +264,26 @@ describe('sanitizePackageName', () => {
 })
 
 describe('getCacheFilePath', () => {
-  it('should return a path ending in .json', () => {
-    const result = getCacheFilePath('lodash')
+  it('should return a path ending in .json', async () => {
+    const result = await getCacheFilePath('lodash')
     assert.ok(result.endsWith('.json'), 'Should end with .json')
   })
 
-  it('should include the sanitized package name', () => {
-    const result = getCacheFilePath('lodash')
+  it('should include the sanitized package name', async () => {
+    const result = await getCacheFilePath('lodash')
     assert.ok(result.includes('lodash'), 'Should include package name')
   })
 
-  it('should handle scoped packages', () => {
-    const result = getCacheFilePath('@types/node')
+  it('should handle scoped packages', async () => {
+    const result = await getCacheFilePath('@types/node')
     assert.ok(
       result.includes('_at_types__node'),
       'Should include sanitized scoped name',
     )
   })
 
-  it('should produce safe paths for malicious input', () => {
-    const result = getCacheFilePath('../../../etc/passwd')
+  it('should produce safe paths for malicious input', async () => {
+    const result = await getCacheFilePath('../../../etc/passwd')
     assert.ok(!result.includes('../'), 'Should not allow path traversal')
     assert.ok(result.endsWith('.json'), 'Should still end with .json')
   })
