@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
+import { ensureServiceCerts } from '../../lib/services/certs.ts'
 import {
   getServiceCompletions,
   getServiceContext,
@@ -35,6 +36,13 @@ export const servicesStartCommand = new Command({
 
     const projectPrefix =
       targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
+
+    const serviceConfig = targetProject.config.services?.[serviceName]
+    if (serviceConfig) {
+      await ensureServiceCerts(serviceName, serviceConfig, {
+        json: !!flags.json,
+      })
+    }
 
     if (!flags.json) {
       console.log(`Starting ${projectPrefix}${serviceName}...`)
