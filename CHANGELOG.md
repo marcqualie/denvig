@@ -3,6 +3,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- Auto-configure TLS certificates when starting or restarting services with `http.secure: true`
+  - Prompts to generate and install a local CA if none exists
+  - Prompts to generate domain certificates for uncovered domains
+  - Skips prompts in non-interactive mode (`--json`) with warning messages
+
 ### Changed
 
 - Convert synchronous filesystem operations to async across the codebase for improved CLI responsiveness

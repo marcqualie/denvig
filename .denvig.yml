@@ -14,7 +14,7 @@ services:
     http:
       port: 8080
       secure: true
-      domain: denvig.localhost
+      domain: hello.denvig.me
       cnames:
         - hello.denvig.localhost
   wontlaunch:
