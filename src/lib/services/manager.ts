@@ -1,6 +1,7 @@
 import {
   access,
   appendFile,
+  chmod,
   mkdir,
   readFile,
   rm,
@@ -14,7 +15,7 @@ import { resolve } from 'node:path'
 import { configureGateway } from '../gateway/configure.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
-import { generatePlist } from './plist.ts'
+import { generatePlist, generateServiceScript } from './plist.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
 
@@ -176,9 +177,21 @@ export class ServiceManager {
     // Ensure working directory exists (e.g. global services use auto-generated paths)
     await mkdir(workingDirectory, { recursive: true })
 
+    // Create wrapper script so Login Items shows the script name instead of "zsh"
+    const scriptPath = this.getServiceScriptPath(name)
+    const scriptContent = generateServiceScript({
+      command: config.command,
+      serviceName: name,
+      projectPath: this.project.path,
+      projectSlug: this.project.slug,
+      workingDirectory,
+    })
+    await writeFile(scriptPath, scriptContent, 'utf-8')
+    await chmod(scriptPath, 0o755)
+
     const plistContent = generatePlist({
       label,
-      command: config.command,
+      programPath: scriptPath,
       workingDirectory,
       environmentVariables: envResult.env,
       standardOutPath: logFilePath,
@@ -561,13 +574,38 @@ export class ServiceManager {
   }
 
   /**
+   * Get the service-specific directory.
+   * Format: ~/.denvig/services/[projectId].[serviceName]/
+   */
+  getServiceDir(name: string): string {
+    const normalizedName = this.normalizeForLabel(name)
+    const serviceId = `${this.project.id}.${normalizedName}`
+    return resolve(this.getDenvigHomeDir(), 'services', serviceId)
+  }
+
+  /**
    * Get the service-specific log directory.
    * Format: ~/.denvig/services/[projectId].[serviceName]/logs/
    */
   getServiceLogDir(name: string): string {
+    return resolve(this.getServiceDir(name), 'logs')
+  }
+
+  /**
+   * Get the path to the service wrapper script.
+   * Includes the project slug in the filename for github projects so Login Items
+   * shows a meaningful name (e.g. "denvig-marcqualie-myapp-api").
+   */
+  getServiceScriptPath(name: string): string {
     const normalizedName = this.normalizeForLabel(name)
-    const serviceId = `${this.project.id}.${normalizedName}`
-    return resolve(this.getDenvigHomeDir(), 'services', serviceId, 'logs')
+    const slug = this.project.slug
+    const slugPrefix = slug.startsWith('github:')
+      ? `${slug.replace('github:', '').replace('/', '-')}-`
+      : ''
+    return resolve(
+      this.getServiceDir(name),
+      `denvig-${slugPrefix}${normalizedName}`,
+    )
   }
 
   /**

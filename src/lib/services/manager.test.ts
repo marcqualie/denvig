@@ -72,6 +72,60 @@ describe('ServiceManager', () => {
     })
   })
 
+  describe('getServiceDir()', () => {
+    it('should generate correct service directory path', () => {
+      const project = createMockProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const dir = manager.getServiceDir('api')
+
+      ok(dir.includes(`.denvig/services/${project.id}.api`))
+      ok(!dir.includes('/logs'))
+    })
+  })
+
+  describe('getServiceScriptPath()', () => {
+    it('should include github slug in script filename', () => {
+      const project = createMockProject({
+        slug: 'github:marcqualie/denvig',
+      })
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceScriptPath('api')
+
+      ok(
+        path.includes(
+          `.denvig/services/${project.id}.api/denvig-marcqualie-denvig-api`,
+        ),
+      )
+      ok(!path.endsWith('.sh'))
+    })
+
+    it('should omit slug prefix for non-github projects', () => {
+      const project = createMockProject({
+        slug: 'local:/Users/marc/my-app',
+      })
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceScriptPath('api')
+
+      ok(path.endsWith('/denvig-api'))
+      ok(!path.includes('local'))
+    })
+
+    it('should sanitize special characters in script filename', () => {
+      const project = createMockProject({
+        slug: 'local:/tmp/test',
+      })
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceScriptPath('dev:watch')
+
+      ok(path.endsWith('/denvig-dev-watch'))
+      ok(!path.includes(':'))
+    })
+  })
+
   describe('getServiceLogDir()', () => {
     it('should generate correct service log directory path', () => {
       const project = createMockProject('workspace/my-app')
