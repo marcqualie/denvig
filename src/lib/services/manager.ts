@@ -186,20 +186,37 @@ export class ServiceManager {
       projectSlug: this.project.slug,
       workingDirectory,
     })
-    await writeFile(scriptPath, scriptContent, 'utf-8')
-    await chmod(scriptPath, 0o755)
+    let existingScriptContent: string | null = null
+    try {
+      existingScriptContent = await readFile(scriptPath, 'utf-8')
+    } catch {
+      // File doesn't exist yet
+    }
+    if (existingScriptContent !== scriptContent) {
+      await writeFile(scriptPath, scriptContent, 'utf-8')
+      await chmod(scriptPath, 0o755)
+    }
 
     const plistContent = generatePlist({
       label,
       programPath: scriptPath,
       workingDirectory,
       environmentVariables: envResult.env,
-      standardOutPath: logFilePath,
+      standardOutPath: this.getStableLogPath(name),
       keepAlive: config.keepAlive ?? true,
       runAtLoad: config.startOnBoot ?? false,
     })
 
-    await writeFile(plistPath, plistContent, 'utf-8')
+    // Only write plist if content changed to avoid macOS "new login item" popups
+    let existingPlistContent: string | null = null
+    try {
+      existingPlistContent = await readFile(plistPath, 'utf-8')
+    } catch {
+      // File doesn't exist yet
+    }
+    if (existingPlistContent !== plistContent) {
+      await writeFile(plistPath, plistContent, 'utf-8')
+    }
 
     // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents
     if (!isBootstrapped) {
@@ -609,6 +626,15 @@ export class ServiceManager {
   }
 
   /**
+   * Get the stable log path used by the plist StandardOutPath.
+   * This is a symlink that always points to the current timestamped log file.
+   * Format: ~/.denvig/services/[serviceId]/logs/latest.log
+   */
+  getStableLogPath(name: string): string {
+    return resolve(this.getServiceLogDir(name), 'latest.log')
+  }
+
+  /**
    * Get the log file path (symlink to latest log for this host).
    * Format: ~/.denvig/services/[serviceId]/logs/latest.[hostname].log
    */
@@ -632,14 +658,19 @@ export class ServiceManager {
     // Create empty log file
     await writeFile(logPath, '', 'utf-8')
 
-    // Create/update latest symlink (relative so it works if home dir moves)
-    const symlinkPath = this.getLogPath(name)
-    try {
-      await unlink(symlinkPath)
-    } catch {
-      // Symlink may not exist yet
-    }
-    await symlink(logFilename, symlinkPath)
+    // Update symlinks (relative so they work if home dir moves)
+    const stableSymlinkPath = this.getStableLogPath(name)
+    const hostSymlinkPath = this.getLogPath(name)
+    await Promise.all(
+      [stableSymlinkPath, hostSymlinkPath].map(async (link) => {
+        try {
+          await unlink(link)
+        } catch {
+          // Symlink may not exist yet
+        }
+        await symlink(logFilename, link)
+      }),
+    )
 
     return logPath
   }
