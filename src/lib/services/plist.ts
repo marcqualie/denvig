@@ -3,7 +3,7 @@
  */
 export type PlistOptions = {
   label: string
-  command: string
+  programPath: string
   workingDirectory: string
   environmentVariables?: Record<string, string>
   standardOutPath: string
@@ -39,6 +39,42 @@ export function wrapCommandWithTimestamp(command: string): string {
 }
 
 /**
+ * Escape a string for embedding in a single-quoted shell string.
+ * Replaces ' with '\'' (end quote, escaped quote, start quote).
+ */
+export function escapeForSingleQuote(str: string): string {
+  return str.replace(/'/g, "'\\''")
+}
+
+export type ServiceScriptOptions = {
+  command: string
+  serviceName: string
+  projectPath: string
+  projectSlug: string
+  workingDirectory: string
+}
+
+/**
+ * Generate a bash wrapper script that executes a command via zsh login shell.
+ * This allows launchd to show the script name instead of "zsh" in Login Items.
+ * Includes metadata comments so users can identify which project owns the service.
+ */
+export function generateServiceScript(options: ServiceScriptOptions): string {
+  const wrappedCommand = wrapCommandWithTimestamp(options.command)
+  return `#!/bin/bash
+#
+# Denvig service wrapper
+# Service: ${options.serviceName}
+# Project: ${options.projectSlug}
+# Path:    ${options.projectPath}
+# Command: ${options.command}
+# Workdir: ${options.workingDirectory}
+#
+exec /bin/zsh -l -c '${escapeForSingleQuote(wrappedCommand)}'
+`
+}
+
+/**
  * Generate a plist XML string from the given options.
  *
  * @param options - Plist configuration options
@@ -47,16 +83,13 @@ export function wrapCommandWithTimestamp(command: string): string {
 export function generatePlist(options: PlistOptions): string {
   const {
     label,
-    command,
+    programPath,
     workingDirectory,
     environmentVariables = {},
     standardOutPath,
     keepAlive,
     runAtLoad,
   } = options
-
-  // Wrap command with timestamp injection (also merges stderr into stdout)
-  const wrappedCommand = wrapCommandWithTimestamp(command)
 
   // Build environment variables section
   const envVarsXml = Object.entries(environmentVariables)
@@ -75,10 +108,7 @@ export function generatePlist(options: PlistOptions): string {
 
   <key>ProgramArguments</key>
   <array>
-    <string>/bin/zsh</string>
-    <string>-l</string>
-    <string>-c</string>
-    <string>${escapeXml(wrappedCommand)}</string>
+    <string>${escapeXml(programPath)}</string>
   </array>
 
   <key>WorkingDirectory</key>
@@ -105,6 +135,8 @@ ${envVarsXml}
 // Default export containing all functions
 export default {
   generatePlist,
+  generateServiceScript,
   escapeXml,
+  escapeForSingleQuote,
   wrapCommandWithTimestamp,
 }

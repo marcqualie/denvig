@@ -4,6 +4,7 @@ import { hostname } from 'node:os'
 import { describe, it } from 'node:test'
 
 import { createMockProject } from '../../test/mock.ts'
+import launchctl from './launchctl.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {
@@ -72,6 +73,60 @@ describe('ServiceManager', () => {
     })
   })
 
+  describe('getServiceDir()', () => {
+    it('should generate correct service directory path', () => {
+      const project = createMockProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const dir = manager.getServiceDir('api')
+
+      ok(dir.includes(`.denvig/services/${project.id}.api`))
+      ok(!dir.includes('/logs'))
+    })
+  })
+
+  describe('getServiceScriptPath()', () => {
+    it('should include github slug in script filename', () => {
+      const project = createMockProject({
+        slug: 'github:marcqualie/denvig',
+      })
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceScriptPath('api')
+
+      ok(
+        path.includes(
+          `.denvig/services/${project.id}.api/denvig-marcqualie-denvig-api`,
+        ),
+      )
+      ok(!path.endsWith('.sh'))
+    })
+
+    it('should omit slug prefix for non-github projects', () => {
+      const project = createMockProject({
+        slug: 'local:/Users/marc/my-app',
+      })
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceScriptPath('api')
+
+      ok(path.endsWith('/denvig-api'))
+      ok(!path.includes('local'))
+    })
+
+    it('should sanitize special characters in script filename', () => {
+      const project = createMockProject({
+        slug: 'local:/tmp/test',
+      })
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceScriptPath('dev:watch')
+
+      ok(path.endsWith('/denvig-dev-watch'))
+      ok(!path.includes(':'))
+    })
+  })
+
   describe('getServiceLogDir()', () => {
     it('should generate correct service log directory path', () => {
       const project = createMockProject('workspace/my-app')
@@ -80,6 +135,18 @@ describe('ServiceManager', () => {
       const dir = manager.getServiceLogDir('api')
 
       ok(dir.includes(`.denvig/services/${project.id}.api/logs`))
+    })
+  })
+
+  describe('getStableLogPath()', () => {
+    it('should return latest.log under service log dir', () => {
+      const project = createMockProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const path = manager.getStableLogPath('api')
+
+      ok(path.includes(`.denvig/services/${project.id}.api/logs`))
+      ok(path.endsWith('/latest.log'))
     })
   })
 
@@ -144,120 +211,87 @@ describe('ServiceManager', () => {
     })
   })
 
-  describe('log entries on start/stop', () => {
-    // These tests require mocking ES modules which isn't supported with direct assignment
-    // TODO: Implement proper dependency injection or use a mocking library
-    it.skip('should append a timestamped Service Started line on start', async () => {
+  describe('stopService() launchctl behavior', () => {
+    it('should call bootout and disable for regular services', async (t) => {
       const project = createMockProject({
-        slug: 'workspace/denvig',
-        path: process.cwd(),
+        slug: 'github:owner/repo',
+        path: '/tmp/test-stop',
       })
       project.config.services = {
-        'test-logger': {
-          command: 'echo hello',
-        },
+        api: { command: 'node server.js' },
       }
-
       const manager = new ServiceManager(project)
 
-      // Stub launchctl to simulate successful bootstrap
-      const launchctl = await import('./launchctl.ts')
-      ;(launchctl as any).bootstrap = async () => ({
+      // Mock launchctl methods
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        state: 'running',
+        status: 'running',
+      }))
+      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
         success: true,
         output: '',
-      })
-      ;(launchctl as any).print = async () => null
+      }))
+      const disableMock = t.mock.method(launchctl, 'disable', async () => ({
+        success: true,
+        output: '',
+      }))
+      const stopMock = t.mock.method(launchctl, 'stop', async () => ({
+        success: true,
+        output: '',
+      }))
+      // Prevent real gateway reconfiguration
+      t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
 
-      const startResult = await manager.startService('test-logger')
-      ok(startResult.success)
+      const result = await manager.stopService('api')
 
-      const home = require('node:os').homedir()
-      const logPath = require('node:path').resolve(
-        home,
-        '.denvig',
-        'logs',
-        `${project.id}.test-logger.log`,
-      )
-
-      // Read the log and assert the started line exists
-      const fs = await import('node:fs/promises')
-      const content = await fs.readFile(logPath, 'utf-8')
-      const match = content.match(
-        /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] Service Started/,
-      )
-      ok(match !== null)
-
-      // Clean up
-      await fs.unlink(logPath).catch(() => {})
-      await import('node:fs').then((fsSync) =>
-        fsSync.rmSync(
-          require('node:path').resolve(
-            home,
-            'Library',
-            'LaunchAgents',
-            `denvig.${project.id}.test-logger.plist`,
-          ),
-          { force: true },
-        ),
-      )
+      ok(result.success)
+      strictEqual(bootoutMock.mock.callCount(), 1, 'bootout should be called')
+      strictEqual(disableMock.mock.callCount(), 1, 'disable should be called')
+      strictEqual(stopMock.mock.callCount(), 0, 'stop should not be called')
     })
 
-    it.skip('should append a timestamped Service Stopped line on stop', async () => {
+    it('should call stop but not bootout or disable for startOnBoot services', async (t) => {
       const project = createMockProject({
-        slug: 'workspace/denvig',
-        path: process.cwd(),
+        slug: 'github:owner/repo',
+        path: '/tmp/test-stop-boot',
       })
       project.config.services = {
-        'test-logger-stop': {
-          command: 'echo bye',
-        },
+        api: { command: 'node server.js', startOnBoot: true },
       }
-
       const manager = new ServiceManager(project)
 
-      // Stub launchctl to simulate a bootstrapped service and successful bootout
-      const launchctl = await import('./launchctl.ts')
-      ;(launchctl as any).print = async () => ({
-        label: 'loaded',
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
         state: 'running',
-      })
-      ;(launchctl as any).bootout = async () => ({ success: true, output: '' })
+        status: 'running',
+      }))
+      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      const disableMock = t.mock.method(launchctl, 'disable', async () => ({
+        success: true,
+        output: '',
+      }))
+      const stopMock = t.mock.method(launchctl, 'stop', async () => ({
+        success: true,
+        output: '',
+      }))
 
-      // Ensure log file exists to be appended to
-      const home = require('node:os').homedir()
-      const logPath = require('node:path').resolve(
-        home,
-        '.denvig',
-        'logs',
-        `${project.id}.test-logger-stop.log`,
+      const result = await manager.stopService('api')
+
+      ok(result.success)
+      strictEqual(stopMock.mock.callCount(), 1, 'stop should be called')
+      strictEqual(
+        bootoutMock.mock.callCount(),
+        0,
+        'bootout should not be called',
       )
-      const fs = await import('node:fs/promises')
-      await fs.mkdir(require('node:path').resolve(home, '.denvig', 'logs'), {
-        recursive: true,
-      })
-      await fs.writeFile(logPath, 'initial log\n', 'utf-8')
-
-      const stopResult = await manager.stopService('test-logger-stop')
-      ok(stopResult.success)
-
-      const content = await fs.readFile(logPath, 'utf-8')
-      const match = content.match(
-        /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] Service Stopped/,
-      )
-      ok(match !== null)
-
-      // Clean up
-      await fs.unlink(logPath).catch(() => {})
-      await import('node:fs').then((fsSync) =>
-        fsSync.rmSync(
-          require('node:path').resolve(
-            home,
-            'Library',
-            'LaunchAgents',
-            `denvig.${project.id}.test-logger-stop.plist`,
-          ),
-          { force: true },
-        ),
+      strictEqual(
+        disableMock.mock.callCount(),
+        0,
+        'disable should not be called',
       )
     })
   })
