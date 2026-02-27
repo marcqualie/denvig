@@ -12,6 +12,7 @@
 
 ### Changed
 
+- Services now use a bash wrapper script (`~/.denvig/services/{serviceId}/denvig-{name}.sh`) instead of invoking `/bin/zsh` directly in the plist, so macOS Login Items shows the service script name instead of "zsh"
 - Convert synchronous filesystem operations to async across the codebase for improved CLI responsiveness
   - All `readFileSync`, `existsSync`, `readdirSync`, `writeFileSync`, `statSync` calls replaced with `node:fs/promises` equivalents
   - `DenvigProject` uses a static `create()` factory method for async initialization

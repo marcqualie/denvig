@@ -1,6 +1,7 @@
 import {
   access,
   appendFile,
+  chmod,
   mkdir,
   readFile,
   rm,
@@ -14,7 +15,7 @@ import { resolve } from 'node:path'
 import { configureGateway } from '../gateway/configure.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
-import { generatePlist } from './plist.ts'
+import { generatePlist, generateServiceScript } from './plist.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
 
@@ -176,17 +177,49 @@ export class ServiceManager {
     // Ensure working directory exists (e.g. global services use auto-generated paths)
     await mkdir(workingDirectory, { recursive: true })
 
+    // Create wrapper script so Login Items shows the script name instead of "zsh"
+    const scriptPath = this.getServiceScriptPath(name)
+    const scriptContent = generateServiceScript({
+      command: config.command,
+      serviceName: name,
+      projectPath: this.project.path,
+      projectSlug: this.project.slug,
+      workingDirectory,
+    })
+    let existingScriptContent: string | null = null
+    try {
+      existingScriptContent = await readFile(scriptPath, 'utf-8')
+    } catch {
+      // File doesn't exist yet
+    }
+    if (existingScriptContent !== scriptContent) {
+      await writeFile(scriptPath, scriptContent, 'utf-8')
+      await chmod(scriptPath, 0o755)
+    }
+
     const plistContent = generatePlist({
       label,
-      command: config.command,
+      programPath: scriptPath,
       workingDirectory,
       environmentVariables: envResult.env,
-      standardOutPath: logFilePath,
+      standardOutPath: this.getStableLogPath(name),
       keepAlive: config.keepAlive ?? true,
       runAtLoad: config.startOnBoot ?? false,
     })
 
-    await writeFile(plistPath, plistContent, 'utf-8')
+    // Only write plist if content changed to avoid macOS "new login item" popups
+    let existingPlistContent: string | null = null
+    try {
+      existingPlistContent = await readFile(plistPath, 'utf-8')
+    } catch {
+      // File doesn't exist yet
+    }
+    if (existingPlistContent !== plistContent) {
+      await writeFile(plistPath, plistContent, 'utf-8')
+    }
+
+    // Enable service so launchd will start it (reverses disable from stop)
+    await launchctl.enable(label)
 
     // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents
     if (!isBootstrapped) {
@@ -281,12 +314,8 @@ export class ServiceManager {
           message: `Failed to stop service: ${result.output}`,
         }
       }
-      // Remove plist file so service doesn't restart on reboot
-      try {
-        await unlink(this.getPlistPath(name))
-      } catch {
-        // Ignore errors removing plist file (may not exist)
-      }
+      // Disable so launchd won't auto-start on login (plist stays for next manual start)
+      await launchctl.disable(label)
       // Reconfigure gateway to remove this service's nginx config
       await this.reconfigureGateway()
     }
@@ -561,13 +590,47 @@ export class ServiceManager {
   }
 
   /**
+   * Get the service-specific directory.
+   * Format: ~/.denvig/services/[projectId].[serviceName]/
+   */
+  getServiceDir(name: string): string {
+    const normalizedName = this.normalizeForLabel(name)
+    const serviceId = `${this.project.id}.${normalizedName}`
+    return resolve(this.getDenvigHomeDir(), 'services', serviceId)
+  }
+
+  /**
    * Get the service-specific log directory.
    * Format: ~/.denvig/services/[projectId].[serviceName]/logs/
    */
   getServiceLogDir(name: string): string {
+    return resolve(this.getServiceDir(name), 'logs')
+  }
+
+  /**
+   * Get the path to the service wrapper script.
+   * Includes the project slug in the filename for github projects so Login Items
+   * shows a meaningful name (e.g. "denvig-marcqualie-myapp-api").
+   */
+  getServiceScriptPath(name: string): string {
     const normalizedName = this.normalizeForLabel(name)
-    const serviceId = `${this.project.id}.${normalizedName}`
-    return resolve(this.getDenvigHomeDir(), 'services', serviceId, 'logs')
+    const slug = this.project.slug
+    const slugPrefix = slug.startsWith('github:')
+      ? `${slug.replace('github:', '').replace('/', '-')}-`
+      : ''
+    return resolve(
+      this.getServiceDir(name),
+      `denvig-${slugPrefix}${normalizedName}`,
+    )
+  }
+
+  /**
+   * Get the stable log path used by the plist StandardOutPath.
+   * This is a symlink that always points to the current timestamped log file.
+   * Format: ~/.denvig/services/[serviceId]/logs/latest.log
+   */
+  getStableLogPath(name: string): string {
+    return resolve(this.getServiceLogDir(name), 'latest.log')
   }
 
   /**
@@ -594,14 +657,19 @@ export class ServiceManager {
     // Create empty log file
     await writeFile(logPath, '', 'utf-8')
 
-    // Create/update latest symlink (relative so it works if home dir moves)
-    const symlinkPath = this.getLogPath(name)
-    try {
-      await unlink(symlinkPath)
-    } catch {
-      // Symlink may not exist yet
-    }
-    await symlink(logFilename, symlinkPath)
+    // Update symlinks (relative so they work if home dir moves)
+    const stableSymlinkPath = this.getStableLogPath(name)
+    const hostSymlinkPath = this.getLogPath(name)
+    await Promise.all(
+      [stableSymlinkPath, hostSymlinkPath].map(async (link) => {
+        try {
+          await unlink(link)
+        } catch {
+          // Symlink may not exist yet
+        }
+        await symlink(logFilename, link)
+      }),
+    )
 
     return logPath
   }

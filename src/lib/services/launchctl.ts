@@ -124,6 +124,54 @@ export async function stop(
 }
 
 /**
+ * Enable a service so it can be started by launchd.
+ *
+ * @param label - Service label
+ * @returns Result with success status and output
+ */
+export async function enable(
+  label: string,
+): Promise<{ success: boolean; output: string }> {
+  try {
+    const domain = getUserDomain()
+    const { stdout, stderr } = await execAsync(
+      `launchctl enable ${domain}/${label}`,
+    )
+    return { success: true, output: stdout || stderr }
+  } catch (error) {
+    const execError = error as { stderr?: string; message?: string }
+    return {
+      success: false,
+      output: execError.stderr || execError.message || 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Disable a service so launchd will not start it on login.
+ *
+ * @param label - Service label
+ * @returns Result with success status and output
+ */
+export async function disable(
+  label: string,
+): Promise<{ success: boolean; output: string }> {
+  try {
+    const domain = getUserDomain()
+    const { stdout, stderr } = await execAsync(
+      `launchctl disable ${domain}/${label}`,
+    )
+    return { success: true, output: stdout || stderr }
+  } catch (error) {
+    const execError = error as { stderr?: string; message?: string }
+    return {
+      success: false,
+      output: execError.stderr || execError.message || 'Unknown error',
+    }
+  }
+}
+
+/**
  * Get service information.
  *
  * @param label - Service label
@@ -193,6 +241,8 @@ export async function list(pattern?: string): Promise<LaunchctlListItem[]> {
 export default {
   bootstrap,
   bootout,
+  enable,
+  disable,
   start,
   stop,
   print,
