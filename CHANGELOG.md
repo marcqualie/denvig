@@ -1,35 +1,19 @@
 # Denvig Changelog
 
 
-## [Unreleased]
-
-### Added
-
-- Auto-configure TLS certificates when starting or restarting services with `http.secure: true`
-  - Prompts to generate and install a local CA if none exists
-  - Prompts to generate domain certificates for uncovered domains
-  - Skips prompts in non-interactive mode (`--json`) with warning messages
-
-### Changed
-
-- Services now use a bash wrapper script (`~/.denvig/services/{serviceId}/denvig-{name}.sh`) instead of invoking `/bin/zsh` directly in the plist, so macOS Login Items shows the service script name instead of "zsh"
-- Convert synchronous filesystem operations to async across the codebase for improved CLI responsiveness
-  - All `readFileSync`, `existsSync`, `readdirSync`, `writeFileSync`, `statSync` calls replaced with `node:fs/promises` equivalents
-  - `DenvigProject` uses a static `create()` factory method for async initialization
-  - `listProjects()`, `createGlobalProject()`, config and git utilities are now async
-  - Test files retain sync operations as intended
-
-## [0.6.0-alpha.1] - 2026-02-16
+## [0.6.0] - 2026-02-27
 
 ### Added
 
 - Global services support: define services in `~/.denvig/config.yml` under `services:` that work from any directory (#135)
-- `certs ca` subcommand group for CA lifecycle management (`certs ca install`, `certs ca uninstall`, `certs ca info`) (#128)
 - Experimental nginx gateway proxy support for local domains (#120)
+- Certificate management for secure local development (#128)
 - Deno dependency support for jsr and npm (#127)
 
 ### Changed
 
+- Services now use a bash wrapper script (`~/.denvig/services/{serviceId}/denvig-{name}.sh`) instead of invoking `/bin/zsh` directly in the plist, so macOS Login Items shows the service script name instead of "zsh" (#141)
+- Convert synchronous filesystem operations to async across the codebase for improved CLI responsiveness and prepare for SDK (#137)
 - Service logs now use timestamp-based files per run instead of a single shared log file (#134)
 - Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts` (#130)
 
