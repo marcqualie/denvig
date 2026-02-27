@@ -1,7 +1,13 @@
 import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import launchctl, { getUserDomain, list, print } from './launchctl.ts'
+import launchctl, {
+  disable,
+  enable,
+  getUserDomain,
+  list,
+  print,
+} from './launchctl.ts'
 
 describe('launchctl', () => {
   describe('getUserDomain()', () => {
@@ -47,6 +53,32 @@ describe('launchctl', () => {
     it('should work via default export', async () => {
       const info = await launchctl.print('com.denvig.nonexistent.service')
       ok(info === null)
+    })
+  })
+
+  describe('enable()', () => {
+    it('should return a result object', async () => {
+      const result = await enable('com.denvig.nonexistent.service')
+      ok('success' in result)
+      ok('output' in result)
+    })
+
+    it('should work via default export', async () => {
+      const result = await launchctl.enable('com.denvig.nonexistent.service')
+      ok('success' in result)
+    })
+  })
+
+  describe('disable()', () => {
+    it('should return a result object', async () => {
+      const result = await disable('com.denvig.nonexistent.service')
+      ok('success' in result)
+      ok('output' in result)
+    })
+
+    it('should work via default export', async () => {
+      const result = await launchctl.disable('com.denvig.nonexistent.service')
+      ok('success' in result)
     })
   })
 })

@@ -218,6 +218,9 @@ export class ServiceManager {
       await writeFile(plistPath, plistContent, 'utf-8')
     }
 
+    // Enable service so launchd will start it (reverses disable from stop)
+    await launchctl.enable(label)
+
     // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents
     if (!isBootstrapped) {
       const bootstrapResult = await launchctl.bootstrap(plistPath)
@@ -311,12 +314,8 @@ export class ServiceManager {
           message: `Failed to stop service: ${result.output}`,
         }
       }
-      // Remove plist file so service doesn't restart on reboot
-      try {
-        await unlink(this.getPlistPath(name))
-      } catch {
-        // Ignore errors removing plist file (may not exist)
-      }
+      // Disable so launchd won't auto-start on login (plist stays for next manual start)
+      await launchctl.disable(label)
       // Reconfigure gateway to remove this service's nginx config
       await this.reconfigureGateway()
     }
