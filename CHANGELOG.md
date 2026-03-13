@@ -1,6 +1,13 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Changed
+
+- Upgrade `@biomejs/biome` from 2.4.4 to 2.4.6
+
+
 ## [0.6.0] - 2026-02-27
 
 ### Added
