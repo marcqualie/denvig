@@ -1,7 +1,7 @@
 import semver from 'semver'
 
 export type SemverLevel = 'major' | 'minor' | 'patch'
-export type SemverFilter = 'patch' | 'minor'
+export type SemverFilter = 'patch' | 'minor' | 'major'
 
 /**
  * Get the semver update level between two versions using the semver package.
@@ -38,6 +38,7 @@ export const getSemverLevel = (
  * Check if a semver level matches the filter.
  * - 'patch': only patch updates match
  * - 'minor': minor and patch updates match
+ * - 'major': only major updates match
  */
 export const matchesSemverFilter = (
   level: SemverLevel | null,
@@ -46,6 +47,7 @@ export const matchesSemverFilter = (
   if (level === null) return false
   if (filter === 'patch') return level === 'patch'
   if (filter === 'minor') return level === 'patch' || level === 'minor'
+  if (filter === 'major') return level === 'major'
   return false
 }
 

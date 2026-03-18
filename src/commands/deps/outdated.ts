@@ -26,7 +26,7 @@ export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
   usage:
-    'deps outdated [--no-cache] [--semver patch|minor] [--ecosystem <name>]',
+    'deps outdated [--no-cache] [--semver patch|minor|major] [--ecosystem <name>]',
   example: 'denvig deps outdated --semver patch',
   args: [],
   flags: [
@@ -40,7 +40,7 @@ export const depsOutdatedCommand = new Command({
     {
       name: 'semver',
       description:
-        'Filter by semver level: "patch" for patch updates only, "minor" for minor and patch updates',
+        'Filter by semver level: "patch" for patch updates only, "minor" for minor and patch updates, "major" for major updates only',
       required: false,
       type: 'string',
       defaultValue: undefined,
@@ -55,13 +55,18 @@ export const depsOutdatedCommand = new Command({
   ],
   handler: async ({ project, flags }) => {
     const cache = !(flags['no-cache'] as boolean)
-    const semverFilter = flags.semver as 'patch' | 'minor' | undefined
+    const semverFilter = flags.semver as 'patch' | 'minor' | 'major' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
 
     // Validate semver flag
-    if (semverFilter && semverFilter !== 'patch' && semverFilter !== 'minor') {
+    if (
+      semverFilter &&
+      semverFilter !== 'patch' &&
+      semverFilter !== 'minor' &&
+      semverFilter !== 'major'
+    ) {
       console.error(
-        `Invalid --semver value: "${semverFilter}". Must be "patch" or "minor".`,
+        `Invalid --semver value: "${semverFilter}". Must be "patch", "minor", or "major".`,
       )
       return { success: false, message: 'Invalid --semver value.' }
     }
