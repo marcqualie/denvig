@@ -1,16 +1,11 @@
 # Denvig Changelog
 
 
-## [Unreleased]
+## [0.6.1] - 2026-03-18
 
 ### Added
 
-- Support `--semver major` filter for `deps outdated` to show only packages with major version updates
-
-### Changed
-
-- Upgrade `@biomejs/biome` from 2.4.4 to 2.4.8
-
+- Support `--semver major` filter on `deps outdated`
 
 ## [0.6.0] - 2026-02-27
 
