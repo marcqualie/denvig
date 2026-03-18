@@ -5,7 +5,7 @@
 
 ### Changed
 
-- Upgrade `@biomejs/biome` from 2.4.4 to 2.4.7
+- Upgrade `@biomejs/biome` from 2.4.4 to 2.4.8
 
 
 ## [0.6.0] - 2026-02-27
