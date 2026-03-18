@@ -95,8 +95,8 @@ export type DepsOutdatedOptions = {
   project?: string
   /** Skip cache and fetch fresh data from registry */
   noCache?: boolean
-  /** Filter by semver level: "patch" for patch updates only, "minor" for minor and patch updates */
-  semver?: 'patch' | 'minor'
+  /** Filter by semver level: "patch" for patch updates only, "minor" for minor and patch updates, "major" for major updates only */
+  semver?: 'patch' | 'minor' | 'major'
   /** Filter to a specific ecosystem (e.g., npm, rubygems, pypi) */
   ecosystem?: string
 }

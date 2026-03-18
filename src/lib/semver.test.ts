@@ -66,6 +66,24 @@ describe('matchesSemverFilter()', () => {
     })
   })
 
+  describe('with "major" filter', () => {
+    it('should not match patch level', () => {
+      strictEqual(matchesSemverFilter('patch', 'major'), false)
+    })
+
+    it('should not match minor level', () => {
+      strictEqual(matchesSemverFilter('minor', 'major'), false)
+    })
+
+    it('should match major level', () => {
+      strictEqual(matchesSemverFilter('major', 'major'), true)
+    })
+
+    it('should not match null level', () => {
+      strictEqual(matchesSemverFilter(null, 'major'), false)
+    })
+  })
+
   describe('with "minor" filter', () => {
     it('should match patch level', () => {
       strictEqual(matchesSemverFilter('patch', 'minor'), true)
@@ -109,6 +127,16 @@ describe('filterDependenciesBySemver()', () => {
       deepStrictEqual(
         result.map((d) => d.name),
         ['@types/react', 'react', 'react-dom'],
+      )
+    })
+  })
+
+  describe('with "major" filter', () => {
+    it('should only return dependencies with major updates', () => {
+      const result = filterDependenciesBySemver(testDeps, 'major')
+      deepStrictEqual(
+        result.map((d) => d.name),
+        ['@types/node'],
       )
     })
   })
