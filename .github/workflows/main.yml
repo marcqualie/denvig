@@ -10,6 +10,8 @@ on:
     branches: [main]
 
 env:
+  # https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Workspace is /home/runner/work/denvig/denvig so we want /home/runner/work as the root
   DENVIG_CODE_ROOT_DIR: ${{ github.workspace }}/../..
 
