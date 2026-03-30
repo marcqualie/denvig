@@ -1,6 +1,12 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Added
+
+- `deps dedupe` command to deduplicate pnpm and yarn lockfile dependencies by combining compatible versions
+
 ## [0.6.1] - 2026-03-18
 
 ### Added

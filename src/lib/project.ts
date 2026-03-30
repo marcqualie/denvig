@@ -12,7 +12,11 @@ import { getProjectSlug } from './git.ts'
 import plugins from './plugins.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
-import type { OutdatedDependenciesOptions } from './plugin.ts'
+import type {
+  DeduplicateDependenciesOptions,
+  DeduplicateResult,
+  OutdatedDependenciesOptions,
+} from './plugin.ts'
 
 /**
  * Generate a unique project ID from the absolute path.
@@ -123,6 +127,22 @@ export class DenvigProject {
 
     // Flatten all results into a single array
     return pluginResults.flat()
+  }
+
+  async deduplicateDependencies(
+    options?: DeduplicateDependenciesOptions,
+  ): Promise<DeduplicateResult[]> {
+    const results = await Promise.all(
+      Object.values(plugins).map((plugin) =>
+        plugin.deduplicateDependencies
+          ? plugin.deduplicateDependencies(this, options)
+          : Promise.resolve(null),
+      ),
+    )
+
+    return results.filter(
+      (result): result is DeduplicateResult => result !== null,
+    )
   }
 
   /**
