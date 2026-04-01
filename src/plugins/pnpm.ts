@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { parse } from 'yaml'
 
+import {
+  analyzeDedupeFromParsed,
+  applyDedupeChanges,
+} from '../lib/dedupe/dedupe.ts'
+import { parsePnpmLockForDedupe } from '../lib/dedupe/parse-pnpm.ts'
+import { preparePnpmRemovals } from '../lib/dedupe/prepare-removals-pnpm.ts'
 import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
@@ -214,6 +220,43 @@ const plugin = definePlugin({
     const dependencies = await plugin.dependencies?.(project)
     if (!dependencies) return []
     return npmOutdated(dependencies, options)
+  },
+
+  deduplicateDependencies: async (project, options) => {
+    const lockfilePath = `${project.path}/pnpm-lock.yaml`
+    if (!(await pathExists(lockfilePath))) {
+      return null
+    }
+
+    const content = await readFile(lockfilePath, 'utf-8')
+    const parsed = parsePnpmLockForDedupe(content)
+    const analysis = analyzeDedupeFromParsed(parsed)
+
+    const dryRun = options?.dryRun ?? false
+    let applied = false
+
+    if (!dryRun && Object.keys(analysis.removals).length > 0) {
+      const optimisedVersionsMap: Record<string, Record<string, string[]>> = {}
+      for (const [name, info] of Object.entries(parsed.dependencies)) {
+        if (analysis.removals[name] && info.optimisedVersions) {
+          optimisedVersionsMap[name] = info.optimisedVersions
+        }
+      }
+
+      const newContent = preparePnpmRemovals(
+        content,
+        analysis.removals,
+        optimisedVersionsMap,
+      )
+      await applyDedupeChanges(lockfilePath, newContent, 'pnpm')
+      applied = true
+    }
+
+    return {
+      ecosystem: 'pnpm-lock.yaml',
+      ...analysis,
+      applied,
+    }
   },
 })
 
