@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { parse } from 'yaml'
 
+import {
+  analyzeDedupeFromParsed,
+  applyDedupeChanges,
+} from '../lib/dedupe/dedupe.ts'
+import { parseYarnLockForDedupe } from '../lib/dedupe/parse-yarn.ts'
+import { prepareYarnRemovals } from '../lib/dedupe/prepare-removals-yarn.ts'
 import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { parseYarnLockContent } from '../lib/parsers/yarn.ts'
@@ -350,6 +356,32 @@ const plugin = definePlugin({
     const dependencies = await plugin.dependencies?.(project)
     if (!dependencies) return []
     return npmOutdated(dependencies, options)
+  },
+
+  deduplicateDependencies: async (project, options) => {
+    const lockfilePath = `${project.path}/yarn.lock`
+    if (!(await pathExists(lockfilePath))) {
+      return null
+    }
+
+    const content = await readFile(lockfilePath, 'utf-8')
+    const parsed = parseYarnLockForDedupe(content)
+    const analysis = analyzeDedupeFromParsed(parsed)
+
+    const dryRun = options?.dryRun ?? false
+    let applied = false
+
+    if (!dryRun && Object.keys(analysis.removals).length > 0) {
+      const newContent = prepareYarnRemovals(content, analysis.removals)
+      await applyDedupeChanges(lockfilePath, newContent, 'yarn')
+      applied = true
+    }
+
+    return {
+      ecosystem: 'yarn.lock',
+      ...analysis,
+      applied,
+    }
   },
 })
 
