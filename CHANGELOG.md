@@ -7,6 +7,10 @@
 
 - `deps dedupe` command to deduplicate pnpm and yarn lockfile dependencies by combining compatible versions
 
+### Changed
+
+- Upgraded `node-forge` from 1.3.3 to 1.4.0 (security fixes for 4 CVEs)
+
 ## [0.6.1] - 2026-03-18
 
 ### Added
