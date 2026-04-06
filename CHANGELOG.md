@@ -1,7 +1,7 @@
 # Denvig Changelog
 
 
-## [Unreleased]
+## [0.6.2] - 2026-04-03
 
 ### Added
 
@@ -11,8 +11,6 @@
 
 - Upgraded `node-forge` from 1.3.3 to 1.4.0 (security fixes for 4 CVEs)
 - Upgraded `typescript` from 5.9.3 to 6.0.2 (major version upgrade)
-- Changed `moduleResolution` from `node` to `bundler` in tsconfig.json (deprecated in TS 6.0)
-- Added `ignoreDeprecations: "6.0"` to tsconfig.json to suppress tsup's `baseUrl` deprecation warning
 
 ## [0.6.1] - 2026-03-18
 
