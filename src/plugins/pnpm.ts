@@ -48,6 +48,24 @@ const stripPeerDeps = (version: string): string => {
   return parenIndex === -1 ? version : version.slice(0, parenIndex)
 }
 
+/**
+ * Resolve pnpm dependency aliases where the version field references another package.
+ * e.g., depName="wrap-ansi-cjs", depVersion="wrap-ansi@7.0.0" -> { name: "wrap-ansi", version: "7.0.0" }
+ * Returns null if not an alias.
+ */
+const resolveAlias = (
+  depVersion: string,
+): { name: string; version: string } | null => {
+  // Aliases look like "package@version" where it starts with a letter or @scope
+  // Normal versions start with a digit
+  if (/^\d/.test(depVersion)) return null
+  const match = depVersion.match(/^((?:@[^@/]+\/)?[^@]+)@(.+)$/)
+  if (match) {
+    return { name: match[1], version: match[2] }
+  }
+  return null
+}
+
 const plugin = definePlugin({
   name: 'pnpm',
 
@@ -93,8 +111,6 @@ const plugin = definePlugin({
     }
 
     const data: Map<string, ProjectDependencySchema> = new Map()
-    const directDependencies: Set<string> = new Set()
-
     // Helper to add a dependency version entry
     const addDependency = (
       id: string,
@@ -144,7 +160,6 @@ const plugin = definePlugin({
         if (importer.dependencies) {
           for (const [name, depInfo] of Object.entries(importer.dependencies)) {
             if (depInfo?.specifier && depInfo?.version) {
-              directDependencies.add(name)
               addDependency(
                 `npm:${name}`,
                 name,
@@ -163,7 +178,6 @@ const plugin = definePlugin({
             importer.devDependencies,
           )) {
             if (depInfo?.specifier && depInfo?.version) {
-              directDependencies.add(name)
               addDependency(
                 `npm:${name}`,
                 name,
@@ -187,18 +201,18 @@ const plugin = definePlugin({
           ...snapshot.dependencies,
         }
         for (const [depName, depVersion] of Object.entries(transitiveDeps)) {
-          if (!directDependencies.has(depName)) {
-            const cleanVersion = stripPeerDeps(depVersion)
-            const source = `pnpm-lock.yaml:${snapshotKey}`
-            addDependency(
-              `npm:${depName}`,
-              depName,
-              'npm',
-              cleanVersion,
-              source,
-              cleanVersion,
-            )
-          }
+          const alias = resolveAlias(depVersion)
+          const actualName = alias ? alias.name : depName
+          const cleanVersion = stripPeerDeps(alias ? alias.version : depVersion)
+          const source = `pnpm-lock.yaml:${snapshotKey}`
+          addDependency(
+            `npm:${actualName}`,
+            actualName,
+            'npm',
+            cleanVersion,
+            source,
+            cleanVersion,
+          )
         }
       }
     }

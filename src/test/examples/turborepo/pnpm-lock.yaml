@@ -32,6 +32,9 @@ importers:
 
   packages/package3:
     dependencies:
+      minimist:
+        specifier: ^1.2.0
+        version: 1.2.8
       react:
         specifier: ^18
         version: 18.3.1
@@ -794,6 +797,7 @@ snapshots:
   denvig@0.3.0:
     dependencies:
       minimist: 1.2.8
+      minimist-cjs: minimist@1.2.8
       yaml: 2.8.2
       zod: 4.3.5
 

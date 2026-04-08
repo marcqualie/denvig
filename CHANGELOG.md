@@ -1,6 +1,14 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Fixed
+
+- `deps why` now correctly resolves dependency chains through scoped packages (e.g. `@serverless/dashboard-plugin`)
+- `deps why` now shows transitive chains for packages that are also direct dependencies
+- `deps why` now resolves pnpm aliased dependencies (e.g. `wrap-ansi-cjs: wrap-ansi@7.0.0`) to their real package name
+
 ## [0.6.2] - 2026-04-03
 
 ### Added
