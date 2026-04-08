@@ -1,6 +1,12 @@
 # Denvig Changelog
 
 
+## [Unreleased]
+
+### Fixed
+
+- `deps why` now correctly resolves dependency chains through scoped packages (e.g. `@serverless/dashboard-plugin`)
+
 ## [0.6.2] - 2026-04-03
 
 ### Added

@@ -41,8 +41,8 @@ export const parseParentFromSource = (
   for (const prefix of LOCKFILE_PREFIXES) {
     if (source.startsWith(prefix)) {
       const ref = source.slice(prefix.length)
-      // Parse "package@version" or "package@version(peer@1.0.0)"
-      const match = ref.match(/^([^@]+)@([^(@]+)/)
+      // Parse "package@version", "@scope/package@version", or with peer deps
+      const match = ref.match(/^((?:@[^@/]+\/)?[^@]+)@([^(@]+)/)
       if (match) {
         return { name: match[1], version: match[2] }
       }
