@@ -10,6 +10,11 @@ set of consistent wrappers to avoid muscle memory and configuration headaches.
 
 ## Installation
 
+### Homebrew
+
+```shell
+brew install denvig/tap/denvig
+```
 
 ### NPM
 
