@@ -32,6 +32,9 @@ importers:
 
   packages/package3:
     dependencies:
+      minimist:
+        specifier: ^1.2.0
+        version: 1.2.8
       react:
         specifier: ^18
         version: 18.3.1

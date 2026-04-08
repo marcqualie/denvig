@@ -6,6 +6,7 @@
 ### Fixed
 
 - `deps why` now correctly resolves dependency chains through scoped packages (e.g. `@serverless/dashboard-plugin`)
+- `deps why` now shows transitive chains for packages that are also direct dependencies
 
 ## [0.6.2] - 2026-04-03
 

@@ -93,8 +93,6 @@ const plugin = definePlugin({
     }
 
     const data: Map<string, ProjectDependencySchema> = new Map()
-    const directDependencies: Set<string> = new Set()
-
     // Helper to add a dependency version entry
     const addDependency = (
       id: string,
@@ -144,7 +142,6 @@ const plugin = definePlugin({
         if (importer.dependencies) {
           for (const [name, depInfo] of Object.entries(importer.dependencies)) {
             if (depInfo?.specifier && depInfo?.version) {
-              directDependencies.add(name)
               addDependency(
                 `npm:${name}`,
                 name,
@@ -163,7 +160,6 @@ const plugin = definePlugin({
             importer.devDependencies,
           )) {
             if (depInfo?.specifier && depInfo?.version) {
-              directDependencies.add(name)
               addDependency(
                 `npm:${name}`,
                 name,
@@ -187,18 +183,16 @@ const plugin = definePlugin({
           ...snapshot.dependencies,
         }
         for (const [depName, depVersion] of Object.entries(transitiveDeps)) {
-          if (!directDependencies.has(depName)) {
-            const cleanVersion = stripPeerDeps(depVersion)
-            const source = `pnpm-lock.yaml:${snapshotKey}`
-            addDependency(
-              `npm:${depName}`,
-              depName,
-              'npm',
-              cleanVersion,
-              source,
-              cleanVersion,
-            )
-          }
+          const cleanVersion = stripPeerDeps(depVersion)
+          const source = `pnpm-lock.yaml:${snapshotKey}`
+          addDependency(
+            `npm:${depName}`,
+            depName,
+            'npm',
+            cleanVersion,
+            source,
+            cleanVersion,
+          )
         }
       }
     }

@@ -141,6 +141,32 @@ describe('pnpm plugin', () => {
       )
     })
 
+    it('should include transitive entries for dependencies that are also direct', async () => {
+      const project = createMockProjectFromPath(turborepoExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      // minimist is both a direct dependency (package3) and transitive (via denvig@0.3.0)
+      const minimistDep = deps.find((d) => d.name === 'minimist')
+      ok(minimistDep, 'minimist should be detected')
+      strictEqual(minimistDep.ecosystem, 'npm')
+
+      const directVersion = minimistDep.versions.find(
+        (v) => v.source === 'packages/package3#dependencies',
+      )
+      ok(directVersion, 'should have direct dependency entry from package3')
+      strictEqual(directVersion.resolved, '1.2.8')
+
+      const transitiveVersion = minimistDep.versions.find(
+        (v) => v.source === 'pnpm-lock.yaml:denvig@0.3.0',
+      )
+      ok(
+        transitiveVersion,
+        'should have transitive dependency entry via denvig',
+      )
+      strictEqual(transitiveVersion.resolved, '1.2.8')
+    })
+
     it('should return all expected dependencies from turborepo example', async () => {
       const project = createMockProjectFromPath(turborepoExamplePath)
       ok(pnpmPlugin.dependencies, 'dependencies function should exist')
