@@ -3,6 +3,9 @@
 
 ## [Unreleased]
 
+
+## [0.6.3] - 2026-04-08
+
 ### Fixed
 
 - `deps why` now correctly resolves dependency chains through scoped packages (e.g. `@serverless/dashboard-plugin`)
