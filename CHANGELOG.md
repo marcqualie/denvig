@@ -3,9 +3,7 @@
 
 ## [Unreleased]
 
-### Changed
-
-- Upgraded `@biomejs/biome` from 2.4.10 to 2.4.11
+## [0.6.4] - 2026-04-12
 
 ### Fixed
 
