@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded `@biomejs/biome` from 2.4.10 to 2.4.11
+
 ### Fixed
 
 - `deps outdated --semver patch` now detects patch updates even when a minor or major version is also available
