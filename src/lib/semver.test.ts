@@ -5,6 +5,7 @@ import {
   filterDependenciesBySemver,
   getSemverLevel,
   matchesSemverFilter,
+  outdatedMatchesSemverFilter,
 } from './semver.ts'
 
 describe('getSemverLevel()', () => {
@@ -177,5 +178,49 @@ describe('filterDependenciesBySemver()', () => {
     ]
     const result = filterDependenciesBySemver(majorOnly, 'patch')
     deepStrictEqual(result, [])
+  })
+})
+
+describe('outdatedMatchesSemverFilter()', () => {
+  // Regression for https://github.com/marcqualie/denvig/issues/154
+  // esbuild has both a patch (0.27.7) and a minor (0.28.0) available; the
+  // patch filter must still include it because a patch update does exist.
+  const esbuild = {
+    currentVersion: '0.27.4',
+    wantedVersion: '0.27.7',
+    latestVersion: '0.28.0',
+  }
+
+  it('should include a dep with a patch in wanted when filter is "patch"', () => {
+    strictEqual(outdatedMatchesSemverFilter(esbuild, 'patch'), true)
+  })
+
+  it('should include a dep with a patch in wanted when filter is "minor"', () => {
+    strictEqual(outdatedMatchesSemverFilter(esbuild, 'minor'), true)
+  })
+
+  it('should exclude a dep with only a minor available when filter is "major"', () => {
+    strictEqual(outdatedMatchesSemverFilter(esbuild, 'major'), false)
+  })
+
+  it('should match based on latest when wanted equals current', () => {
+    const dep = {
+      currentVersion: '20.19.27',
+      wantedVersion: '20.19.27',
+      latestVersion: '25.0.8',
+    }
+    strictEqual(outdatedMatchesSemverFilter(dep, 'major'), true)
+    strictEqual(outdatedMatchesSemverFilter(dep, 'patch'), false)
+  })
+
+  it('should match a pure patch dep in both patch and minor filters', () => {
+    const dep = {
+      currentVersion: '19.2.1',
+      wantedVersion: '19.2.3',
+      latestVersion: '19.2.3',
+    }
+    strictEqual(outdatedMatchesSemverFilter(dep, 'patch'), true)
+    strictEqual(outdatedMatchesSemverFilter(dep, 'minor'), true)
+    strictEqual(outdatedMatchesSemverFilter(dep, 'major'), false)
   })
 })

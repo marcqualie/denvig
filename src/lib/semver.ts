@@ -70,3 +70,28 @@ export const filterDependenciesBySemver = <T extends DependencyWithVersions>(
     return matchesSemverFilter(level, filter)
   })
 }
+
+export type OutdatedDependencyVersions = {
+  currentVersion: string
+  wantedVersion: string
+  latestVersion: string
+}
+
+/**
+ * Check if an outdated dependency matches a semver filter.
+ *
+ * A dependency matches when either `wanted` or `latest` represents an update
+ * at the requested level. This ensures a patch update (e.g., `0.27.7`) is
+ * still detected when a higher minor/major version (e.g., `0.28.0`) exists
+ * alongside it — previously the filter only compared against `latest`, so the
+ * patch would be hidden behind the minor bump.
+ */
+export const outdatedMatchesSemverFilter = (
+  dep: OutdatedDependencyVersions,
+  filter: SemverFilter,
+): boolean => {
+  const wantedLevel = getSemverLevel(dep.currentVersion, dep.wantedVersion)
+  if (matchesSemverFilter(wantedLevel, filter)) return true
+  const latestLevel = getSemverLevel(dep.currentVersion, dep.latestVersion)
+  return matchesSemverFilter(latestLevel, filter)
+}
