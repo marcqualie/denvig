@@ -3,6 +3,9 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `deps outdated --semver patch` now detects patch updates even when a minor or major version is also available
 
 ## [0.6.3] - 2026-04-08
 

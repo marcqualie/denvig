@@ -1,6 +1,9 @@
 import { Command } from '../../lib/command.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
-import { getSemverLevel, matchesSemverFilter } from '../../lib/semver.ts'
+import {
+  getSemverLevel,
+  outdatedMatchesSemverFilter,
+} from '../../lib/semver.ts'
 
 /**
  * Get the color for a version update based on semver difference.
@@ -83,12 +86,20 @@ export const depsOutdatedCommand = new Command({
       entries = entries.filter((dep) => dep.ecosystem === ecosystemFilter)
     }
 
-    // Filter by semver level if specified (compare against latest version)
+    // Filter by semver level if specified. We check both `wanted` and
+    // `latest` so that a patch-level update is still detected even when a
+    // higher minor/major version exists alongside it (see issue #154).
     if (semverFilter) {
-      entries = entries.filter((dep) => {
-        const level = getSemverLevel(getCurrent(dep), dep.latest)
-        return matchesSemverFilter(level, semverFilter)
-      })
+      entries = entries.filter((dep) =>
+        outdatedMatchesSemverFilter(
+          {
+            currentVersion: getCurrent(dep),
+            wantedVersion: dep.wanted,
+            latestVersion: dep.latest,
+          },
+          semverFilter,
+        ),
+      )
     }
 
     if (entries.length === 0) {
