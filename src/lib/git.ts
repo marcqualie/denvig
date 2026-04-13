@@ -42,15 +42,16 @@ export const getGitHubSlug = async (
   try {
     const gitConfig = await readFile(gitConfigPath, 'utf-8')
 
-    // Parse git config to find remotes
-    // Look for [remote "origin"] section and its url
-    const remoteOriginMatch = gitConfig.match(
-      /\[remote "origin"\][^[]*url\s*=\s*([^\s\n]+)/,
-    )
+    // Check remotes in priority order: origin first, then github
+    for (const remoteName of ['origin', 'github']) {
+      const remoteMatch = gitConfig.match(
+        new RegExp(`\\[remote "${remoteName}"\\][^[]*url\\s*=\\s*([^\\s\\n]+)`),
+      )
 
-    if (remoteOriginMatch) {
-      const remoteUrl = remoteOriginMatch[1]
-      return parseGitHubRemoteUrl(remoteUrl)
+      if (remoteMatch) {
+        const slug = parseGitHubRemoteUrl(remoteMatch[1])
+        if (slug) return slug
+      }
     }
 
     return null
