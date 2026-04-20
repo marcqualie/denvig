@@ -1,7 +1,7 @@
 import { Command } from '../../lib/command.ts'
 import { parseDuration } from '../../lib/formatters/duration.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
-import { COLORS, formatTable } from '../../lib/formatters/table.ts'
+import { COLORS, formatTable, hyperlink } from '../../lib/formatters/table.ts'
 import { readPnpmReleaseAgeConfig } from '../../lib/pnpm-config.ts'
 import {
   getSemverLevel,
@@ -26,6 +26,23 @@ const getVersionColor = (current: string, target: string): string => {
   if (level === 'patch') return COLORS.green
 
   return COLORS.white
+}
+
+/** Get a URL for a specific package version based on ecosystem. */
+const getVersionUrl = (
+  name: string,
+  version: string,
+  ecosystem: string,
+): string | null => {
+  const via = process.env.DENVIG_OPEN_VIA || 'npm'
+  if (via === 'none') return null
+  if (ecosystem === 'npm') {
+    if (via === 'npmx') {
+      return `https://npmx.dev/package/${name}/v/${version}`
+    }
+    return `https://www.npmjs.com/package/${name}/v/${version}`
+  }
+  return null
 }
 
 export const depsOutdatedCommand = new Command({
@@ -236,13 +253,19 @@ export const depsOutdatedCommand = new Command({
             return getCurrent(dep)
           },
           format: (value, dep) => {
+            const current = getCurrent(dep)
+            const url = getVersionUrl(dep.name, current, dep.ecosystem)
             if (dep.currentDate) {
               const versionEnd = value.indexOf(' (')
               const versionPart = value.slice(0, versionEnd)
               const rest = value.slice(versionEnd)
-              return `${versionPart}${COLORS.grey}${rest}${COLORS.reset}`
+              const linked = url ? hyperlink(versionPart, url) : versionPart
+              return `${linked}${COLORS.grey}${rest}${COLORS.reset}`
             }
-            return value
+            return url
+              ? hyperlink(value.trimEnd(), url) +
+                  value.slice(value.trimEnd().length)
+              : value
           },
         },
         {
@@ -255,15 +278,22 @@ export const depsOutdatedCommand = new Command({
             return dep.wanted
           },
           format: (value, dep) => {
-            if (value === '-') return value
+            if (value.trimEnd() === '-') return value
             const color = getVersionColor(getCurrent(dep), dep.wanted)
+            const url = getVersionUrl(dep.name, dep.wanted, dep.ecosystem)
             if (dep.wantedDate) {
               const versionEnd = value.indexOf(' (')
               const versionPart = value.slice(0, versionEnd)
               const rest = value.slice(versionEnd)
-              return `${color}${versionPart}${COLORS.reset}${COLORS.grey}${rest}${COLORS.reset}`
+              const linked = url
+                ? hyperlink(`${color}${versionPart}${COLORS.reset}`, url)
+                : `${color}${versionPart}${COLORS.reset}`
+              return `${linked}${COLORS.grey}${rest}${COLORS.reset}`
             }
-            return `${color}${value}${COLORS.reset}`
+            const linked = url
+              ? hyperlink(`${color}${value.trimEnd()}${COLORS.reset}`, url)
+              : `${color}${value}${COLORS.reset}`
+            return url ? linked + value.slice(value.trimEnd().length) : linked
           },
         },
         {
@@ -276,13 +306,20 @@ export const depsOutdatedCommand = new Command({
           },
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.latest)
+            const url = getVersionUrl(dep.name, dep.latest, dep.ecosystem)
             if (dep.latestDate) {
               const versionEnd = value.indexOf(' (')
               const versionPart = value.slice(0, versionEnd)
               const rest = value.slice(versionEnd)
-              return `${color}${versionPart}${COLORS.reset}${COLORS.grey}${rest}${COLORS.reset}`
+              const linked = url
+                ? hyperlink(`${color}${versionPart}${COLORS.reset}`, url)
+                : `${color}${versionPart}${COLORS.reset}`
+              return `${linked}${COLORS.grey}${rest}${COLORS.reset}`
             }
-            return `${color}${value}${COLORS.reset}`
+            const linked = url
+              ? hyperlink(`${color}${value.trimEnd()}${COLORS.reset}`, url)
+              : `${color}${value}${COLORS.reset}`
+            return url ? linked + value.slice(value.trimEnd().length) : linked
           },
         },
         {

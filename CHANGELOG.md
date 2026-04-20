@@ -9,6 +9,8 @@
 - `deps outdated --release-latency` flag to filter out recently-released versions (e.g. `--release-latency 7d`). Defaults to `auto`, which reads pnpm's `minimumReleaseAge` from `pnpm-workspace.yaml` when available
 - `--release-latency=auto` now respects pnpm's `minimumReleaseAgeExclude` list, allowing excluded packages to bypass the latency filter
 - `deps outdated` wanted column now displays `-` when the wanted version matches the current version
+- `deps outdated` version numbers are now clickable OSC 8 hyperlinks to the npm package page in supported terminals
+- `DENVIG_OPEN_VIA` environment variable to control version link target: `npm` (default), `npmx` for npmx.dev, or `none` to disable links
 
 ### Fixed
 

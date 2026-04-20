@@ -37,11 +37,20 @@ export const COLORS = {
 }
 
 /**
- * Strip ANSI escape codes from a string to get display width.
+ * Strip ANSI escape codes and OSC 8 hyperlink sequences from a string to get display width.
  */
 const stripAnsi = (str: string): string => {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for ANSI code stripping
-  return str.replace(/\x1b\[[0-9;]*m/g, '')
+  return str.replace(/\x1b\[[0-9;]*m/g, '').replace(/\x1b]8;;[^\x07]*\x07/g, '')
+}
+
+/**
+ * Wrap text in an OSC 8 hyperlink escape sequence.
+ * Returns the text unchanged when terminal formatting is disabled.
+ */
+export const hyperlink = (text: string, url: string): string => {
+  if (!shouldUseColors()) return text
+  return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`
 }
 
 /**
