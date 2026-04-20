@@ -145,10 +145,11 @@ export const gatewayStatusCommand = new Command({
     console.log('')
 
     for (const [name, config] of gatewayServices) {
-      const domain = config.http!.domain!
-      const cnames = config.http!.cnames || []
+      const domain = config.http?.domain
+      if (!domain) continue
+      const cnames = config.http?.cnames || []
       const allDomains = [domain, ...cnames]
-      const secure = config.http!.secure ?? false
+      const secure = config.http?.secure ?? false
 
       const certDir = secure ? await findCertForDomain(domain) : null
       const sslPaths = certDir ? await resolveSslPaths(certDir) : null
@@ -165,7 +166,7 @@ export const gatewayStatusCommand = new Command({
 
       console.log(`  ${name}:`)
       console.log(`    Domains: ${allDomains.join(', ')}`)
-      console.log(`    Port:    ${config.http!.port || '(not set)'}`)
+      console.log(`    Port:    ${config.http?.port || '(not set)'}`)
       console.log(`    Certs:   ${certStatus} ${certLabel}`)
       console.log(
         `    Nginx:   ${nginxStatus} ${nginxExists ? 'configured' : 'not generated'}`,

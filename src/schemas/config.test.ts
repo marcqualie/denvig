@@ -60,8 +60,8 @@ describe('GlobalConfigSchema', () => {
     ok(result.success)
     if (result.success) {
       ok(result.data.services)
-      ok(result.data.services!.redis)
-      ok(result.data.services!.postgres)
+      ok(result.data.services?.redis)
+      ok(result.data.services?.postgres)
     }
   })
 

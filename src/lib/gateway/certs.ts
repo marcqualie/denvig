@@ -3,7 +3,6 @@ import { resolve } from 'node:path'
 
 import {
   generateDomainCert,
-  getCertDir,
   getCertsDir,
   isCaInitialized,
   loadCaCert,
@@ -91,7 +90,7 @@ export function groupDomainsForCertGeneration(
     if (!parentMap.has(parent)) {
       parentMap.set(parent, [])
     }
-    parentMap.get(parent)!.push(domain)
+    parentMap.get(parent)?.push(domain)
   }
 
   const result = new Map<string, string[]>()
