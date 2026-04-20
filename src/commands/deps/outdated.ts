@@ -248,12 +248,14 @@ export const depsOutdatedCommand = new Command({
         {
           header: 'Wanted',
           accessor: (dep) => {
+            if (dep.wanted === getCurrent(dep)) return '-'
             if (dep.wantedDate) {
               return `${dep.wanted} (${relativeFormattedTime(dep.wantedDate)})`
             }
             return dep.wanted
           },
           format: (value, dep) => {
+            if (value === '-') return value
             const color = getVersionColor(getCurrent(dep), dep.wanted)
             if (dep.wantedDate) {
               const versionEnd = value.indexOf(' (')
