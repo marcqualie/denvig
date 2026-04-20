@@ -1,6 +1,8 @@
 import { Command } from '../../lib/command.ts'
+import { parseDuration } from '../../lib/formatters/duration.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
+import { readPnpmMinimumReleaseAge } from '../../lib/pnpm-config.ts'
 import {
   getSemverLevel,
   outdatedMatchesSemverFilter,
@@ -30,8 +32,8 @@ export const depsOutdatedCommand = new Command({
   name: 'deps:outdated',
   description: 'Show outdated dependencies',
   usage:
-    'deps outdated [--no-cache] [--semver patch|minor|major] [--ecosystem <name>]',
-  example: 'denvig deps outdated --semver patch',
+    'deps outdated [--no-cache] [--semver patch|minor|major] [--ecosystem <name>] [--release-latency <duration>]',
+  example: 'denvig deps outdated --release-latency 7d',
   args: [],
   flags: [
     {
@@ -56,11 +58,20 @@ export const depsOutdatedCommand = new Command({
       type: 'string',
       defaultValue: undefined,
     },
+    {
+      name: 'release-latency',
+      description:
+        'Only show updates released longer ago than this duration (e.g., "3h", "7d", "2w"). Use "auto" to read from pnpm minimumReleaseAge, or "0" to disable.',
+      required: false,
+      type: 'string',
+      defaultValue: 'auto',
+    },
   ],
   handler: async ({ project, flags }) => {
     const cache = !(flags['no-cache'] as boolean)
     const semverFilter = flags.semver as 'patch' | 'minor' | 'major' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
+    const releaseLatencyFlag = flags['release-latency'] as string | undefined
 
     // Validate semver flag
     if (
@@ -101,6 +112,57 @@ export const depsOutdatedCommand = new Command({
           semverFilter,
         ),
       )
+    }
+
+    // Resolve release latency threshold
+    let releaseLatencyMs: number | null = null
+    const latencyValue = releaseLatencyFlag ?? 'auto'
+    if (latencyValue === '0') {
+      // Explicitly disabled
+      releaseLatencyMs = null
+    } else if (latencyValue === 'auto') {
+      // Read from pnpm-workspace.yaml if available
+      releaseLatencyMs = await readPnpmMinimumReleaseAge(project.path)
+    } else {
+      releaseLatencyMs = parseDuration(latencyValue)
+      if (releaseLatencyMs === null) {
+        console.error(
+          `Invalid --release-latency value: "${latencyValue}". Use a duration like "3h", "7d", "2w", or "auto".`,
+        )
+        return { success: false, message: 'Invalid --release-latency value.' }
+      }
+    }
+
+    // Filter by release latency: hide entries where all update versions
+    // were released more recently than the threshold
+    if (releaseLatencyMs !== null) {
+      const now = Date.now()
+      entries = entries.filter((dep) => {
+        const current = getCurrent(dep)
+        const wantedIsUpdate = dep.wanted !== current
+        const latestIsUpdate = dep.latest !== current
+
+        // Check if wanted version is old enough
+        const wantedOldEnough =
+          wantedIsUpdate && dep.wantedDate
+            ? now - new Date(dep.wantedDate).getTime() >= releaseLatencyMs
+            : false
+
+        // Check if latest version is old enough
+        const latestOldEnough =
+          latestIsUpdate && dep.latestDate
+            ? now - new Date(dep.latestDate).getTime() >= releaseLatencyMs
+            : false
+
+        // Keep if any available update is old enough, or if dates are missing
+        // (we don't filter out entries with unknown release dates)
+        const hasDateInfo =
+          (wantedIsUpdate && dep.wantedDate) ||
+          (latestIsUpdate && dep.latestDate)
+        if (!hasDateInfo) return true
+
+        return wantedOldEnough || latestOldEnough
+      })
     }
 
     if (entries.length === 0) {
