@@ -219,7 +219,24 @@ export const depsOutdatedCommand = new Command({
           accessor: (e) =>
             e.isDevDependency ? `${COLORS.grey}(dev)${COLORS.reset}` : '    ',
         },
-        { header: 'Current', accessor: (dep) => getCurrent(dep) },
+        {
+          header: 'Current',
+          accessor: (dep) => {
+            if (dep.currentDate) {
+              return `${getCurrent(dep)} (${relativeFormattedTime(dep.currentDate)})`
+            }
+            return getCurrent(dep)
+          },
+          format: (value, dep) => {
+            if (dep.currentDate) {
+              const versionEnd = value.indexOf(' (')
+              const versionPart = value.slice(0, versionEnd)
+              const rest = value.slice(versionEnd)
+              return `${versionPart}${COLORS.grey}${rest}${COLORS.reset}`
+            }
+            return value
+          },
+        },
         {
           header: 'Wanted',
           accessor: (dep) => {

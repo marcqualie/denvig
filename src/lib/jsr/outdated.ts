@@ -51,6 +51,7 @@ export const jsrOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        currentDate: jsrInfo.versionDates?.[info.current],
         wantedDate: jsrInfo.versionDates?.[wantedVersion],
         latestDate: jsrInfo.versionDates?.[latest],
       })

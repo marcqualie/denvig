@@ -181,6 +181,7 @@ export const npmOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        currentDate: npmInfo.versionDates?.[info.current],
         wantedDate: npmInfo.versionDates?.[wantedVersion],
         latestDate: npmInfo.versionDates?.[latest],
       })
