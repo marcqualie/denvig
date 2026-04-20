@@ -206,6 +206,7 @@ export const rubygemsOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        currentDate: gemInfo.versionDates?.[info.current],
         wantedDate: gemInfo.versionDates?.[wantedVersion],
         latestDate: gemInfo.versionDates?.[latest],
       })

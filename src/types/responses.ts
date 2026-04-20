@@ -102,6 +102,7 @@ export type OutdatedDependency = Dependency & {
   latest: string
   specifier: string
   isDevDependency: boolean
+  currentDate?: string
   wantedDate?: string
   latestDate?: string
 }

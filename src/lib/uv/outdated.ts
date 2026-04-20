@@ -214,6 +214,7 @@ export const uvOutdated = async (
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        currentDate: pypiInfo.versionDates?.[info.current],
         wantedDate: pypiInfo.versionDates?.[wantedVersion],
         latestDate: pypiInfo.versionDates?.[latest],
       })

@@ -56,6 +56,10 @@ export const OutdatedDependencyZodSchema = ProjectDependencyZodSchema.extend({
   latest: z.string().describe('Absolute latest version available'),
   specifier: z.string().describe('The version specifier from package manifest'),
   isDevDependency: z.boolean().describe('Whether this is a dev dependency'),
+  currentDate: z
+    .string()
+    .optional()
+    .describe('ISO date when the current version was published'),
   wantedDate: z
     .string()
     .optional()
