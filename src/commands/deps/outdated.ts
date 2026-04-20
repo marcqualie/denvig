@@ -169,8 +169,10 @@ export const depsOutdatedCommand = new Command({
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.wanted)
             if (dep.wantedDate) {
-              const age = `(${relativeFormattedTime(dep.wantedDate)})`
-              return `${color}${dep.wanted}${COLORS.reset} ${COLORS.grey}${age}${COLORS.reset}`
+              const versionEnd = value.indexOf(' (')
+              const versionPart = value.slice(0, versionEnd)
+              const rest = value.slice(versionEnd)
+              return `${color}${versionPart}${COLORS.reset}${COLORS.grey}${rest}${COLORS.reset}`
             }
             return `${color}${value}${COLORS.reset}`
           },
@@ -186,8 +188,10 @@ export const depsOutdatedCommand = new Command({
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.latest)
             if (dep.latestDate) {
-              const age = `(${relativeFormattedTime(dep.latestDate)})`
-              return `${color}${dep.latest}${COLORS.reset} ${COLORS.grey}${age}${COLORS.reset}`
+              const versionEnd = value.indexOf(' (')
+              const versionPart = value.slice(0, versionEnd)
+              const rest = value.slice(versionEnd)
+              return `${color}${versionPart}${COLORS.reset}${COLORS.grey}${rest}${COLORS.reset}`
             }
             return `${color}${value}${COLORS.reset}`
           },
