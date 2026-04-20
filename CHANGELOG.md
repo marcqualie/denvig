@@ -7,6 +7,7 @@
 
 - `deps outdated` now shows how long ago the wanted, latest, and current versions were released (e.g. `1.2.3 (3d)`)
 - `deps outdated --release-latency` flag to filter out recently-released versions (e.g. `--release-latency 7d`). Defaults to `auto`, which reads pnpm's `minimumReleaseAge` from `pnpm-workspace.yaml` when available
+- `--release-latency=auto` now respects pnpm's `minimumReleaseAgeExclude` list, allowing excluded packages to bypass the latency filter
 
 ### Fixed
 

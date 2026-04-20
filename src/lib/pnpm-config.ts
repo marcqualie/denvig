@@ -5,16 +5,23 @@ import { parseDuration } from './formatters/duration.ts'
 
 type PnpmWorkspaceConfig = {
   minimumReleaseAge?: number | string
+  minimumReleaseAgeExclude?: string[]
+}
+
+export type PnpmReleaseAgeConfig = {
+  minimumReleaseAgeMs: number
+  exclude: string[]
 }
 
 /**
- * Read the minimumReleaseAge from pnpm-workspace.yaml and return it as milliseconds.
+ * Read release age configuration from pnpm-workspace.yaml.
+ * Returns the minimumReleaseAge as milliseconds and the exclude list.
  * Returns null if the file doesn't exist or the setting isn't configured.
- * pnpm stores this value as minutes (e.g., 1440 = 24 hours).
+ * pnpm stores the age value as minutes (e.g., 1440 = 24 hours).
  */
-export const readPnpmMinimumReleaseAge = async (
+export const readPnpmReleaseAgeConfig = async (
   projectPath: string,
-): Promise<number | null> => {
+): Promise<PnpmReleaseAgeConfig | null> => {
   try {
     const content = await readFile(
       `${projectPath}/pnpm-workspace.yaml`,
@@ -24,7 +31,13 @@ export const readPnpmMinimumReleaseAge = async (
     if (config?.minimumReleaseAge == null) return null
 
     const value = String(config.minimumReleaseAge)
-    return parseDuration(value)
+    const ms = parseDuration(value)
+    if (ms === null) return null
+
+    return {
+      minimumReleaseAgeMs: ms,
+      exclude: config.minimumReleaseAgeExclude ?? [],
+    }
   } catch {
     return null
   }
