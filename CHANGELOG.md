@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-04-20
+
 ### Added
 
 - `deps outdated` now shows how long ago the wanted, latest, and current versions were released (e.g. `1.2.3 (3d)`)
