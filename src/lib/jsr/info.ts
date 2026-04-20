@@ -33,6 +33,7 @@ const isCacheValid = async (filePath: string): Promise<boolean> => {
 export type JsrPackageInfo = {
   versions: string[]
   latest: string
+  versionDates?: Record<string, string>
 }
 
 /** Read cached package info */
@@ -87,7 +88,7 @@ export const fetchJsrPackageInfo = async (
 
     const data = (await response.json()) as {
       latest: string
-      versions: Record<string, { yanked?: boolean }>
+      versions: Record<string, { yanked?: boolean; createdAt?: string }>
     }
 
     const versions = Object.entries(data.versions)
@@ -95,7 +96,20 @@ export const fetchJsrPackageInfo = async (
       .map(([version]) => version)
     const latest = data.latest
 
-    const result = { versions, latest }
+    // Extract publish dates if available
+    const versionDates: Record<string, string> = {}
+    for (const [version, info] of Object.entries(data.versions)) {
+      if (info.createdAt) {
+        versionDates[version] = info.createdAt
+      }
+    }
+
+    const result: JsrPackageInfo = {
+      versions,
+      latest,
+      versionDates:
+        Object.keys(versionDates).length > 0 ? versionDates : undefined,
+    }
     await writeCache(packageName, result)
 
     return result

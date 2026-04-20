@@ -61,6 +61,7 @@ const isCacheValid = async (filePath: string): Promise<boolean> => {
 export type PyPIPackageInfo = {
   versions: string[]
   latest: string
+  versionDates?: Record<string, string>
 }
 
 /** Read cached package info */
@@ -73,7 +74,9 @@ const readCache = async (
   }
   try {
     const content = await readFile(filePath, 'utf-8')
-    return JSON.parse(content) as PyPIPackageInfo
+    const data = JSON.parse(content) as PyPIPackageInfo
+    if (!data.versionDates) return null
+    return data
   } catch {
     return null
   }
@@ -119,7 +122,7 @@ export const fetchPyPIPackageInfo = async (
     if (!response.ok) return null
 
     const data = (await response.json()) as {
-      releases: Record<string, unknown[]>
+      releases: Record<string, Array<{ upload_time_iso_8601?: string }>>
       info: { version: string }
     }
 
@@ -130,7 +133,15 @@ export const fetchPyPIPackageInfo = async (
 
     const latest = data.info?.version || versions[versions.length - 1]
 
-    const result = { versions, latest }
+    // Extract publish dates from the first file of each release
+    const versionDates: Record<string, string> = {}
+    for (const [version, files] of Object.entries(data.releases)) {
+      if (files.length > 0 && files[0].upload_time_iso_8601) {
+        versionDates[version] = files[0].upload_time_iso_8601
+      }
+    }
+
+    const result: PyPIPackageInfo = { versions, latest, versionDates }
 
     // Write to cache
     await writeCache(normalizedName, result)

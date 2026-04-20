@@ -1,4 +1,5 @@
 import { Command } from '../../lib/command.ts'
+import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 import {
   getSemverLevel,
@@ -159,17 +160,39 @@ export const depsOutdatedCommand = new Command({
         { header: 'Current', accessor: (dep) => getCurrent(dep) },
         {
           header: 'Wanted',
-          accessor: (dep) => dep.wanted,
+          accessor: (dep) => {
+            if (dep.wantedDate) {
+              return `${dep.wanted} (${relativeFormattedTime(dep.wantedDate)})`
+            }
+            return dep.wanted
+          },
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.wanted)
+            if (dep.wantedDate) {
+              const versionEnd = value.indexOf(' (')
+              const versionPart = value.slice(0, versionEnd)
+              const rest = value.slice(versionEnd)
+              return `${color}${versionPart}${COLORS.reset}${COLORS.grey}${rest}${COLORS.reset}`
+            }
             return `${color}${value}${COLORS.reset}`
           },
         },
         {
           header: 'Latest',
-          accessor: (dep) => dep.latest,
+          accessor: (dep) => {
+            if (dep.latestDate) {
+              return `${dep.latest} (${relativeFormattedTime(dep.latestDate)})`
+            }
+            return dep.latest
+          },
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.latest)
+            if (dep.latestDate) {
+              const versionEnd = value.indexOf(' (')
+              const versionPart = value.slice(0, versionEnd)
+              const rest = value.slice(versionEnd)
+              return `${color}${versionPart}${COLORS.reset}${COLORS.grey}${rest}${COLORS.reset}`
+            }
             return `${color}${value}${COLORS.reset}`
           },
         },

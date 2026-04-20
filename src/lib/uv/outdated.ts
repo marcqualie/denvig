@@ -207,12 +207,15 @@ export const uvOutdated = async (
     const hasLatestUpdate = latest && latest !== info.current
 
     if (hasWantedUpdate || hasLatestUpdate) {
+      const wantedVersion = wanted || info.current
       result.push({
         ...dep,
-        wanted: wanted || info.current,
+        wanted: wantedVersion,
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        wantedDate: pypiInfo.versionDates?.[wantedVersion],
+        latestDate: pypiInfo.versionDates?.[latest],
       })
     }
   })

@@ -44,12 +44,15 @@ export const jsrOutdated = async (
     const hasLatestUpdate = latest && latest !== info.current
 
     if (hasWantedUpdate || hasLatestUpdate) {
+      const wantedVersion = wanted || info.current
       result.push({
         ...dep,
-        wanted: wanted || info.current,
+        wanted: wantedVersion,
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        wantedDate: jsrInfo.versionDates?.[wantedVersion],
+        latestDate: jsrInfo.versionDates?.[latest],
       })
     }
   })
