@@ -199,12 +199,15 @@ export const rubygemsOutdated = async (
     const hasLatestUpdate = latest && latest !== info.current
 
     if (hasWantedUpdate || hasLatestUpdate) {
+      const wantedVersion = wanted || info.current
       result.push({
         ...dep,
-        wanted: wanted || info.current,
+        wanted: wantedVersion,
         latest: latest,
         specifier: info.specifier,
         isDevDependency: info.isDevDependency,
+        wantedDate: gemInfo.versionDates?.[wantedVersion],
+        latestDate: gemInfo.versionDates?.[latest],
       })
     }
   })

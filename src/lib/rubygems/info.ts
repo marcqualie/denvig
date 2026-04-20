@@ -56,6 +56,7 @@ const isCacheValid = async (filePath: string): Promise<boolean> => {
 export type RubygemInfo = {
   versions: string[]
   latest: string
+  versionDates?: Record<string, string>
 }
 
 /** Read cached gem info */
@@ -66,7 +67,9 @@ const readCache = async (gemName: string): Promise<RubygemInfo | null> => {
   }
   try {
     const content = await readFile(filePath, 'utf-8')
-    return JSON.parse(content) as RubygemInfo
+    const data = JSON.parse(content) as RubygemInfo
+    if (!data.versionDates) return null
+    return data
   } catch {
     return null
   }
@@ -112,6 +115,7 @@ export const fetchRubygemInfo = async (
     const data = (await response.json()) as Array<{
       number: string
       prerelease: boolean
+      created_at?: string
     }>
 
     // Extract version numbers, filtering out prereleases for the versions list
@@ -123,7 +127,15 @@ export const fetchRubygemInfo = async (
       .map((v) => v.number)
     const latest = stableVersions[0] || allVersions[0]
 
-    const result = { versions: allVersions, latest }
+    // Extract publish dates
+    const versionDates: Record<string, string> = {}
+    for (const v of data) {
+      if (v.created_at) {
+        versionDates[v.number] = v.created_at
+      }
+    }
+
+    const result: RubygemInfo = { versions: allVersions, latest, versionDates }
 
     // Write to cache
     await writeCache(gemName, result)

@@ -63,6 +63,7 @@ const isCacheValid = async (filePath: string): Promise<boolean> => {
 export type NpmPackageInfo = {
   versions: string[]
   latest: string
+  versionDates?: Record<string, string>
 }
 
 /** Read cached package info */
@@ -75,7 +76,10 @@ const readCache = async (
   }
   try {
     const content = await readFile(filePath, 'utf-8')
-    return JSON.parse(content) as NpmPackageInfo
+    const data = JSON.parse(content) as NpmPackageInfo
+    // Invalidate cache entries missing versionDates
+    if (!data.versionDates) return null
+    return data
   } catch {
     return null
   }
@@ -119,12 +123,23 @@ export const fetchNpmPackageInfo = async (
     const data = (await response.json()) as {
       versions: Record<string, unknown>
       'dist-tags': { latest: string }
+      time?: Record<string, string>
     }
 
     const versions = Object.keys(data.versions)
     const latest = data['dist-tags']?.latest || versions[versions.length - 1]
 
-    const result = { versions, latest }
+    // Extract publish dates for each version
+    const versionDates: Record<string, string> = {}
+    if (data.time) {
+      for (const [version, date] of Object.entries(data.time)) {
+        if (version !== 'created' && version !== 'modified') {
+          versionDates[version] = date
+        }
+      }
+    }
+
+    const result: NpmPackageInfo = { versions, latest, versionDates }
 
     // Write to cache
     await writeCache(packageName, result)

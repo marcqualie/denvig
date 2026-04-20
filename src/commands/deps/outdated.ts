@@ -1,4 +1,5 @@
 import { Command } from '../../lib/command.ts'
+import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 import {
   getSemverLevel,
@@ -159,7 +160,12 @@ export const depsOutdatedCommand = new Command({
         { header: 'Current', accessor: (dep) => getCurrent(dep) },
         {
           header: 'Wanted',
-          accessor: (dep) => dep.wanted,
+          accessor: (dep) => {
+            if (dep.wantedDate) {
+              return `${dep.wanted} (${relativeFormattedTime(dep.wantedDate)})`
+            }
+            return dep.wanted
+          },
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.wanted)
             return `${color}${value}${COLORS.reset}`
@@ -167,7 +173,12 @@ export const depsOutdatedCommand = new Command({
         },
         {
           header: 'Latest',
-          accessor: (dep) => dep.latest,
+          accessor: (dep) => {
+            if (dep.latestDate) {
+              return `${dep.latest} (${relativeFormattedTime(dep.latestDate)})`
+            }
+            return dep.latest
+          },
           format: (value, dep) => {
             const color = getVersionColor(getCurrent(dep), dep.latest)
             return `${color}${value}${COLORS.reset}`

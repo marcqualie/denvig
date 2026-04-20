@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `deps outdated` now shows how long ago the wanted and latest versions were released (e.g. `1.2.3 (3d)`)
+
 ### Fixed
 
 - GitHub slug detection now checks the `github` remote as a fallback when `origin` is not a GitHub URL
