@@ -34,8 +34,10 @@ const getVersionUrl = (
   version: string,
   ecosystem: string,
 ): string | null => {
+  const via = process.env.DENVIG_OPEN_VIA || 'npm'
+  if (via === 'none') return null
   if (ecosystem === 'npm') {
-    if (process.env.DENVIG_OPEN_NPMX === '1') {
+    if (via === 'npmx') {
       return `https://npmx.dev/package/${name}/v/${version}`
     }
     return `https://www.npmjs.com/package/${name}/v/${version}`
