@@ -2,7 +2,7 @@ import { Command } from '../../lib/command.ts'
 import { parseDuration } from '../../lib/formatters/duration.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
-import { readPnpmMinimumReleaseAge } from '../../lib/pnpm-config.ts'
+import { readPnpmReleaseAgeConfig } from '../../lib/pnpm-config.ts'
 import {
   getSemverLevel,
   outdatedMatchesSemverFilter,
@@ -116,13 +116,18 @@ export const depsOutdatedCommand = new Command({
 
     // Resolve release latency threshold
     let releaseLatencyMs: number | null = null
+    let releaseLatencyExclude: string[] = []
     const latencyValue = releaseLatencyFlag ?? 'auto'
     if (latencyValue === '0') {
       // Explicitly disabled
       releaseLatencyMs = null
     } else if (latencyValue === 'auto') {
       // Read from pnpm-workspace.yaml if available
-      releaseLatencyMs = await readPnpmMinimumReleaseAge(project.path)
+      const pnpmConfig = await readPnpmReleaseAgeConfig(project.path)
+      if (pnpmConfig) {
+        releaseLatencyMs = pnpmConfig.minimumReleaseAgeMs
+        releaseLatencyExclude = pnpmConfig.exclude
+      }
     } else {
       releaseLatencyMs = parseDuration(latencyValue)
       if (releaseLatencyMs === null) {
@@ -138,6 +143,9 @@ export const depsOutdatedCommand = new Command({
     if (releaseLatencyMs !== null) {
       const now = Date.now()
       entries = entries.filter((dep) => {
+        // Skip filtering for excluded packages
+        if (releaseLatencyExclude.includes(dep.name)) return true
+
         const current = getCurrent(dep)
         const wantedIsUpdate = dep.wanted !== current
         const latestIsUpdate = dep.latest !== current
