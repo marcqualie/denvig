@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- GitHub slug detection now checks the `github` remote as a fallback when `origin` is not a GitHub URL
+
 ## [0.6.4] - 2026-04-12
 
 ### Fixed

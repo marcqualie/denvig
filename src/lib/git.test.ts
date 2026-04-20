@@ -318,6 +318,85 @@ describe('getGitHubSlug()', () => {
     }
   })
 
+  it('should fall back to github remote when origin is non-GitHub', async () => {
+    const tempDir = createTempDir()
+    try {
+      createGitConfig(
+        tempDir,
+        `
+[remote "origin"]
+	url = git@gitea.example.com:owner/repo.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[remote "github"]
+	url = https://github.com/owner/repo.git
+	fetch = +refs/heads/*:refs/remotes/github/*
+`,
+      )
+      const result = await getGitHubSlug(tempDir)
+      strictEqual(result, 'owner/repo')
+    } finally {
+      fs.rmSync(tempDir, { recursive: true })
+    }
+  })
+
+  it('should prefer origin over github remote when both are GitHub', async () => {
+    const tempDir = createTempDir()
+    try {
+      createGitConfig(
+        tempDir,
+        `
+[remote "origin"]
+	url = git@github.com:origin-owner/repo.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[remote "github"]
+	url = git@github.com:github-owner/repo.git
+	fetch = +refs/heads/*:refs/remotes/github/*
+`,
+      )
+      const result = await getGitHubSlug(tempDir)
+      strictEqual(result, 'origin-owner/repo')
+    } finally {
+      fs.rmSync(tempDir, { recursive: true })
+    }
+  })
+
+  it('should use github remote when origin does not exist', async () => {
+    const tempDir = createTempDir()
+    try {
+      createGitConfig(
+        tempDir,
+        `
+[remote "github"]
+	url = git@github.com:owner/repo.git
+	fetch = +refs/heads/*:refs/remotes/github/*
+`,
+      )
+      const result = await getGitHubSlug(tempDir)
+      strictEqual(result, 'owner/repo')
+    } finally {
+      fs.rmSync(tempDir, { recursive: true })
+    }
+  })
+
+  it('should return null when neither origin nor github remote has GitHub URL', async () => {
+    const tempDir = createTempDir()
+    try {
+      createGitConfig(
+        tempDir,
+        `
+[remote "origin"]
+	url = git@gitea.example.com:owner/repo.git
+[remote "github"]
+	url = git@gitlab.com:owner/repo.git
+`,
+      )
+      const result = await getGitHubSlug(tempDir)
+      strictEqual(result, null)
+    } finally {
+      fs.rmSync(tempDir, { recursive: true })
+    }
+  })
+
   it('should return null for non-existent directory', async () => {
     const result = await getGitHubSlug('/non/existent/path/that/does/not/exist')
     strictEqual(result, null)
@@ -376,6 +455,25 @@ describe('getProjectSlug()', () => {
       const result = await getProjectSlug(tempDir)
       ok(result.startsWith('local:'))
       ok(result.includes(tempDir))
+    } finally {
+      fs.rmSync(tempDir, { recursive: true })
+    }
+  })
+
+  it('should return github: slug via github remote fallback', async () => {
+    const tempDir = createTempDir()
+    try {
+      createGitConfig(
+        tempDir,
+        `
+[remote "origin"]
+	url = git@gitea.example.com:owner/repo.git
+[remote "github"]
+	url = git@github.com:owner/repo.git
+`,
+      )
+      const result = await getProjectSlug(tempDir)
+      strictEqual(result, 'github:owner/repo')
     } finally {
       fs.rmSync(tempDir, { recursive: true })
     }
