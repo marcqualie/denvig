@@ -3,6 +3,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- `system setup <url>` command to clone a dotfiles repository to `~/.dotfiles` and run its `setup` action
+- `system update` command to pull dotfiles, run the `update` action, refresh Homebrew packages, and run `skills update -g` when available
+
 ### Changed
 
 - Upgraded `@biomejs/biome` from 2.4.12 to 2.4.13

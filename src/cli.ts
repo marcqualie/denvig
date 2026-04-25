@@ -102,6 +102,7 @@ async function main() {
   const { gatewayCommand } = await import('./commands/gateway/index.ts')
   const { zshCommand } = await import('./commands/zsh/index.ts')
   const { certsCommand } = await import('./commands/certs/index.ts')
+  const { systemCommand } = await import('./commands/system/index.ts')
 
   const commands = {
     run: runCommand,
@@ -120,6 +121,7 @@ async function main() {
     gateway: gatewayCommand,
     zsh: zshCommand,
     certs: certsCommand,
+    system: systemCommand,
   } as Record<string, GenericCommand>
 
   // Handle root-level help
