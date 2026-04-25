@@ -1,5 +1,11 @@
+import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { promisify } from 'node:util'
+
+import { runInherit } from './system/process.ts'
+
+const execFileAsync = promisify(execFile)
 
 /**
  * Parse a GitHub remote URL and extract owner/repo.
@@ -70,4 +76,26 @@ export const getProjectSlug = async (projectPath: string): Promise<string> => {
     return `github:${githubSlug}`
   }
   return `local:${projectPath}`
+}
+
+/** Clone a git repository into the target directory. */
+export const gitClone = (url: string, target: string): Promise<boolean> => {
+  return runInherit('git', ['clone', url, target])
+}
+
+/** Run `git pull` in the given directory. */
+export const gitPull = (cwd: string): Promise<boolean> => {
+  return runInherit('git', ['pull'], { cwd })
+}
+
+/** Check if a git working tree has uncommitted changes. */
+export const isWorkingTreeDirty = async (cwd: string): Promise<boolean> => {
+  try {
+    const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+      cwd,
+    })
+    return stdout.trim().length > 0
+  } catch {
+    return false
+  }
 }
