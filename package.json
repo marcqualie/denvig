@@ -43,7 +43,7 @@
     "node-forge": "^1.4.0",
     "semver": "^7.7.4",
     "yaml": "^2.8.3",
-    "zod": "^4.3.6"
+    "zod": "^4.4.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
