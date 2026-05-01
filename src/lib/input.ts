@@ -10,3 +10,14 @@ export const confirm = (prompt: string): Promise<boolean> => {
     })
   })
 }
+
+/** Prompt the user for a free-text answer. Returns the trimmed input. */
+export const prompt = (question: string): Promise<string> => {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise((resolve) => {
+    rl.question(`${question}: `, (answer) => {
+      rl.close()
+      resolve(answer.trim())
+    })
+  })
+}
