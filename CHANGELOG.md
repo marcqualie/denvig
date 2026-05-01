@@ -7,6 +7,7 @@
 
 - `system setup <url>` command to clone a dotfiles repository to `~/.dotfiles` and run its `setup` action
 - `system update` command to pull dotfiles, run the `update` action, refresh Homebrew packages, and run `skills update -g` when available
+- `system configure` command to interactively check and enable common macOS setup steps: sudo Touch ID, FileVault, Xcode Command Line Tools, Homebrew, dotfiles, and global git config
 
 ### Changed
 

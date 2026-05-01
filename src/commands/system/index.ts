@@ -1,4 +1,5 @@
 import { Command } from '../../lib/command.ts'
+import { systemConfigureCommand } from './configure.ts'
 import { systemSetupCommand } from './setup.ts'
 import { systemUpdateCommand } from './update.ts'
 
@@ -12,6 +13,7 @@ export const systemCommand = new Command({
   subcommands: {
     setup: systemSetupCommand,
     update: systemUpdateCommand,
+    configure: systemConfigureCommand,
   },
   handler: () => ({ success: true }),
 })
