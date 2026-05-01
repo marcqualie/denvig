@@ -11,7 +11,7 @@
 
 ### Changed
 
-- Upgraded `@biomejs/biome` from 2.4.12 to 2.4.13
+- Upgraded `@biomejs/biome` from 2.4.12 to 2.4.14
 - Upgraded `zod` from 4.3.6 to 4.4.2
 
 ## [0.6.5] - 2026-04-20
