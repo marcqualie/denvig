@@ -13,7 +13,18 @@ import {
   parseCertDomains,
 } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
+import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const WEEK_MS = 7 * DAY_MS
+
+const expiryColor = (expires: Date, now: Date = new Date()): string => {
+  const diffMs = expires.getTime() - now.getTime()
+  if (diffMs < DAY_MS) return COLORS.red
+  if (diffMs < WEEK_MS) return COLORS.yellow
+  return COLORS.green
+}
 
 type CertEntry = {
   dir: string
@@ -167,8 +178,19 @@ export const certsListCommand = new Command({
         { header: 'Certificate', accessor: (e) => e.name },
         {
           header: 'Expires',
-          accessor: (e) =>
-            e.depth === 0 ? e.expires.toISOString().slice(0, 10) : '',
+          accessor: (e) => {
+            if (e.depth !== 0) return ''
+            const iso = e.expires.toISOString().slice(0, 10)
+            return `${iso} (${relativeFormattedTime(e.expires.toISOString())})`
+          },
+          format: (value, row) => {
+            if (row.depth !== 0) return value
+            const trimmed = value.trimEnd()
+            if (!trimmed) return value
+            const color = expiryColor(row.expires)
+            const padding = ' '.repeat(value.length - trimmed.length)
+            return `${color}${trimmed}${COLORS.reset}${padding}`
+          },
         },
         {
           header: 'Status',

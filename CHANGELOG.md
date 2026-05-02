@@ -8,10 +8,12 @@
 - `system setup <url>` command to clone a dotfiles repository to `~/.dotfiles` and run its `setup` action
 - `system update` command to pull dotfiles, run the `update` action, refresh Homebrew packages, and run `skills update -g` when available
 - `system configure` command to interactively check and enable common macOS setup steps: sudo Touch ID, FileVault, Xcode Command Line Tools, Homebrew, dotfiles, and global git config
+- `certs list` Expires column now shows relative time (e.g. `2026-08-15 (3mo)`) and is colored green when over a week from expiry, yellow when within a week, and red when within a day or already expired
 
 ### Changed
 
 - `certs list` now displays expiry dates in ISO 8601 (`YYYY-MM-DD`) format instead of locale-dependent format
+- `relativeFormattedTime` now returns the magnitude of the difference for both past and future dates instead of `0s` for future dates
 - Upgraded `@biomejs/biome` from 2.4.12 to 2.4.14
 - Upgraded `zod` from 4.3.6 to 4.4.2
 - Upgraded `yaml` from 2.8.3 to 2.8.4

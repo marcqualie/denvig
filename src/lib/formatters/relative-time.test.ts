@@ -53,7 +53,10 @@ describe('relativeFormattedTime()', () => {
     strictEqual(relativeFormattedTime('2026-03-31T12:00:00.000Z', now), '3w')
   })
 
-  it('should return 0s for future dates', () => {
-    strictEqual(relativeFormattedTime('2026-04-21T12:00:00.000Z', now), '0s')
+  it('should return the magnitude for future dates', () => {
+    strictEqual(relativeFormattedTime('2026-04-20T12:00:30.000Z', now), '30s')
+    strictEqual(relativeFormattedTime('2026-04-20T13:00:00.000Z', now), '1h')
+    strictEqual(relativeFormattedTime('2026-04-21T12:00:00.000Z', now), '1d')
+    strictEqual(relativeFormattedTime('2026-04-27T12:00:00.000Z', now), '1w')
   })
 })
