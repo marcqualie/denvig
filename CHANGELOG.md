@@ -13,7 +13,6 @@
 
 ### Changed
 
-- `system update` now continues through all steps when one fails, printing each step header as it runs and a succeeded/failed summary at the end
 - `certs list` now displays expiry dates in ISO 8601 (`YYYY-MM-DD`) format instead of locale-dependent format
 - `relativeFormattedTime` now returns the magnitude of the difference for both past and future dates instead of `0s` for future dates
 - Upgraded `@biomejs/biome` from 2.4.12 to 2.4.14
