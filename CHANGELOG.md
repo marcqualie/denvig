@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-05-02
+
 ### Added
 
 - `system setup <url>` command to clone a dotfiles repository to `~/.dotfiles` and run its `setup` action
