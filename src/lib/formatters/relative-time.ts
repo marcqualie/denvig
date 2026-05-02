@@ -1,5 +1,6 @@
 /**
  * Format a date as a short relative time string.
+ * Returns the magnitude of the difference, regardless of whether the date is past or future.
  * Examples: "1h", "3d", "4w", "2mo", "1y"
  */
 export const relativeFormattedTime = (
@@ -7,9 +8,7 @@ export const relativeFormattedTime = (
   now: Date = new Date(),
 ): string => {
   const date = new Date(isoDate)
-  const diffMs = now.getTime() - date.getTime()
-
-  if (diffMs < 0) return '0s'
+  const diffMs = Math.abs(now.getTime() - date.getTime())
 
   const seconds = diffMs / 1000
   const minutes = seconds / 60
