@@ -168,7 +168,7 @@ export const certsListCommand = new Command({
         {
           header: 'Expires',
           accessor: (e) =>
-            e.depth === 0 ? e.expires.toLocaleDateString() : '',
+            e.depth === 0 ? e.expires.toISOString().slice(0, 10) : '',
         },
         {
           header: 'Status',
