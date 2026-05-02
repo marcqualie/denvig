@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
+  findCertFile,
   getCaCertPath,
   getCertExpiry,
   getCertIssuerCN,
@@ -41,20 +42,6 @@ type CertRow = {
   isLast: boolean
   hasChildren: boolean
   parentPath: boolean[]
-}
-
-const findCertFile = (dir: string): string | null => {
-  const fullchain = resolve(dir, 'fullchain.pem')
-  const cert = resolve(dir, 'cert.pem')
-  try {
-    statSync(fullchain)
-    return fullchain
-  } catch {}
-  try {
-    statSync(cert)
-    return cert
-  } catch {}
-  return null
 }
 
 export const certsListCommand = new Command({

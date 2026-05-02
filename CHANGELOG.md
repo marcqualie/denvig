@@ -9,6 +9,7 @@
 - `system update` command to pull dotfiles, run the `update` action, refresh Homebrew packages, and run `skills update -g` when available
 - `system configure` command to interactively check and enable common macOS setup steps: sudo Touch ID, FileVault, Xcode Command Line Tools, Homebrew, dotfiles, and global git config
 - `certs list` Expires column now shows relative time (e.g. `2026-08-15 (3mo)`) and is colored green when over a week from expiry, yellow when within a week, and red when within a day or already expired
+- `deps outdated` now prints a yellow warning at the end when one or more managed certificates are due to expire within a week, prompting the user to run `denvig certs` for details
 
 ### Changed
 

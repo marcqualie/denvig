@@ -1,3 +1,4 @@
+import { countCertsExpiringWithin } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
 import { parseDuration } from '../../lib/formatters/duration.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
@@ -7,6 +8,18 @@ import {
   getSemverLevel,
   outdatedMatchesSemverFilter,
 } from '../../lib/semver.ts'
+
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+const printExpiringCertsWarning = (): void => {
+  const count = countCertsExpiringWithin(ONE_WEEK_MS)
+  if (count === 0) return
+  const noun = count === 1 ? 'certificate is' : 'certificates are'
+  console.log('')
+  console.log(
+    `${COLORS.yellow}${count} ${noun} due to expire. Run denvig certs for details.${COLORS.reset}`,
+  )
+}
 
 /**
  * Get the color for a version update based on semver difference.
@@ -203,6 +216,7 @@ export const depsOutdatedCommand = new Command({
           message = `No ${semverFilter}-level updates available.`
         }
         console.log(message)
+        printExpiringCertsWarning()
       }
       let message = 'All dependencies are up to date!'
       if (ecosystemFilter && semverFilter) {
@@ -334,6 +348,8 @@ export const depsOutdatedCommand = new Command({
     for (const line of lines) {
       console.log(line)
     }
+
+    printExpiringCertsWarning()
 
     return { success: true, message: 'Outdated dependencies listed.' }
   },
