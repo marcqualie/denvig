@@ -42,7 +42,7 @@
     "minimist": "^1.2.8",
     "node-forge": "^1.4.0",
     "semver": "^7.7.4",
-    "yaml": "^2.8.3",
+    "yaml": "^2.8.4",
     "zod": "^4.4.2"
   },
   "devDependencies": {
