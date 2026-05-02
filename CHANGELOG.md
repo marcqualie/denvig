@@ -11,6 +11,7 @@
 
 ### Changed
 
+- `certs list` now displays expiry dates in ISO 8601 (`YYYY-MM-DD`) format instead of locale-dependent format
 - Upgraded `@biomejs/biome` from 2.4.12 to 2.4.14
 - Upgraded `zod` from 4.3.6 to 4.4.2
 - Upgraded `yaml` from 2.8.3 to 2.8.4
