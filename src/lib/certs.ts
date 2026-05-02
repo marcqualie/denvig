@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { X509Certificate } from 'node:crypto'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
@@ -347,4 +348,59 @@ export const getCertIssuerCN = (certPem: string): string | null => {
 const generateSerialNumber = async (): Promise<string> => {
   const forge = await importNodeForge()
   return forge.util.bytesToHex(forge.random.getBytesSync(16))
+}
+
+/**
+ * Find the certificate file (fullchain.pem or cert.pem) inside a cert directory.
+ * Returns null if neither exists.
+ */
+export const findCertFile = (dir: string): string | null => {
+  const fullchain = resolve(dir, 'fullchain.pem')
+  const cert = resolve(dir, 'cert.pem')
+  try {
+    statSync(fullchain)
+    return fullchain
+  } catch {}
+  try {
+    statSync(cert)
+    return cert
+  } catch {}
+  return null
+}
+
+/**
+ * Count managed certificates whose expiry is at or before `now + durationMs`.
+ * Already-expired certificates are included in the count.
+ * Returns 0 if the certs directory is missing or unreadable.
+ */
+export const countCertsExpiringWithin = (
+  durationMs: number,
+  now: Date = new Date(),
+): number => {
+  const certsDir = getCertsDir()
+  let dirs: string[]
+  try {
+    dirs = readdirSync(certsDir).filter((name) => {
+      try {
+        return statSync(resolve(certsDir, name)).isDirectory()
+      } catch {
+        return false
+      }
+    })
+  } catch {
+    return 0
+  }
+
+  const threshold = now.getTime() + durationMs
+  let count = 0
+  for (const dir of dirs) {
+    const certFile = findCertFile(resolve(certsDir, dir))
+    if (!certFile) continue
+    try {
+      const pem = readFileSync(certFile, 'utf-8')
+      const expires = getCertExpiry(pem)
+      if (expires.getTime() <= threshold) count++
+    } catch {}
+  }
+  return count
 }
