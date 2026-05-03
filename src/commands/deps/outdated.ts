@@ -91,7 +91,7 @@ export const depsOutdatedCommand = new Command({
     {
       name: 'release-latency',
       description:
-        'Only show updates released longer ago than this duration (e.g., "3h", "7d", "2w"). Use "auto" to read from pnpm minimumReleaseAge, or "0" to disable.',
+        'Only show updates released longer ago than this duration (e.g., "3h", "7d", "2w"). Use "auto" to read from pnpm minimumReleaseAge with a 24h fallback, or "0" to disable.',
       required: false,
       type: 'string',
       defaultValue: 'auto',
@@ -152,11 +152,13 @@ export const depsOutdatedCommand = new Command({
       // Explicitly disabled
       releaseLatencyMs = null
     } else if (latencyValue === 'auto') {
-      // Read from pnpm-workspace.yaml if available
+      // Read from pnpm-workspace.yaml if available, otherwise default to 24h
       const pnpmConfig = await readPnpmReleaseAgeConfig(project.path)
       if (pnpmConfig) {
         releaseLatencyMs = pnpmConfig.minimumReleaseAgeMs
         releaseLatencyExclude = pnpmConfig.exclude
+      } else {
+        releaseLatencyMs = 24 * 60 * 60 * 1000
       }
     } else {
       releaseLatencyMs = parseDuration(latencyValue)
