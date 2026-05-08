@@ -41,10 +41,13 @@ export const COLORS = {
  * Handles both BEL (\x07) and ST (\x1b\\) terminators.
  */
 const stripAnsi = (str: string): string => {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for ANSI code stripping
-  return str
-    .replace(/\x1b\[[0-9;:]*m/g, '')
-    .replace(/\x1b]8;;.*?(?:\x07|\x1b\\)/g, '')
+  return (
+    str
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for ANSI code stripping
+      .replace(/\x1b\[[0-9;:]*m/g, '')
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for OSC 8 stripping
+      .replace(/\x1b]8;;.*?(?:\x07|\x1b\\)/g, '')
+  )
 }
 
 /**
