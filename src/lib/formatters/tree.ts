@@ -7,6 +7,18 @@ export type TreeNode = {
   name: string
   version: string
   children: TreeNode[]
+  /** Optional ANSI color applied to the entire `name version` body. */
+  color?: string
+  /** Optional suffix appended after the version (rendered in grey). */
+  suffix?: string
+}
+
+const formatNodeBody = (node: TreeNode): string => {
+  const body = node.color
+    ? `${node.color}${node.name} ${node.version}${COLORS.reset}`
+    : `${node.name} ${COLORS.grey}${node.version}${COLORS.reset}`
+  if (!node.suffix) return body
+  return `${body} ${COLORS.grey}${node.suffix}${COLORS.reset}`
 }
 
 /**
@@ -23,7 +35,7 @@ export const formatTree = (
 
   if (isRoot) {
     // Root nodes don't get tree prefixes
-    lines.push(`${node.name} ${COLORS.grey}${node.version}${COLORS.reset}`)
+    lines.push(formatNodeBody(node))
   } else {
     // Non-root nodes get tree prefixes
     const branch = hasChildren
@@ -34,9 +46,7 @@ export const formatTree = (
         ? '└── '
         : '├── '
 
-    lines.push(
-      `${prefix}${branch}${node.name} ${COLORS.grey}${node.version}${COLORS.reset}`,
-    )
+    lines.push(`${prefix}${branch}${formatNodeBody(node)}`)
   }
 
   // Format children

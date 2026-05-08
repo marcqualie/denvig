@@ -3,13 +3,20 @@ import {
   buildReverseChain,
   isDevDependenciesSource,
 } from '../../lib/deps/tree.ts'
+import { COLORS } from '../../lib/formatters/table.ts'
 import {
   formatTree,
   mergeTreeNode,
   type TreeNode,
 } from '../../lib/formatters/tree.ts'
+import { getSemverLevel } from '../../lib/semver.ts'
 
 import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
+
+type RootChain = {
+  tree: TreeNode
+  isDev: boolean
+}
 
 export const depsWhyCommand = new Command({
   name: 'deps:why',
@@ -31,9 +38,12 @@ export const depsWhyCommand = new Command({
   },
   handler: async ({ project, args, flags }) => {
     const dependencyName = args.dependency as string
-    const allDependencies = await project.dependencies()
 
-    // Find the dependency
+    const [allDependencies, outdated] = await Promise.all([
+      project.dependencies(),
+      project.outdatedDependencies({ cache: true }).catch(() => []),
+    ])
+
     const dep = allDependencies.find((d) => d.name === dependencyName)
 
     if (!dep) {
@@ -52,35 +62,59 @@ export const depsWhyCommand = new Command({
       return { success: false, message: 'Dependency not found.' }
     }
 
-    // Build a map of all dependencies for resolving chains
     const depsMap = new Map<string, ProjectDependencySchema>()
     for (const d of allDependencies) {
       depsMap.set(d.name, d)
     }
 
-    // Group chains by source type (dependencies vs devDependencies)
+    const outdatedMap = new Map<string, { latest: string; wanted: string }>()
+    for (const o of outdated) {
+      outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
+    }
+
+    const getNodeColor = (name: string, version: string): string => {
+      const o = outdatedMap.get(name)
+      if (o) {
+        const level = getSemverLevel(version, o.latest)
+        if (level === 'major') return COLORS.red
+        if (level === 'minor') return COLORS.yellow
+        if (level === 'patch') return COLORS.green
+      }
+      return name === dependencyName ? COLORS.white : COLORS.grey
+    }
+
+    const decorate = (node: TreeNode): TreeNode => ({
+      ...node,
+      color: getNodeColor(node.name, node.version),
+      children: node.children.map(decorate),
+    })
+
+    const chains: RootChain[] = []
     const depChains: TreeNode[] = []
     const devDepChains: TreeNode[] = []
 
-    // For each version of the target dependency, build the chain back to root
     for (const v of dep.versions) {
       const chain = buildReverseChain(dep.name, v.resolved, v.source, depsMap)
-      if (chain) {
-        // Determine if this is a dev dependency chain
-        const rootDep = depsMap.get(chain.name)
-        const isDevChain = rootDep?.versions.some((rv) =>
-          isDevDependenciesSource(rv.source),
-        )
+      if (!chain) continue
 
-        if (isDevChain) {
-          mergeTreeNode(devDepChains, chain)
-        } else {
-          mergeTreeNode(depChains, chain)
-        }
+      const rootDep = depsMap.get(chain.name)
+      const rootVersion = rootDep?.versions.find(
+        (rv) => rv.resolved === chain.version,
+      )
+      const isDevChain = rootVersion
+        ? isDevDependenciesSource(rootVersion.source)
+        : false
+
+      if (isDevChain) {
+        mergeTreeNode(devDepChains, chain)
+      } else {
+        mergeTreeNode(depChains, chain)
       }
     }
 
-    // JSON output
+    for (const tree of depChains) chains.push({ tree, isDev: false })
+    for (const tree of devDepChains) chains.push({ tree, isDev: true })
+
     if (flags.json) {
       console.log(
         JSON.stringify({
@@ -97,47 +131,20 @@ export const depsWhyCommand = new Command({
       return { success: true, message: 'Dependency chain shown.' }
     }
 
-    console.log(`${project.name} ${project.path}`)
-    console.log('')
-
-    // Print dependencies chains
-    if (depChains.length > 0) {
-      console.log('dependencies:')
-      for (let i = 0; i < depChains.length; i++) {
-        const lines = formatTree(
-          depChains[i],
-          '',
-          i === depChains.length - 1,
-          true,
-        )
-        for (const line of lines) {
-          console.log(line)
-        }
-      }
-      console.log('')
-    }
-
-    // Print devDependencies chains
-    if (devDepChains.length > 0) {
-      console.log('devDependencies:')
-      for (let i = 0; i < devDepChains.length; i++) {
-        const lines = formatTree(
-          devDepChains[i],
-          '',
-          i === devDepChains.length - 1,
-          true,
-        )
-        for (const line of lines) {
-          console.log(line)
-        }
-      }
-      console.log('')
-    }
-
-    if (depChains.length === 0 && devDepChains.length === 0) {
+    if (chains.length === 0) {
       console.log(
         `Could not determine dependency chain for "${dependencyName}".`,
       )
+      return { success: true, message: 'Dependency chain shown.' }
+    }
+
+    for (const { tree, isDev } of chains) {
+      const decorated = decorate(tree)
+      if (isDev) decorated.suffix = '(dev)'
+      const lines = formatTree(decorated, '', true, true)
+      for (const line of lines) {
+        console.log(line)
+      }
     }
 
     return { success: true, message: 'Dependency chain shown.' }
