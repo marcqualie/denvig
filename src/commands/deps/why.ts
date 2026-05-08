@@ -60,7 +60,16 @@ export const depsWhyCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [],
+  flags: [
+    {
+      name: 'check-versions',
+      description:
+        'Fetch latest versions from the registry and annotate available patch/minor/major updates next to each entry. Off by default since registry lookups can be slow.',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+  ],
   completions: async ({ project }) => {
     const dependencies = await project.dependencies()
     return dependencies.map((d) => d.name)
@@ -119,24 +128,28 @@ export const depsWhyCommand = new Command({
       ...devDepChains.map((tree) => ({ tree, isDev: true })),
     ]
 
-    const computeMaxDepth = (node: TreeNode, depth = 0): number => {
-      if (node.children.length === 0) return depth
-      return Math.max(
-        ...node.children.map((child) => computeMaxDepth(child, depth + 1)),
-      )
-    }
-    const outdatedDepth = chains.reduce(
-      (max, { tree }) => Math.max(max, computeMaxDepth(tree)),
-      0,
-    )
-
-    const outdated = await project
-      .outdatedDependencies({ cache: true, depth: outdatedDepth })
-      .catch(() => [])
+    const checkVersions = flags['check-versions'] as boolean
 
     const outdatedMap = new Map<string, { latest: string; wanted: string }>()
-    for (const o of outdated) {
-      outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
+    if (checkVersions) {
+      const computeMaxDepth = (node: TreeNode, depth = 0): number => {
+        if (node.children.length === 0) return depth
+        return Math.max(
+          ...node.children.map((child) => computeMaxDepth(child, depth + 1)),
+        )
+      }
+      const outdatedDepth = chains.reduce(
+        (max, { tree }) => Math.max(max, computeMaxDepth(tree)),
+        0,
+      )
+
+      const outdated = await project
+        .outdatedDependencies({ cache: true, depth: outdatedDepth })
+        .catch(() => [])
+
+      for (const o of outdated) {
+        outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
+      }
     }
 
     const getAvailableVersions = (
