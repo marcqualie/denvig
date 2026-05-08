@@ -11,9 +11,36 @@ import {
   mergeTreeNode,
   type TreeNode,
 } from '../../lib/formatters/tree.ts'
+import { fetchJsrPackageInfo } from '../../lib/jsr/info.ts'
+import { fetchNpmPackageInfo } from '../../lib/npm/info.ts'
+import { fetchRubygemInfo } from '../../lib/rubygems/info.ts'
 import { getSemverLevel } from '../../lib/semver.ts'
+import { fetchPyPIPackageInfo } from '../../lib/uv/info.ts'
 
 import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
+
+const fetchLatestForPackage = async (
+  name: string,
+  ecosystem: string,
+): Promise<string | null> => {
+  if (ecosystem === 'npm') {
+    const info = await fetchNpmPackageInfo(name)
+    return info?.latest ?? null
+  }
+  if (ecosystem === 'jsr') {
+    const info = await fetchJsrPackageInfo(name)
+    return info?.latest ?? null
+  }
+  if (ecosystem === 'pypi') {
+    const info = await fetchPyPIPackageInfo(name)
+    return info?.latest ?? null
+  }
+  if (ecosystem === 'rubygems') {
+    const info = await fetchRubygemInfo(name)
+    return info?.latest ?? null
+  }
+  return null
+}
 
 type RootChain = {
   tree: TreeNode
@@ -62,9 +89,9 @@ export const depsWhyCommand = new Command({
   ],
   flags: [
     {
-      name: 'check-versions',
+      name: 'check-all-versions',
       description:
-        'Fetch latest versions from the registry and annotate available patch/minor/major updates next to each entry. Off by default since registry lookups can be slow.',
+        'Fetch latest versions from the registry for every entry in the tree. Off by default since registry lookups can be slow; without this flag only the queried package is checked.',
       required: false,
       type: 'boolean',
       defaultValue: false,
@@ -123,12 +150,19 @@ export const depsWhyCommand = new Command({
       }
     }
 
+    const sortChildren = (node: TreeNode): void => {
+      node.children.sort((a, b) => a.name.localeCompare(b.name))
+      for (const child of node.children) sortChildren(child)
+    }
+    for (const tree of depChains) sortChildren(tree)
+    for (const tree of devDepChains) sortChildren(tree)
+
     const chains: RootChain[] = [
       ...depChains.map((tree) => ({ tree, isDev: false })),
       ...devDepChains.map((tree) => ({ tree, isDev: true })),
-    ]
+    ].sort((a, b) => a.tree.name.localeCompare(b.tree.name))
 
-    const checkVersions = flags['check-versions'] as boolean
+    const checkVersions = flags['check-all-versions'] as boolean
 
     const outdatedMap = new Map<string, { latest: string; wanted: string }>()
     if (checkVersions) {
@@ -149,6 +183,13 @@ export const depsWhyCommand = new Command({
 
       for (const o of outdated) {
         outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
+      }
+    } else {
+      const latest = await fetchLatestForPackage(dep.name, dep.ecosystem).catch(
+        () => null,
+      )
+      if (latest) {
+        outdatedMap.set(dep.name, { latest, wanted: latest })
       }
     }
 

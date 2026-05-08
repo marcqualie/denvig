@@ -5,8 +5,9 @@
 
 ### Changed
 
-- `deps why <package>` output is now a single flat list (no project header, no `dependencies:`/`devDependencies:` grouping). Direct dev dependencies are tagged with a `(dev)` suffix. The queried package is highlighted in white and other entries default to grey.
-- `deps why <package> --check-versions` opts into a registry lookup that annotates each entry with available wanted/latest versions in brackets (e.g. `express 4.21.2 (5.2.1)`), colored green (patch), yellow (minor), or red (major). The check walks the dependency tree deep enough to cover every occurrence of the queried package, so transitive dependencies report update info too. Default behaviour stays instant by skipping the registry lookup.
+- `deps why <package>` output is now a single flat list (no project header, no `dependencies:`/`devDependencies:` grouping) sorted alphabetically at every depth. Direct dev dependencies are tagged with a `(dev)` suffix. The queried package is highlighted in white and other entries default to grey.
+- `deps why <package>` now performs a single registry lookup for the queried package by default and annotates its tree entries with the latest available version in brackets (e.g. `express 4.21.2 (5.2.1)`), colored green (patch), yellow (minor), or red (major). The lookup covers npm, jsr, PyPI, and RubyGems ecosystems.
+- `deps why <package> --check-all-versions` extends that annotation to every entry in the tree by walking the dependency tree deep enough to cover every occurrence of the queried package, so transitive dependencies report update info too. Off by default since it issues many registry calls.
 - `outdatedDependencies` now accepts a `depth` option (default `0`, meaning direct dependencies only). When `depth > 0`, the check walks transitive dependencies up to that depth via the new `filterDependenciesByDepth` helper.
 - `deps outdated --release-latency auto` (the default) now falls back to a 24h threshold when pnpm's `minimumReleaseAge` is not configured.
 - CI now tests against Node 26 instead of Node 25.
