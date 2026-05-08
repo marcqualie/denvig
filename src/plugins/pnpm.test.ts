@@ -9,6 +9,11 @@ const turborepoExamplePath = new URL(
   import.meta.url,
 ).pathname
 
+const catalogExamplePath = new URL(
+  '../test/examples/pnpm-catalog',
+  import.meta.url,
+).pathname
+
 describe('pnpm plugin', () => {
   it('should have correct plugin name', () => {
     strictEqual(pnpmPlugin.name, 'pnpm')
@@ -205,6 +210,78 @@ describe('pnpm plugin', () => {
         'should include react from workspace packages',
       )
       ok(depNames.includes('denvig'), 'should include denvig from package2')
+    })
+  })
+
+  describe('catalog resolution', () => {
+    it('should resolve `catalog:` specifiers via pnpm-workspace.yaml', async () => {
+      const project = createMockProjectFromPath(catalogExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const nockDep = deps.find((d) => d.name === 'nock')
+      ok(nockDep, 'nock should be detected')
+
+      const importerEntry = nockDep.versions.find(
+        (v) => v.source === 'apps/api#devDependencies',
+      )
+      ok(importerEntry, 'should have importer source entry')
+      strictEqual(
+        importerEntry.specifier,
+        'catalog:',
+        'importer entry preserves the literal `catalog:` specifier',
+      )
+
+      const catalogEntry = nockDep.versions.find(
+        (v) => v.source === 'pnpm-workspace.yaml$catalog',
+      )
+      ok(catalogEntry, 'should have a catalog source entry')
+      strictEqual(
+        catalogEntry.specifier,
+        '^14.0.14',
+        'catalog entry exposes the resolved specifier',
+      )
+      strictEqual(catalogEntry.resolved, '14.0.14')
+    })
+
+    it('should resolve `catalog:<name>` specifiers from named catalogs', async () => {
+      const project = createMockProjectFromPath(catalogExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const reactDep = deps.find((d) => d.name === 'react')
+      ok(reactDep, 'react should be detected')
+
+      const namedCatalogEntry = reactDep.versions.find(
+        (v) => v.source === 'pnpm-workspace.yaml$catalogs.legacy',
+      )
+      ok(namedCatalogEntry, 'should have a named catalog source entry')
+      strictEqual(namedCatalogEntry.specifier, '^18.3.1')
+      strictEqual(namedCatalogEntry.resolved, '18.3.1')
+
+      const defaultCatalogEntry = reactDep.versions.find(
+        (v) => v.source === 'pnpm-workspace.yaml$catalog',
+      )
+      ok(defaultCatalogEntry, 'should also have the default catalog entry')
+      strictEqual(defaultCatalogEntry.specifier, '^19.2.0')
+    })
+
+    it('should not duplicate the catalog source when many importers reference it', async () => {
+      const project = createMockProjectFromPath(catalogExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const nockDep = deps.find((d) => d.name === 'nock')
+      ok(nockDep, 'nock should be detected')
+
+      const catalogEntries = nockDep.versions.filter(
+        (v) => v.source === 'pnpm-workspace.yaml$catalog',
+      )
+      strictEqual(
+        catalogEntries.length,
+        1,
+        'each catalog should contribute at most one source entry per dep',
+      )
     })
   })
 

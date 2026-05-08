@@ -10,6 +10,11 @@ import { preparePnpmRemovals } from '../lib/dedupe/prepare-removals-pnpm.ts'
 import { npmOutdated } from '../lib/npm/outdated.ts'
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
+import {
+  catalogSource,
+  readPnpmCatalogs,
+  resolveCatalogSpecifier,
+} from '../lib/pnpm-config.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
@@ -149,6 +154,47 @@ const plugin = definePlugin({
     const lockfileContent = await readFile(lockfilePath, 'utf-8')
     const lockfile = parse(lockfileContent) as PnpmLockfile
 
+    // Read catalogs from pnpm-workspace.yaml so we can resolve `catalog:` /
+    // `catalog:<name>` specifiers in importer entries to their real version
+    // ranges.
+    const catalogs = await readPnpmCatalogs(project.path)
+    const catalogSourcesAdded = new Set<string>()
+
+    const addImporterDep = (
+      name: string,
+      depInfo: PnpmLockfileDep,
+      source: string,
+    ) => {
+      const id = `npm:${name}`
+      const resolvedVersion = stripPeerDeps(depInfo.version)
+      const catalogMatch = resolveCatalogSpecifier(
+        catalogs,
+        name,
+        depInfo.specifier,
+      )
+
+      // Importer entry: keep the literal `catalog:` specifier so the source
+      // truthfully reflects what's declared in the workspace package's
+      // package.json. Resolution lives on the catalog source entry below.
+      addDependency(id, name, 'npm', resolvedVersion, source, depInfo.specifier)
+
+      if (catalogMatch) {
+        const catSource = catalogSource(catalogMatch.catalogName)
+        const dedupeKey = `${id}@${catSource}`
+        if (!catalogSourcesAdded.has(dedupeKey)) {
+          catalogSourcesAdded.add(dedupeKey)
+          addDependency(
+            id,
+            name,
+            'npm',
+            resolvedVersion,
+            catSource,
+            catalogMatch.specifier,
+          )
+        }
+      }
+    }
+
     // Iterate through importers (workspace packages)
     if (lockfile?.importers) {
       for (const [importerPath, importer] of Object.entries(
@@ -160,14 +206,7 @@ const plugin = definePlugin({
         if (importer.dependencies) {
           for (const [name, depInfo] of Object.entries(importer.dependencies)) {
             if (depInfo?.specifier && depInfo?.version) {
-              addDependency(
-                `npm:${name}`,
-                name,
-                'npm',
-                stripPeerDeps(depInfo.version),
-                `${basePath}#dependencies`,
-                depInfo.specifier,
-              )
+              addImporterDep(name, depInfo, `${basePath}#dependencies`)
             }
           }
         }
@@ -178,14 +217,7 @@ const plugin = definePlugin({
             importer.devDependencies,
           )) {
             if (depInfo?.specifier && depInfo?.version) {
-              addDependency(
-                `npm:${name}`,
-                name,
-                'npm',
-                stripPeerDeps(depInfo.version),
-                `${basePath}#devDependencies`,
-                depInfo.specifier,
-              )
+              addImporterDep(name, depInfo, `${basePath}#devDependencies`)
             }
           }
         }

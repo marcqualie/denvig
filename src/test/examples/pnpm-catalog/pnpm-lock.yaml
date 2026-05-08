@@ -1,0 +1,55 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+catalogs:
+  default:
+    nock:
+      specifier: ^14.0.14
+      version: 14.0.14
+    react:
+      specifier: ^19.2.0
+      version: 19.2.3
+  legacy:
+    react:
+      specifier: ^18.3.1
+      version: 18.3.1
+
+importers:
+
+  apps/api:
+    dependencies:
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+    devDependencies:
+      nock:
+        specifier: 'catalog:'
+        version: 14.0.14
+
+  apps/web:
+    dependencies:
+      react:
+        specifier: 'catalog:legacy'
+        version: 18.3.1
+
+packages:
+
+  nock@14.0.14:
+    resolution: {integrity: sha512-fake==}
+
+  react@18.3.1:
+    resolution: {integrity: sha512-fake==}
+
+  react@19.2.3:
+    resolution: {integrity: sha512-fake==}
+
+snapshots:
+
+  nock@14.0.14: {}
+
+  react@18.3.1: {}
+
+  react@19.2.3: {}

@@ -3,8 +3,13 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `deps outdated` now resolves pnpm `catalog:` and `catalog:<name>` specifiers via `pnpm-workspace.yaml` so the `Wanted` column reflects the real version range (previously the literal `catalog:` string was passed to the semver matcher and yielded no wanted update).
+
 ### Changed
 
+- pnpm dependency detection now adds a `pnpm-workspace.yaml$catalog` (or `pnpm-workspace.yaml$catalogs.<name>`) source entry for every dependency declared via a workspace catalog, alongside the existing importer source entries.
 - `deps why <package>` output is now a single flat list (no project header, no `dependencies:`/`devDependencies:` grouping) sorted alphabetically at every depth. Direct dev dependencies are tagged with a `(dev)` suffix. The queried package is highlighted in white and other entries default to grey.
 - `deps why <package>` now performs a single registry lookup for the queried package by default and annotates its tree entries with the latest available version in brackets (e.g. `express 4.21.2 (5.2.1)`), colored green (patch), yellow (minor), or red (major). The lookup covers npm, jsr, PyPI, and RubyGems ecosystems.
 - `deps why <package> --check-all-versions` extends that annotation to every entry in the tree by walking the dependency tree deep enough to cover every occurrence of the queried package, so transitive dependencies report update info too. Off by default since it issues many registry calls.

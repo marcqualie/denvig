@@ -1,0 +1,11 @@
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "nock": "catalog:"
+  }
+}

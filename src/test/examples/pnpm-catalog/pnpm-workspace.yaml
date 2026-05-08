@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+
+catalog:
+  nock: ^14.0.14
+  react: ^19.2.0
+
+catalogs:
+  legacy:
+    react: ^18.3.1

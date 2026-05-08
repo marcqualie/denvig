@@ -121,19 +121,28 @@ export const findWantedVersion = (
 /**
  * Extract dependency info from ProjectDependencySchema versions.
  * Returns the current version, specifier, and whether it's a dev dependency.
+ *
+ * The first entry establishes the current version and dev flag (matching the
+ * declaration order in the lockfile). The specifier may need to come from a
+ * different entry — when the first importer references a pnpm catalog, its
+ * literal specifier is `catalog:` and the real semver range lives on the
+ * `pnpm-workspace.yaml$catalog` source entry added by the pnpm plugin.
  */
 export const extractDepInfo = (
   dep: Pick<ProjectDependencySchema, 'versions'>,
 ): { current: string; specifier: string; isDevDependency: boolean } | null => {
-  // Get the first version entry (there should typically be one for direct deps)
   if (dep.versions.length === 0) return null
 
   const firstVersion = dep.versions[0]
   const isDevDependency = firstVersion.source.includes('#devDependencies')
 
+  const usableSpecifier =
+    dep.versions.find((v) => !v.specifier.startsWith('catalog:'))?.specifier ??
+    firstVersion.specifier
+
   return {
     current: firstVersion.resolved,
-    specifier: firstVersion.specifier,
+    specifier: usableSpecifier,
     isDevDependency,
   }
 }
