@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-05-08
+
 ### Fixed
 
 - `deps outdated` now resolves pnpm `catalog:` and `catalog:<name>` specifiers via `pnpm-workspace.yaml` so the `Wanted` column reflects the real version range (previously the literal `catalog:` string was passed to the semver matcher and yielded no wanted update).
