@@ -59,6 +59,86 @@ export const isLockfileSource = (source: string): boolean => {
 }
 
 /**
+ * Filter dependencies to those reachable from direct deps within `depth` levels.
+ * - `depth <= 0` returns only direct dependencies (those with `#dependencies` or
+ *   `#devDependencies` sources).
+ * - `depth > 0` walks the parent/child relationships and includes transitive
+ *   dependencies up to that depth.
+ */
+export const filterDependenciesByDepth = <T extends ProjectDependencySchema>(
+  dependencies: T[],
+  depth: number,
+): T[] => {
+  if (depth <= 0) {
+    return dependencies.filter((dep) =>
+      dep.versions.some(
+        (v) =>
+          v.source.includes('#dependencies') ||
+          v.source.includes('#devDependencies'),
+      ),
+    )
+  }
+
+  const childrenByParent = new Map<string, Set<string>>()
+  for (const dep of dependencies) {
+    for (const v of dep.versions) {
+      const parent = parseParentFromSource(v.source)
+      if (!parent) continue
+      const parentKey = `${parent.name}@${parent.version}`
+      const set = childrenByParent.get(parentKey) ?? new Set<string>()
+      set.add(dep.name)
+      childrenByParent.set(parentKey, set)
+    }
+  }
+
+  const includedNames = new Set<string>()
+  const queue: { name: string; version: string; depth: number }[] = []
+
+  for (const dep of dependencies) {
+    for (const v of dep.versions) {
+      if (
+        v.source.includes('#dependencies') ||
+        v.source.includes('#devDependencies')
+      ) {
+        if (!includedNames.has(dep.name)) {
+          includedNames.add(dep.name)
+        }
+        queue.push({ name: dep.name, version: v.resolved, depth: 0 })
+      }
+    }
+  }
+
+  const visited = new Set<string>()
+  while (queue.length > 0) {
+    const node = queue.shift()
+    if (!node) break
+    if (node.depth >= depth) continue
+    const key = `${node.name}@${node.version}`
+    if (visited.has(key)) continue
+    visited.add(key)
+    const children = childrenByParent.get(key)
+    if (!children) continue
+    for (const childName of children) {
+      includedNames.add(childName)
+      const childDep = dependencies.find((d) => d.name === childName)
+      if (!childDep) continue
+      for (const cv of childDep.versions) {
+        const parent = parseParentFromSource(cv.source)
+        if (parent?.name === node.name && parent.version === node.version) {
+          queue.push({
+            name: childDep.name,
+            version: cv.resolved,
+            depth: node.depth + 1,
+          })
+        }
+      }
+    }
+  }
+
+  return dependencies.filter((dep) => includedNames.has(dep.name))
+}
+
+/**
  * Check if a source is from dependencies section.
  */
 export const isDependenciesSource = (source: string): boolean => {

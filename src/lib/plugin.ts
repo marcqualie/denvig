@@ -10,6 +10,12 @@ import type { DenvigProject } from './project'
 export type OutdatedDependenciesOptions = {
   /** Use cache for registry requests (default: true) */
   cache?: boolean
+  /**
+   * How many levels of the dependency tree to include.
+   * 0 (default) = direct dependencies only.
+   * N > 0 = direct deps plus transitive dependencies up to depth N.
+   */
+  depth?: number
 }
 
 /**
