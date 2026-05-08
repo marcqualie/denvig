@@ -6,6 +6,7 @@
 ### Fixed
 
 - `deps outdated` now resolves pnpm `catalog:` and `catalog:<name>` specifiers via `pnpm-workspace.yaml` so the `Wanted` column reflects the real version range (previously the literal `catalog:` string was passed to the semver matcher and yielded no wanted update).
+- OSC 8 hyperlinks in `deps outdated` now use the ST (`ESC \`) terminator instead of BEL (`\x07`), so version links render as clickable in Ghostty (previously links only worked in VSCode/Zed integrated terminals). Hyperlinked text is also explicitly underlined via the extended SGR dotted underline (`\x1b[4:4m`/`\x1b[4:0m`) so the clickable indicator is visible in Ghostty (which does not auto-style OSC 8 links).
 
 ### Changed
 
