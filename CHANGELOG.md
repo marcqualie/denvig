@@ -6,6 +6,7 @@
 ### Changed
 
 - `deps outdated --release-latency auto` (the default) now falls back to a 24h threshold when pnpm's `minimumReleaseAge` is not configured.
+- CI now tests against Node 26 instead of Node 25.
 
 ## [0.6.6] - 2026-05-02
 
