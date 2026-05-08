@@ -47,12 +47,16 @@ export const readPnpmCatalogs = async (
 ): Promise<PnpmCatalogs | null> => {
   const config = await readPnpmWorkspaceConfig(projectPath)
   if (!config) return null
-  const hasDefault = config.catalog && typeof config.catalog === 'object'
-  const hasNamed = config.catalogs && typeof config.catalogs === 'object'
-  if (!hasDefault && !hasNamed) return null
+  const defaultCatalog =
+    config.catalog && typeof config.catalog === 'object' ? config.catalog : null
+  const namedCatalogs =
+    config.catalogs && typeof config.catalogs === 'object'
+      ? config.catalogs
+      : null
+  if (!defaultCatalog && !namedCatalogs) return null
   return {
-    default: hasDefault ? config.catalog! : {},
-    named: hasNamed ? config.catalogs! : {},
+    default: defaultCatalog ?? {},
+    named: namedCatalogs ?? {},
   }
 }
 
