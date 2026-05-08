@@ -38,19 +38,27 @@ export const COLORS = {
 
 /**
  * Strip ANSI escape codes and OSC 8 hyperlink sequences from a string to get display width.
+ * Handles both BEL (\x07) and ST (\x1b\\) terminators.
  */
 const stripAnsi = (str: string): string => {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for ANSI code stripping
-  return str.replace(/\x1b\[[0-9;]*m/g, '').replace(/\x1b]8;;[^\x07]*\x07/g, '')
+  return (
+    str
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for ANSI code stripping
+      .replace(/\x1b\[[0-9;:]*m/g, '')
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Required for OSC 8 stripping
+      .replace(/\x1b]8;;.*?(?:\x07|\x1b\\)/g, '')
+  )
 }
 
 /**
  * Wrap text in an OSC 8 hyperlink escape sequence.
+ * Uses ST (ESC \) as terminator for broader terminal compatibility (e.g. Ghostty).
+ * Adds an explicit ANSI underline since Ghostty does not auto-style OSC 8 links.
  * Returns the text unchanged when terminal formatting is disabled.
  */
 export const hyperlink = (text: string, url: string): string => {
   if (!shouldUseColors()) return text
-  return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`
+  return `\x1b]8;;${url}\x1b\\\x1b[4:4m${text}\x1b[4:0m\x1b]8;;\x1b\\`
 }
 
 /**
