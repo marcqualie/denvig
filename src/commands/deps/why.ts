@@ -1,3 +1,5 @@
+import semver from 'semver'
+
 import { Command } from '../../lib/command.ts'
 import {
   buildReverseChain,
@@ -16,6 +18,33 @@ import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
 type RootChain = {
   tree: TreeNode
   isDev: boolean
+}
+
+type AvailableVersion = {
+  version: string
+  color: string
+}
+
+const colorForLevel = (level: 'major' | 'minor' | 'patch'): string => {
+  if (level === 'major') return COLORS.red
+  if (level === 'minor') return COLORS.yellow
+  return COLORS.green
+}
+
+const isUpgrade = (from: string, to: string): boolean => {
+  try {
+    return semver.gt(to, from)
+  } catch {
+    return false
+  }
+}
+
+const formatAvailableVersions = (versions: AvailableVersion[]): string => {
+  if (versions.length === 0) return ''
+  const inner = versions
+    .map(({ version, color }) => `${color}${version}${COLORS.reset}`)
+    .join(`${COLORS.grey}, ${COLORS.reset}`)
+  return `${COLORS.grey}(${COLORS.reset}${inner}${COLORS.grey})${COLORS.reset}`
 }
 
 export const depsWhyCommand = new Command({
@@ -72,24 +101,55 @@ export const depsWhyCommand = new Command({
       outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
     }
 
-    const getNodeColor = (name: string, version: string): string => {
+    const getAvailableVersions = (
+      name: string,
+      version: string,
+    ): AvailableVersion[] => {
       const o = outdatedMap.get(name)
-      if (o) {
-        const level = getSemverLevel(version, o.latest)
-        if (level === 'major') return COLORS.red
-        if (level === 'minor') return COLORS.yellow
-        if (level === 'patch') return COLORS.green
+      if (!o) return []
+      const candidates = [o.wanted, o.latest].filter(
+        (v): v is string => typeof v === 'string' && v.length > 0,
+      )
+      const versions: AvailableVersion[] = []
+      const seen = new Set<string>([version])
+      for (const candidate of candidates) {
+        if (seen.has(candidate)) continue
+        if (!isUpgrade(version, candidate)) continue
+        const level = getSemverLevel(version, candidate)
+        if (!level) continue
+        seen.add(candidate)
+        versions.push({ version: candidate, color: colorForLevel(level) })
       }
-      return name === dependencyName ? COLORS.white : COLORS.grey
+      return versions
     }
 
-    const decorate = (node: TreeNode): TreeNode => ({
+    const buildSuffix = (
+      node: TreeNode,
+      isRoot: boolean,
+      isDev: boolean,
+    ): string | undefined => {
+      const parts: string[] = []
+      if (isRoot && isDev) {
+        parts.push(`${COLORS.grey}(dev)${COLORS.reset}`)
+      }
+      const formatted = formatAvailableVersions(
+        getAvailableVersions(node.name, node.version),
+      )
+      if (formatted) parts.push(formatted)
+      return parts.length > 0 ? parts.join(' ') : undefined
+    }
+
+    const decorate = (
+      node: TreeNode,
+      isRoot: boolean,
+      isDev: boolean,
+    ): TreeNode => ({
       ...node,
-      color: getNodeColor(node.name, node.version),
-      children: node.children.map(decorate),
+      color: node.name === dependencyName ? COLORS.white : COLORS.grey,
+      suffix: buildSuffix(node, isRoot, isDev),
+      children: node.children.map((child) => decorate(child, false, false)),
     })
 
-    const chains: RootChain[] = []
     const depChains: TreeNode[] = []
     const devDepChains: TreeNode[] = []
 
@@ -112,8 +172,10 @@ export const depsWhyCommand = new Command({
       }
     }
 
-    for (const tree of depChains) chains.push({ tree, isDev: false })
-    for (const tree of devDepChains) chains.push({ tree, isDev: true })
+    const chains: RootChain[] = [
+      ...depChains.map((tree) => ({ tree, isDev: false })),
+      ...devDepChains.map((tree) => ({ tree, isDev: true })),
+    ]
 
     if (flags.json) {
       console.log(
@@ -139,8 +201,7 @@ export const depsWhyCommand = new Command({
     }
 
     for (const { tree, isDev } of chains) {
-      const decorated = decorate(tree)
-      if (isDev) decorated.suffix = '(dev)'
+      const decorated = decorate(tree, true, isDev)
       const lines = formatTree(decorated, '', true, true)
       for (const line of lines) {
         console.log(line)

@@ -5,7 +5,7 @@
 
 ### Changed
 
-- `deps why <package>` output is now a single flat list (no project header, no `dependencies:`/`devDependencies:` grouping). Direct dev dependencies are tagged with a `(dev)` suffix. The queried package is highlighted in white; other entries default to grey, and packages with available updates are colored green (patch), yellow (minor), or red (major).
+- `deps why <package>` output is now a single flat list (no project header, no `dependencies:`/`devDependencies:` grouping). Direct dev dependencies are tagged with a `(dev)` suffix. The queried package is highlighted in white and other entries default to grey. Packages with available updates show the wanted/latest versions in brackets next to the resolved version (e.g. `express 4.21.2 (5.2.1)`), each colored green (patch), yellow (minor), or red (major).
 - `deps outdated --release-latency auto` (the default) now falls back to a 24h threshold when pnpm's `minimumReleaseAge` is not configured.
 - CI now tests against Node 26 instead of Node 25.
 - Upgraded `zod` from 4.4.2 to 4.4.3

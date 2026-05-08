@@ -9,7 +9,7 @@ export type TreeNode = {
   children: TreeNode[]
   /** Optional ANSI color applied to the entire `name version` body. */
   color?: string
-  /** Optional suffix appended after the version (rendered in grey). */
+  /** Optional preformatted suffix appended after the version. */
   suffix?: string
 }
 
@@ -17,8 +17,7 @@ const formatNodeBody = (node: TreeNode): string => {
   const body = node.color
     ? `${node.color}${node.name} ${node.version}${COLORS.reset}`
     : `${node.name} ${COLORS.grey}${node.version}${COLORS.reset}`
-  if (!node.suffix) return body
-  return `${body} ${COLORS.grey}${node.suffix}${COLORS.reset}`
+  return node.suffix ? `${body} ${node.suffix}` : body
 }
 
 /**
