@@ -1,3 +1,4 @@
+import { filterDependenciesByDepth } from '../deps/tree.ts'
 import { extractDepInfo, findWantedVersion } from '../npm/outdated.ts'
 import { fetchJsrPackageInfo } from './info.ts'
 
@@ -16,17 +17,12 @@ export const jsrOutdated = async (
   options: OutdatedDependenciesOptions = {},
 ): Promise<OutdatedDependencySchema[]> => {
   const useCache = options.cache ?? true
+  const depth = options.depth ?? 0
   const result: OutdatedDependencySchema[] = []
 
-  const directDeps = dependencies.filter((dep) => {
-    return dep.versions.some(
-      (v) =>
-        v.source.includes('#dependencies') ||
-        v.source.includes('#devDependencies'),
-    )
-  })
+  const toCheck = filterDependenciesByDepth(dependencies, depth)
 
-  const fetchPromises = directDeps.map(async (dep) => {
+  const fetchPromises = toCheck.map(async (dep) => {
     const info = extractDepInfo(dep)
     if (!info) return
 

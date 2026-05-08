@@ -68,11 +68,7 @@ export const depsWhyCommand = new Command({
   handler: async ({ project, args, flags }) => {
     const dependencyName = args.dependency as string
 
-    const [allDependencies, outdated] = await Promise.all([
-      project.dependencies(),
-      project.outdatedDependencies({ cache: true }).catch(() => []),
-    ])
-
+    const allDependencies = await project.dependencies()
     const dep = allDependencies.find((d) => d.name === dependencyName)
 
     if (!dep) {
@@ -95,6 +91,48 @@ export const depsWhyCommand = new Command({
     for (const d of allDependencies) {
       depsMap.set(d.name, d)
     }
+
+    const depChains: TreeNode[] = []
+    const devDepChains: TreeNode[] = []
+
+    for (const v of dep.versions) {
+      const chain = buildReverseChain(dep.name, v.resolved, v.source, depsMap)
+      if (!chain) continue
+
+      const rootDep = depsMap.get(chain.name)
+      const rootVersion = rootDep?.versions.find(
+        (rv) => rv.resolved === chain.version,
+      )
+      const isDevChain = rootVersion
+        ? isDevDependenciesSource(rootVersion.source)
+        : false
+
+      if (isDevChain) {
+        mergeTreeNode(devDepChains, chain)
+      } else {
+        mergeTreeNode(depChains, chain)
+      }
+    }
+
+    const chains: RootChain[] = [
+      ...depChains.map((tree) => ({ tree, isDev: false })),
+      ...devDepChains.map((tree) => ({ tree, isDev: true })),
+    ]
+
+    const computeMaxDepth = (node: TreeNode, depth = 0): number => {
+      if (node.children.length === 0) return depth
+      return Math.max(
+        ...node.children.map((child) => computeMaxDepth(child, depth + 1)),
+      )
+    }
+    const outdatedDepth = chains.reduce(
+      (max, { tree }) => Math.max(max, computeMaxDepth(tree)),
+      0,
+    )
+
+    const outdated = await project
+      .outdatedDependencies({ cache: true, depth: outdatedDepth })
+      .catch(() => [])
 
     const outdatedMap = new Map<string, { latest: string; wanted: string }>()
     for (const o of outdated) {
@@ -149,33 +187,6 @@ export const depsWhyCommand = new Command({
       suffix: buildSuffix(node, isRoot, isDev),
       children: node.children.map((child) => decorate(child, false, false)),
     })
-
-    const depChains: TreeNode[] = []
-    const devDepChains: TreeNode[] = []
-
-    for (const v of dep.versions) {
-      const chain = buildReverseChain(dep.name, v.resolved, v.source, depsMap)
-      if (!chain) continue
-
-      const rootDep = depsMap.get(chain.name)
-      const rootVersion = rootDep?.versions.find(
-        (rv) => rv.resolved === chain.version,
-      )
-      const isDevChain = rootVersion
-        ? isDevDependenciesSource(rootVersion.source)
-        : false
-
-      if (isDevChain) {
-        mergeTreeNode(devDepChains, chain)
-      } else {
-        mergeTreeNode(depChains, chain)
-      }
-    }
-
-    const chains: RootChain[] = [
-      ...depChains.map((tree) => ({ tree, isDev: false })),
-      ...devDepChains.map((tree) => ({ tree, isDev: true })),
-    ]
 
     if (flags.json) {
       console.log(

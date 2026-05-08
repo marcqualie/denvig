@@ -1,3 +1,4 @@
+import { filterDependenciesByDepth } from '../deps/tree.ts'
 import { fetchNpmPackageInfo } from './info.ts'
 
 import type {
@@ -146,20 +147,12 @@ export const npmOutdated = async (
   options: OutdatedDependenciesOptions = {},
 ): Promise<OutdatedDependencySchema[]> => {
   const useCache = options.cache ?? true
+  const depth = options.depth ?? 0
   const result: OutdatedDependencySchema[] = []
 
-  // Filter to only direct dependencies (those with sources, not transitive)
-  const directDeps = dependencies.filter((dep) => {
-    // Direct deps have sources like ".#dependencies" or "packages/foo#dependencies"
-    // Transitive deps have sources like "pnpm-lock.yaml:package@version"
-    return dep.versions.some(
-      (v) =>
-        v.source.includes('#dependencies') ||
-        v.source.includes('#devDependencies'),
-    )
-  })
+  const toCheck = filterDependenciesByDepth(dependencies, depth)
 
-  const fetchPromises = directDeps.map(async (dep) => {
+  const fetchPromises = toCheck.map(async (dep) => {
     const info = extractDepInfo(dep)
     if (!info) return
 
