@@ -27,6 +27,7 @@ export const logsCommand = new Command({
       required: false,
       type: 'number',
       defaultValue: 10,
+      short: 'n',
     },
     {
       name: 'follow',
@@ -45,8 +46,7 @@ export const logsCommand = new Command({
       nameArg,
       project,
     )
-    // Support alias `-n` through `flags.n` for compatibility with common CLI usage
-    const lines = (flags.lines as number) ?? (flags.n as number) ?? 10
+    const lines = (flags.lines as number) ?? 10
     const follow = !!flags.follow
 
     const logPath = manager.getLogPath(name)

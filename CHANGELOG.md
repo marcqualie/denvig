@@ -8,6 +8,7 @@
 - `deps outdated --release-latency auto` (the default) now falls back to a 24h threshold when pnpm's `minimumReleaseAge` is not configured.
 - CI now tests against Node 26 instead of Node 25.
 - Upgraded `zod` from 4.4.2 to 4.4.3
+- Replaced `minimist` with the built-in `node:util` `parseArgs` for argument parsing. Command flag definitions can now declare a `short` alias (e.g. `services logs -n` for `--lines`).
 
 ## [0.6.6] - 2026-05-02
 

@@ -33,6 +33,7 @@ type FlagDefinition = {
   required: boolean
   type: 'string' | 'number' | 'boolean' | 'array'
   defaultValue?: string | number | boolean
+  short?: string
 }
 
 type CommandResponse = {

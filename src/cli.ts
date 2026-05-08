@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import parseArgs from 'minimist'
+import { type ParseArgsConfig, parseArgs } from 'node:util'
 
 import {
   globalFlags,
@@ -18,14 +18,29 @@ import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
+type ParseArgsOptions = NonNullable<ParseArgsConfig['options']>
+
 // Main CLI execution
 async function main() {
   let commandName = process.argv[2]
   let args = process.argv.slice(2)
-  const rootFlags = parseArgs(args)
+
+  // Initial lenient parse for root-level flags. Unknown flags are tolerated
+  // because the command (and its flag schema) hasn't been resolved yet.
+  const rootResult = parseArgs({
+    args,
+    options: {
+      version: { type: 'boolean', short: 'v' },
+      help: { type: 'boolean', short: 'h' },
+      project: { type: 'string' },
+    },
+    strict: false,
+    allowPositionals: true,
+  })
+  const rootFlags = rootResult.values
 
   // Handle root-level --version/-v
-  if (rootFlags.version || rootFlags.v) {
+  if (rootFlags.version) {
     console.log(`v${getDenvigVersion()}`)
     process.exit(0)
   }
@@ -33,7 +48,8 @@ async function main() {
   // Detect project from current directory or --project flag
   const globalConfig = await getGlobalConfig()
   const currentDir = process.cwd()
-  const projectFlag = parseArgs(process.argv.slice(2)).project?.toString()
+  const projectFlag =
+    typeof rootFlags.project === 'string' ? rootFlags.project : undefined
 
   // Find project path: either from flag, or detect from current directory
   let projectPath: string | null = null
@@ -132,7 +148,7 @@ async function main() {
   }
 
   // Handle --help or -h at root level (no valid command provided)
-  if ((rootFlags.help || rootFlags.h) && !commands[commandName]) {
+  if (rootFlags.help && !commands[commandName]) {
     showRootHelp(commands)
     await cliLogTracker.finish(0, 'Showed help')
     process.exit(0)
@@ -147,7 +163,7 @@ async function main() {
 
   // Resolve subcommands: walk the command tree consuming from args
   // args[0] is command name, args[1..] are potential subcommands/arguments
-  const helpRequested = rootFlags.help || rootFlags.h
+  const helpRequested = !!rootFlags.help
   let command = commands[commandName]
   let subArgIndex = 1
   while (command.hasSubcommands) {
@@ -166,8 +182,6 @@ async function main() {
   // Rebuild args: keep the root command name, then any unconsumed args
   args = [args[0], ...args.slice(subArgIndex)]
 
-  const flags = parseArgs(args)
-
   // If help is requested, show appropriate help
   if (helpRequested) {
     if (command.hasSubcommands) {
@@ -179,13 +193,37 @@ async function main() {
     process.exit(0)
   }
 
-  // Parse command arguments
+  // Build options config from the resolved command's flags so parseArgs can
+  // distinguish known options (with their types and short aliases) from
+  // unknown ones (which still parse leniently via strict: false).
+  const allFlags = [...globalFlags, ...(command?.flags || [])]
+  const optionsConfig: ParseArgsOptions = {
+    help: { type: 'boolean', short: 'h' },
+    version: { type: 'boolean', short: 'v' },
+  }
+  for (const flag of allFlags) {
+    const short = 'short' in flag ? flag.short : undefined
+    optionsConfig[flag.name] = {
+      type: flag.type === 'boolean' ? 'boolean' : 'string',
+      ...(short ? { short } : {}),
+    }
+  }
+
+  const result = parseArgs({
+    args,
+    options: optionsConfig,
+    strict: false,
+    allowPositionals: true,
+    tokens: true,
+  })
+
+  // Parse command arguments from positionals (skipping the command name itself)
   const parsedArgs: Record<string, string | number> = {}
   let missingArg: string | null = null
   for (const [index, arg] of (command?.args || []).entries()) {
-    const value = flags._[index + 1]
+    const value = result.positionals[index + 1]
     if (value !== undefined) {
-      parsedArgs[arg.name] = value
+      parsedArgs[arg.name] = arg.type === 'number' ? Number(value) : value
     } else if (arg.required) {
       missingArg = arg.name
       break
@@ -198,19 +236,18 @@ async function main() {
     process.exit(1)
   }
 
-  // Extract extra arguments that weren't consumed by the command definition
-  const extraPositionalArgs =
-    flags._.slice(command?.args.length + 1).map((arg) => String(arg)) || []
-
-  const allFlags = [...globalFlags, ...(command?.flags || [])]
   const recognizedFlagNames = new Set(allFlags.map((flag) => flag.name))
 
-  // Parse command flags
+  // Parse command flags, applying defaults and number coercion
   const parsedFlags: Record<string, string | number | boolean> = {}
   let missingFlag: string | null = null
   for (const flag of allFlags) {
-    if (flags[flag.name] !== undefined) {
-      parsedFlags[flag.name] = flags[flag.name]
+    const value = result.values[flag.name]
+    if (value !== undefined) {
+      parsedFlags[flag.name] =
+        flag.type === 'number' && typeof value === 'string'
+          ? Number(value)
+          : value
     } else if (flag.defaultValue !== undefined) {
       parsedFlags[flag.name] = flag.defaultValue
     } else if (flag.required) {
@@ -225,22 +262,34 @@ async function main() {
     process.exit(1)
   }
 
-  // Extract unrecognized flags and convert them to command line arguments
-  const extraFlagArgs: string[] = []
-  for (const [key, value] of Object.entries(flags)) {
-    if (key !== '_' && !recognizedFlagNames.has(key)) {
-      if (value === true) {
-        extraFlagArgs.push(`--${key}`)
-      } else if (value === false) {
-        extraFlagArgs.push(`--no-${key}`)
+  // Walk tokens in original order to collect anything not consumed by the
+  // command's defined args/flags. This preserves the order users typed so
+  // forwarded subprocesses receive arguments as expected.
+  const definedArgsCount = command?.args.length || 0
+  const extraArgs: string[] = []
+  let positionalIndex = 0
+  for (const token of result.tokens ?? []) {
+    if (token.kind === 'positional') {
+      // Skip the command name (index 0) and any defined args
+      if (positionalIndex > definedArgsCount) {
+        extraArgs.push(token.value)
+      }
+      positionalIndex++
+    } else if (token.kind === 'option') {
+      if (recognizedFlagNames.has(token.name)) continue
+      if (token.name === 'help' || token.name === 'version') continue
+      const rawName = token.rawName ?? `--${token.name}`
+      if (token.value !== undefined) {
+        if (token.inlineValue) {
+          extraArgs.push(`${rawName}=${token.value}`)
+        } else {
+          extraArgs.push(rawName, token.value)
+        }
       } else {
-        extraFlagArgs.push(`--${key}`, String(value))
+        extraArgs.push(rawName)
       }
     }
   }
-
-  // Combine extra positional args and extra flag args
-  const extraArgs = [...extraPositionalArgs, ...extraFlagArgs]
 
   try {
     if (!project) {
