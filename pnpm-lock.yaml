@@ -12,8 +12,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       semver:
-        specifier: ^7.7.4
-        version: 7.7.4
+        specifier: ^7.8.0
+        version: 7.8.0
       yaml:
         specifier: ^2.8.4
         version: 2.8.4
@@ -627,8 +627,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  semver@7.7.4:
-    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
+  semver@7.8.0:
+    resolution: {integrity: sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -1177,7 +1177,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.46.2
       fsevents: 2.3.3
 
-  semver@7.7.4: {}
+  semver@7.8.0: {}
 
   shebang-command@2.0.0:
     dependencies:
