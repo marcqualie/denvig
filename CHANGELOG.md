@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded `semver` from 7.7.4 to 7.8.0
+
 ## [0.6.7] - 2026-05-08
 
 ### Fixed
