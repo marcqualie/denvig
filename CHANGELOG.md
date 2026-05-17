@@ -7,7 +7,8 @@
 
 - Upgraded `semver` from 7.7.4 to 7.8.0
 - Upgraded `@biomejs/biome` from 2.4.14 to 2.4.15
-- Upgraded `@types/node` from 25.6.0 to 25.6.2
+- Upgraded `@types/node` from 25.6.0 to 25.8.0
+- Upgraded `yaml` from 2.8.4 to 2.9.0
 - Replaced invalid `:TYPE:` predefined group in `biome.json` `organizeImports` config with `{ "type": true }` (biome 2.4.15 now errors on unknown predefined groups)
 
 ## [0.6.7] - 2026-05-08
