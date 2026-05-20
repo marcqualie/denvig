@@ -84,10 +84,7 @@ export const servicesListCommand = new Command({
       const globalProject = await createGlobalProject()
       if (Object.keys(globalProject.config.services || {}).length > 0) {
         projectCount = 1
-        await collectFromManager(
-          new ServiceManager(globalProject),
-          allServices,
-        )
+        await collectFromManager(new ServiceManager(globalProject), allServices)
       }
     } else if (all) {
       const projectInfos = await listProjects()
@@ -100,10 +97,7 @@ export const servicesListCommand = new Command({
       const globalProject = await createGlobalProject()
       if (Object.keys(globalProject.config.services || {}).length > 0) {
         projectCount += 1
-        await collectFromManager(
-          new ServiceManager(globalProject),
-          allServices,
-        )
+        await collectFromManager(new ServiceManager(globalProject), allServices)
       }
     } else {
       projectCount = 1
