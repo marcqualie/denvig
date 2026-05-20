@@ -10,6 +10,6 @@ describe('servicesListCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(servicesListCommand.usage === 'services list')
+    ok(servicesListCommand.usage === 'services list [--all] [--global]')
   })
 })

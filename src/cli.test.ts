@@ -36,7 +36,7 @@ describe('cli', () => {
 
     strictEqual(result.code, 0)
     match(result.stdout, /Usage: denvig services/)
-    match(result.stdout, /List all services/)
+    match(result.stdout, /List services for the current project/)
     match(result.stdout, /Subcommands:/)
     match(result.stdout, /start/)
     match(result.stdout, /stop/)

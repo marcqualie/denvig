@@ -22,73 +22,110 @@ const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
 
 export const servicesListCommand = new Command({
   name: 'services:list',
-  description: 'List all services across all projects',
-  usage: 'services list',
+  description: 'List services for the current project',
+  usage: 'services list [--all] [--global]',
   example: 'services list',
   args: [],
-  flags: [],
+  flags: [
+    {
+      name: 'all',
+      description: 'List services across all projects and global services',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'global',
+      description: 'List only global services',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+  ],
   completions: () => {
     return []
   },
   handler: async ({ project, flags }) => {
-    const currentProjectSlug = project.slug
-    const projectInfos = await listProjects()
+    const all = flags.all as boolean
+    const globalOnly = flags.global as boolean
 
-    if (projectInfos.length === 0) {
+    if (all && globalOnly) {
+      const message = 'Cannot use --all and --global together.'
       if (flags.json) {
-        console.log(JSON.stringify([]))
+        console.log(JSON.stringify({ success: false, message }))
       } else {
-        console.log('No projects found with .denvig.yml configuration.')
+        console.error(message)
       }
-      return { success: true, message: 'No projects found.' }
+      return { success: false, message }
     }
 
     // Pre-fetch launchctl list once to avoid N shell calls
     const launchctlList = await launchctl.list('denvig.')
 
-    const allServices: ServiceResponse[] = []
-
-    for (const projectInfo of projectInfos) {
-      const proj = await DenvigProject.retrieve(projectInfo.path)
-      const manager = new ServiceManager(proj)
+    const collectFromManager = async (
+      manager: ServiceManager,
+      out: ServiceResponse[],
+    ) => {
       const services = await manager.listServices()
-
       for (const service of services) {
         const response = await manager.getServiceResponse(service.name, {
           launchctlList,
         })
         if (response) {
-          allServices.push(response)
+          out.push(response)
         }
       }
     }
 
-    // Include global services
-    const globalProject = await createGlobalProject()
-    const globalServices = globalProject.config.services || {}
-    if (Object.keys(globalServices).length > 0) {
-      const globalManager = new ServiceManager(globalProject)
-      const globalServiceList = await globalManager.listServices()
-      for (const service of globalServiceList) {
-        const response = await globalManager.getServiceResponse(service.name, {
-          launchctlList,
-        })
-        if (response) {
-          allServices.push(response)
-        }
+    const allServices: ServiceResponse[] = []
+    let projectCount = 0
+
+    if (globalOnly) {
+      const globalProject = await createGlobalProject()
+      if (Object.keys(globalProject.config.services || {}).length > 0) {
+        projectCount = 1
+        await collectFromManager(
+          new ServiceManager(globalProject),
+          allServices,
+        )
       }
+    } else if (all) {
+      const projectInfos = await listProjects()
+      for (const projectInfo of projectInfos) {
+        const proj = await DenvigProject.retrieve(projectInfo.path)
+        await collectFromManager(new ServiceManager(proj), allServices)
+      }
+      projectCount = projectInfos.length
+
+      const globalProject = await createGlobalProject()
+      if (Object.keys(globalProject.config.services || {}).length > 0) {
+        projectCount += 1
+        await collectFromManager(
+          new ServiceManager(globalProject),
+          allServices,
+        )
+      }
+    } else {
+      projectCount = 1
+      await collectFromManager(new ServiceManager(project), allServices)
     }
 
     if (allServices.length === 0) {
       if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
-        console.log('No services configured across any project.')
+        if (globalOnly) {
+          console.log('No global services configured.')
+        } else if (all) {
+          console.log('No services configured across any project.')
+        } else {
+          console.log(`No services configured for ${project.slug}.`)
+        }
       }
       return { success: true, message: 'No services configured.' }
     }
 
-    // Sort: current project first, then alphabetically by project slug
+    const currentProjectSlug = project.slug
     const sortedServices = allServices.sort((a, b) => {
       const aIsCurrent = a.project.slug === currentProjectSlug
       const bIsCurrent = b.project.slug === currentProjectSlug
@@ -102,21 +139,28 @@ export const servicesListCommand = new Command({
       return a.name.localeCompare(b.name)
     })
 
-    // JSON output
     if (flags.json) {
       console.log(JSON.stringify(sortedServices))
       return { success: true, message: 'Services listed successfully.' }
     }
 
+    const showProjectColumn = all || globalOnly
     const lines = formatTable({
       columns: [
         {
           header: '',
           accessor: (s) => getStatusIcon(s.status),
         },
-        { header: 'Project', accessor: (s) => s.project.slug },
-        { header: 'Name', accessor: (s) => s.name },
-        { header: 'URL', accessor: (s) => s.url || '-' },
+        ...(showProjectColumn
+          ? [
+              {
+                header: 'Project',
+                accessor: (s: ServiceResponse) => s.project.slug,
+              },
+            ]
+          : []),
+        { header: 'Name', accessor: (s: ServiceResponse) => s.name },
+        { header: 'URL', accessor: (s: ServiceResponse) => s.url || '-' },
       ],
       data: sortedServices,
     })
@@ -125,13 +169,20 @@ export const servicesListCommand = new Command({
       console.log(line)
     }
 
-    const totalProjects =
-      projectInfos.length +
-      (Object.keys(globalProject.config.services || {}).length > 0 ? 1 : 0)
     console.log('')
-    console.log(
-      `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${totalProjects} project${totalProjects === 1 ? '' : 's'}`,
-    )
+    if (all) {
+      console.log(
+        `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${projectCount} project${projectCount === 1 ? '' : 's'}`,
+      )
+    } else if (globalOnly) {
+      console.log(
+        `${allServices.length} global service${allServices.length === 1 ? '' : 's'} configured`,
+      )
+    } else {
+      console.log(
+        `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured for ${project.slug}`,
+      )
+    }
 
     return { success: true, message: 'Services listed successfully.' }
   },
