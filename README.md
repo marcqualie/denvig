@@ -1,4 +1,4 @@
-# Denvig - Developer Environment Invigorator
+# Denvig - Developer Environment Envigorator
 
 [![npm version](https://img.shields.io/npm/v/denvig?color=yellow)](https://npmjs.com/package/denvig)
 [![install size](https://packagephobia.com/badge?p=denvig)](https://packagephobia.com/result?p=denvig)
