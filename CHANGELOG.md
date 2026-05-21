@@ -13,6 +13,7 @@
 - Upgraded `@types/node` from 25.6.0 to 25.8.0
 - Upgraded `yaml` from 2.8.4 to 2.9.0
 - Replaced invalid `:TYPE:` predefined group in `biome.json` `organizeImports` config with `{ "type": true }` (biome 2.4.15 now errors on unknown predefined groups)
+- Migrated the build from `tsup` to `rolldown` (with `rolldown-plugin-dts` for bundled type declarations). Output layout, formats, and externalisation behaviour are unchanged; `dist/sdk.d.cts` is no longer emitted since `package.json` only references `dist/sdk.d.ts`.
 
 ## [0.6.7] - 2026-05-08
 
