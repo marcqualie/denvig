@@ -171,6 +171,18 @@ async function main() {
     if (nextArg && command.subcommands[nextArg]) {
       command = command.subcommands[nextArg]
       subArgIndex++
+    } else if (
+      nextArg &&
+      !nextArg.startsWith('-') &&
+      !command.acceptsExtraArgs
+    ) {
+      const available = Object.keys(command.subcommands)
+        .filter((n) => !n.startsWith('__'))
+        .join(', ')
+      const errorMsg = `Unknown subcommand "${nextArg}" for "${command.name}". Available subcommands: ${available}`
+      console.error(errorMsg)
+      await cliLogTracker.finish(1, errorMsg)
+      process.exit(1)
     } else if (command.defaultSubcommand && !helpRequested) {
       // Only apply default when not requesting help, so --help shows subcommand list
       command = command.subcommands[command.defaultSubcommand]
@@ -264,14 +276,21 @@ async function main() {
 
   // Walk tokens in original order to collect anything not consumed by the
   // command's defined args/flags. This preserves the order users typed so
-  // forwarded subprocesses receive arguments as expected.
+  // forwarded subprocesses receive arguments as expected. Commands that don't
+  // opt in to extraArgs error on any unrecognized positional or flag, which
+  // catches typos like `services listtt` or `services --al`.
   const definedArgsCount = command?.args.length || 0
   const extraArgs: string[] = []
   let positionalIndex = 0
   for (const token of result.tokens ?? []) {
     if (token.kind === 'positional') {
-      // Skip the command name (index 0) and any defined args
       if (positionalIndex > definedArgsCount) {
+        if (!command.acceptsExtraArgs) {
+          const errorMsg = `Unexpected argument: "${token.value}"`
+          console.error(errorMsg)
+          await cliLogTracker.finish(1, errorMsg)
+          process.exit(1)
+        }
         extraArgs.push(token.value)
       }
       positionalIndex++
@@ -279,6 +298,12 @@ async function main() {
       if (recognizedFlagNames.has(token.name)) continue
       if (token.name === 'help' || token.name === 'version') continue
       const rawName = token.rawName ?? `--${token.name}`
+      if (!command.acceptsExtraArgs) {
+        const errorMsg = `Unknown flag: ${rawName}`
+        console.error(errorMsg)
+        await cliLogTracker.finish(1, errorMsg)
+        process.exit(1)
+      }
       if (token.value !== undefined) {
         if (token.inlineValue) {
           extraArgs.push(`${rawName}=${token.value}`)
