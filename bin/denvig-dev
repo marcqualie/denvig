@@ -1,4 +1,9 @@
 #!/bin/sh
 
-# shellcheck disable=SC2068
-node --cpu-prof --experimental-strip-types src/cli.ts $@
+case "$DEBUG" in
+  "denvig:*"|"denvig:cpu") CPU_PROF="--cpu-prof" ;;
+  *) CPU_PROF="" ;;
+esac
+
+# shellcheck disable=SC2068,SC2086
+node $CPU_PROF --experimental-strip-types src/cli.ts $@
