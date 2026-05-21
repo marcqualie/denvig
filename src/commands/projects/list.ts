@@ -24,10 +24,10 @@ const getStatusIcon = (status: ServiceStatus): string => {
 }
 
 export const projectsListCommand = new Command({
-  name: 'projects',
+  name: 'projects:list',
   description: 'List all projects on the system',
-  usage: 'projects [list] [--with-config]',
-  example: 'projects --json',
+  usage: 'projects list [--with-config]',
+  example: 'projects list --json',
   args: [],
   flags: [
     {
