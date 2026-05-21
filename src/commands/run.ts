@@ -18,6 +18,7 @@ export const runCommand = new Command({
     },
   ],
   flags: [],
+  acceptsExtraArgs: true,
   completions: async ({ project }) => {
     const actions = await project.actions
     return Object.keys(actions)

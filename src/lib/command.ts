@@ -17,6 +17,12 @@ type CommandOptions<
   ) => string[] | Promise<string[]>
   subcommands?: Record<string, GenericCommand>
   defaultSubcommand?: string
+  /**
+   * When true, unrecognized positional arguments and flags are passed through
+   * to the handler via `extraArgs` instead of triggering a validation error.
+   * Commands that forward to external processes (e.g. `run`) should opt in.
+   */
+  acceptsExtraArgs?: boolean
 }
 
 type ArgDefinition = {
@@ -84,6 +90,7 @@ export class Command<
   ) => string[] | Promise<string[]>
   subcommands: Record<string, GenericCommand>
   defaultSubcommand?: string
+  acceptsExtraArgs: boolean
 
   get hasSubcommands(): boolean {
     return Object.keys(this.subcommands).length > 0
@@ -100,6 +107,7 @@ export class Command<
     this.completions = options.completions
     this.subcommands = options.subcommands ?? {}
     this.defaultSubcommand = options.defaultSubcommand
+    this.acceptsExtraArgs = options.acceptsExtraArgs ?? false
   }
 
   async run(

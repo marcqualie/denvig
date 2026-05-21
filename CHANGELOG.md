@@ -5,6 +5,7 @@
 
 ### Changed
 
+- CLI now errors on unknown subcommands and unrecognised flags instead of silently falling back to the default subcommand. For example `denvig services listtt` or `denvig services --al` previously ran `services list`; both now exit with code 1 and a descriptive message followed by the relevant help block (root help for unknown commands, subcommand help for unknown subcommands, command help for unknown flags / missing arguments). Commands that intentionally forward extra arguments to subprocesses (`run`, `zsh __complete__`) opt in via a new `acceptsExtraArgs` option on `Command`.
 - `bin/denvig-dev` no longer passes `--cpu-prof` to node by default. Set `DEBUG=denvig:*` or `DEBUG=denvig:cpu` to opt in to CPU profiling (which writes `.cpuprofile` files into the working directory).
 - `services list` now defaults to listing services for the current project only (matching the convention of other commands). Use `--all` to list services across every project plus global services, `--global` to list only global services, or the existing `--project <slug>` to scope to a different project.
 - Upgraded `semver` from 7.7.4 to 7.8.0
