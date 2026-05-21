@@ -5,6 +5,7 @@
 
 ### Changed
 
+- `bin/denvig-dev` no longer passes `--cpu-prof` to node by default. Set `DEBUG=denvig:*` or `DEBUG=denvig:cpu` to opt in to CPU profiling (which writes `.cpuprofile` files into the working directory).
 - `services list` now defaults to listing services for the current project only (matching the convention of other commands). Use `--all` to list services across every project plus global services, `--global` to list only global services, or the existing `--project <slug>` to scope to a different project.
 - Upgraded `semver` from 7.7.4 to 7.8.0
 - Upgraded `@biomejs/biome` from 2.4.14 to 2.4.15
