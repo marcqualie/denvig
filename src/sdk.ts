@@ -371,5 +371,3 @@ export class DenvigSDKError extends Error {
     this.name = 'DenvigSDKError'
   }
 }
-
-export default DenvigSDK
