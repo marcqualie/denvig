@@ -58,6 +58,9 @@ describe('cli', () => {
 
     strictEqual(result.code, 1)
     match(result.stderr, /Command "typocommand" not found/)
+    // Root help block follows the error message
+    match(result.stderr, /Denvig v/)
+    match(result.stderr, /Commands:/)
   })
 
   it('should error on unknown subcommand instead of running default', async () => {
@@ -67,6 +70,9 @@ describe('cli', () => {
     match(result.stderr, /Unknown subcommand "listtt" for "services"/)
     match(result.stderr, /Available subcommands:/)
     match(result.stderr, /list/)
+    // Help block follows the error message
+    match(result.stderr, /Usage: denvig services <subcommand>/)
+    match(result.stderr, /Subcommands:/)
   })
 
   it('should error on unknown nested subcommand', async () => {
@@ -81,6 +87,9 @@ describe('cli', () => {
 
     strictEqual(result.code, 1)
     match(result.stderr, /Unknown flag: --al/)
+    // Help block follows the error message
+    match(result.stderr, /Usage: denvig services list/)
+    match(result.stderr, /Options:/)
   })
 
   it('should error on unknown long flag when falling back to default subcommand', async () => {

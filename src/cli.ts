@@ -3,6 +3,9 @@
 import { type ParseArgsConfig, parseArgs } from 'node:util'
 
 import {
+  formatCommandHelp,
+  formatRootHelp,
+  formatSubcommandHelp,
   globalFlags,
   showCommandHelp,
   showRootHelp,
@@ -154,9 +157,15 @@ async function main() {
     process.exit(0)
   }
 
+  const printLinesToStderr = (lines: string[]) => {
+    console.error('')
+    for (const line of lines) console.error(line)
+  }
+
   if (!commands[commandName]) {
     const errorMsg = `Command "${commandName}" not found`
     console.error(`${errorMsg}.`)
+    printLinesToStderr(formatRootHelp(commands))
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
@@ -181,6 +190,7 @@ async function main() {
         .join(', ')
       const errorMsg = `Unknown subcommand "${nextArg}" for "${command.name}". Available subcommands: ${available}`
       console.error(errorMsg)
+      printLinesToStderr(formatSubcommandHelp(command))
       await cliLogTracker.finish(1, errorMsg)
       process.exit(1)
     } else if (command.defaultSubcommand && !helpRequested) {
@@ -244,6 +254,7 @@ async function main() {
   if (missingArg) {
     const errorMsg = `Missing required argument: ${missingArg}`
     console.error(errorMsg)
+    printLinesToStderr(formatCommandHelp(command))
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
@@ -270,6 +281,7 @@ async function main() {
   if (missingFlag) {
     const errorMsg = `Missing required flag: ${missingFlag}`
     console.error(errorMsg)
+    printLinesToStderr(formatCommandHelp(command))
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
@@ -288,6 +300,7 @@ async function main() {
         if (!command.acceptsExtraArgs) {
           const errorMsg = `Unexpected argument: "${token.value}"`
           console.error(errorMsg)
+          printLinesToStderr(formatCommandHelp(command))
           await cliLogTracker.finish(1, errorMsg)
           process.exit(1)
         }
@@ -301,6 +314,7 @@ async function main() {
       if (!command.acceptsExtraArgs) {
         const errorMsg = `Unknown flag: ${rawName}`
         console.error(errorMsg)
+        printLinesToStderr(formatCommandHelp(command))
         await cliLogTracker.finish(1, errorMsg)
         process.exit(1)
       }
