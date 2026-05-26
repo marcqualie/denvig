@@ -129,6 +129,23 @@ describe('projectRefs()', () => {
       )
     })
 
+    it('keeps the id: stable when the primary worktree switches branches', () => {
+      const before = projectRefs(mockProjectPath).find((ref) =>
+        ref.startsWith('id:'),
+      )
+      execSync('git checkout -q -b feature/foo', { cwd: mockProjectPath })
+      const after = projectRefs(mockProjectPath).find((ref) =>
+        ref.startsWith('id:'),
+      )
+      assert.ok(before)
+      assert.ok(after)
+      assert.strictEqual(
+        before,
+        after,
+        'id: ref should not change when only the primary checkout branch changes',
+      )
+    })
+
     it('produces a unique id: per worktree', () => {
       execSync(`git worktree add ${worktreePath} -b test-branch`, {
         cwd: mockProjectPath,
