@@ -41,6 +41,15 @@ export const infoCommand = new Command({
         console.log(`         ${ref}`)
       }
     }
+    if (info.worktrees.length > 0) {
+      const format = (wt: { branch: string; path: string }) =>
+        `${wt.path} (${wt.branch})`
+      console.log(' ')
+      console.log(`  Worktrees:`)
+      for (const worktree of info.worktrees) {
+        console.log(`         ${format(worktree)}`)
+      }
+    }
 
     return { success: true }
   },

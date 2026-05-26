@@ -6,7 +6,7 @@
 ### Added
 
 - Projects now expose a list of refs identifying themselves and the git worktree they live in. Available as `project.refs` in code, `refs: string[]` on the SDK's `ProjectResponse`, and in a new `Refs:` block in `denvig info`. The `git:` ref is worktree-aware (eg. `git:github.com/marcqualie/denvig+main` for the primary checkout, `+<branch>` for detached worktrees), so sibling worktrees share a common prefix while remaining uniquely addressable.
-- `project.worktrees` getter lists every detached git worktree belonging to a project as `{ path, branch }` objects, sorted by path. The primary checkout is intentionally excluded, so the array is empty for projects without `git worktree add`-style sibling checkouts. Backed by a new `detectProjectWorktrees()` helper in `src/lib/project/refs.ts` that reads `.git/worktrees/*/` directly (no `git` subprocesses). Computed lazily on first access.
+- `project.worktrees` getter lists every detached git worktree belonging to a project as `{ path, branch }` objects, sorted by path. The primary checkout is intentionally excluded, so the array is empty for projects without `git worktree add`-style sibling checkouts. Backed by a new `detectProjectWorktrees()` helper in `src/lib/project/git.ts` that reads `.git/worktrees/*/` directly (no `git` subprocesses). Computed lazily on first access. `denvig info` now prints a `Worktrees:` block (one entry per line as `<absolute-path> (<branch>)`) when any are present, and the same array is exposed as `worktrees: ProjectWorktree[]` on the SDK's `ProjectResponse`.
 
 ### Changed
 
