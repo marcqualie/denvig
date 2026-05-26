@@ -74,6 +74,14 @@ describe('projectRefs()', () => {
 
   describe('with git repository', () => {
     beforeEach(() => {
+      // CI doesn't have a global git identity; configure it locally so
+      // `git commit` and `git worktree add` (which creates a commit) succeed.
+      execSync('git config user.email "test@denvig.test"', {
+        cwd: mockProjectPath,
+      })
+      execSync('git config user.name "Denvig Test"', {
+        cwd: mockProjectPath,
+      })
       execSync('git remote add origin git@github.com:marcqualie/denvig.git', {
         cwd: mockProjectPath,
       })
