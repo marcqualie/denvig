@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { describe, it } from 'node:test'
 
-import { getGitHubSlug, getProjectSlug, parseGitHubRemoteUrl } from './git.ts'
+import { getGitHubSlug, parseGitHubRemoteUrl } from './git.ts'
 
 describe('parseGitHubRemoteUrl()', () => {
   describe('SSH format', () => {
@@ -400,87 +400,5 @@ describe('getGitHubSlug()', () => {
   it('should return null for non-existent directory', async () => {
     const result = await getGitHubSlug('/non/existent/path/that/does/not/exist')
     strictEqual(result, null)
-  })
-})
-
-describe('getProjectSlug()', () => {
-  const createTempDir = (): string => {
-    return fs.mkdtempSync(path.join(os.tmpdir(), 'denvig-test-'))
-  }
-
-  const createGitConfig = (tempDir: string, content: string): void => {
-    const gitDir = path.join(tempDir, '.git')
-    fs.mkdirSync(gitDir, { recursive: true })
-    fs.writeFileSync(path.join(gitDir, 'config'), content)
-  }
-
-  it('should return github: slug for GitHub project', async () => {
-    const tempDir = createTempDir()
-    try {
-      createGitConfig(
-        tempDir,
-        `
-[remote "origin"]
-	url = git@github.com:owner/repo.git
-`,
-      )
-      const result = await getProjectSlug(tempDir)
-      strictEqual(result, 'github:owner/repo')
-    } finally {
-      fs.rmSync(tempDir, { recursive: true })
-    }
-  })
-
-  it('should return local: slug for directory without git', async () => {
-    const tempDir = createTempDir()
-    try {
-      const result = await getProjectSlug(tempDir)
-      ok(result.startsWith('local:'))
-      ok(result.includes(tempDir))
-    } finally {
-      fs.rmSync(tempDir, { recursive: true })
-    }
-  })
-
-  it('should return local: slug for non-GitHub remote', async () => {
-    const tempDir = createTempDir()
-    try {
-      createGitConfig(
-        tempDir,
-        `
-[remote "origin"]
-	url = git@gitlab.com:owner/repo.git
-`,
-      )
-      const result = await getProjectSlug(tempDir)
-      ok(result.startsWith('local:'))
-      ok(result.includes(tempDir))
-    } finally {
-      fs.rmSync(tempDir, { recursive: true })
-    }
-  })
-
-  it('should return github: slug via github remote fallback', async () => {
-    const tempDir = createTempDir()
-    try {
-      createGitConfig(
-        tempDir,
-        `
-[remote "origin"]
-	url = git@gitea.example.com:owner/repo.git
-[remote "github"]
-	url = git@github.com:owner/repo.git
-`,
-      )
-      const result = await getProjectSlug(tempDir)
-      strictEqual(result, 'github:owner/repo')
-    } finally {
-      fs.rmSync(tempDir, { recursive: true })
-    }
-  })
-
-  it('should return local: slug with absolute path', async () => {
-    const result = await getProjectSlug('/Users/marc/dotfiles')
-    strictEqual(result, 'local:/Users/marc/dotfiles')
   })
 })

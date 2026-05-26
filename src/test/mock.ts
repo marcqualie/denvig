@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { projectId } from '../lib/project.ts'
+import { projectId } from '../lib/project/refs.ts'
 
 import type { DenvigProject } from '../lib/project.ts'
 

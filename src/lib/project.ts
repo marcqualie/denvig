@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { readdir } from 'node:fs/promises'
 
 import { detectActions } from './actions/actions.ts'
@@ -8,8 +7,8 @@ import {
   type OutdatedDependencySchema,
   type ProjectDependencySchema,
 } from './dependencies.ts'
-import { getProjectSlug } from './git.ts'
 import plugins from './plugins.ts'
+import { projectRefs } from './project/refs.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 import type {
@@ -17,14 +16,6 @@ import type {
   DeduplicateResult,
   OutdatedDependenciesOptions,
 } from './plugin.ts'
-
-/**
- * Generate a unique project ID from the absolute path.
- * Returns the full SHA1 hash of the path.
- */
-export function projectId(absolutePath: string): string {
-  return createHash('sha1').update(absolutePath).digest('hex')
-}
 
 /**
  * Truncate a project ID for display purposes.
@@ -38,18 +29,24 @@ export class DenvigProject {
   private _path: string
   private _slug: string
   private _id: string
+  private _refs: string[]
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
 
   private constructor(
     projectPath: string,
-    slug: string,
     config: ConfigWithSourcePaths<ProjectConfigSchema>,
     rootFiles?: string[],
   ) {
     this._path = projectPath
-    this._slug = slug
-    this._id = projectId(projectPath)
+    this._refs = projectRefs(projectPath)
+    const githubRef = this._refs.find((ref) => ref.startsWith('github:'))
+    const localRef = this._refs.find((ref) =>
+      ref.startsWith('local:'),
+    ) as string
+    const idRef = this._refs.find((ref) => ref.startsWith('id:')) as string
+    this._slug = githubRef ?? localRef
+    this._id = idRef.slice('id:'.length)
     this.config = config
     if (rootFiles) {
       this._rootFilesCache = rootFiles
@@ -60,12 +57,11 @@ export class DenvigProject {
    * Retrieve a DenvigProject by looking up its config and metadata.
    */
   static async retrieve(projectPath: string): Promise<DenvigProject> {
-    const [slug, config, rootFiles] = await Promise.all([
-      getProjectSlug(projectPath),
+    const [config, rootFiles] = await Promise.all([
       getProjectConfig(projectPath),
       readdir(projectPath).catch(() => [] as string[]),
     ])
-    return new DenvigProject(projectPath, slug, config, rootFiles)
+    return new DenvigProject(projectPath, config, rootFiles)
   }
 
   get slug(): string {
@@ -74,6 +70,14 @@ export class DenvigProject {
 
   get id(): string {
     return this._id
+  }
+
+  /**
+   * All identifiers for this project. See `projectRefs()` for the format
+   * of each ref (`id:`, `local:`, `github:`, `git:`).
+   */
+  get refs(): string[] {
+    return this._refs
   }
 
   get name(): string {

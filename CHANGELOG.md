@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Projects now expose a list of refs identifying themselves and the git worktree they live in. Available as `project.refs` in code, `refs: string[]` on the SDK's `ProjectResponse`, and in a new `Refs:` block in `denvig info`. The `git:` ref is worktree-aware (eg. `git:github.com/marcqualie/denvig+main` for the primary checkout, `+<branch>` for detached worktrees), so sibling worktrees share a common prefix while remaining uniquely addressable.
+
 ### Changed
 
 - CLI now errors on unknown subcommands and unrecognised flags instead of silently falling back to the default subcommand. For example `denvig services listtt` or `denvig services --al` previously ran `services list`; both now exit with code 1 and a descriptive message followed by the relevant help block (root help for unknown commands, subcommand help for unknown subcommands, command help for unknown flags / missing arguments). Commands that intentionally forward extra arguments to subprocesses (`run`, `zsh __complete__`) opt in via a new `acceptsExtraArgs` option on `Command`.

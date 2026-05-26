@@ -11,6 +11,7 @@ export type ProjectInfo = {
   slug: string
   name: string
   path: string
+  refs: string[]
   config: ProjectConfigSchema | null
   serviceStatus: ServiceStatus
 }
@@ -70,6 +71,7 @@ export const getProjectInfo = async (
     slug: project.slug,
     name: project.name,
     path: project.path,
+    refs: project.refs,
     config: hasConfig ? configWithoutSources : null,
     serviceStatus,
   }
