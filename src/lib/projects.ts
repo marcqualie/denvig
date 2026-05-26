@@ -82,26 +82,31 @@ export const listProjects = async (
   const projectPaths = globalConfig.projectPaths
   const withConfig = options?.withConfig ?? false
 
+  // Expand every pattern in parallel.
+  const expanded = await Promise.all(projectPaths.map(expandPattern))
+
+  // Deduplicate, preserving discovery order.
   const seenPaths = new Set<string>()
-  const projects: ProjectInfo[] = []
-
-  for (const pattern of projectPaths) {
-    const expandedPaths = await expandPattern(pattern)
-
-    for (const projectPath of expandedPaths) {
-      // Skip duplicates
-      if (seenPaths.has(projectPath)) continue
-      seenPaths.add(projectPath)
-
-      // Check for config file if required
-      if (withConfig) {
-        const configPath = `${projectPath}/.denvig.yml`
-        if (!(await pathExists(configPath))) continue
-      }
-
-      projects.push({ slug: projectSlug(projectPath), path: projectPath })
-    }
+  const uniquePaths: string[] = []
+  for (const projectPath of expanded.flat()) {
+    if (seenPaths.has(projectPath)) continue
+    seenPaths.add(projectPath)
+    uniquePaths.push(projectPath)
   }
+
+  // Resolve each project in parallel - the only async work per project is
+  // the optional `.denvig.yml` existence check; `projectSlug()` is sync.
+  const projects = (
+    await Promise.all(
+      uniquePaths.map(async (projectPath): Promise<ProjectInfo | null> => {
+        if (withConfig) {
+          const configPath = `${projectPath}/.denvig.yml`
+          if (!(await pathExists(configPath))) return null
+        }
+        return { slug: projectSlug(projectPath), path: projectPath }
+      }),
+    )
+  ).filter((project): project is ProjectInfo => project !== null)
 
   return projects.sort((a, b) => a.slug.localeCompare(b.slug))
 }

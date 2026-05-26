@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { readFileSync, realpathSync, type Stats, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
@@ -17,16 +16,20 @@ import { resolve } from 'node:path'
 export const projectRefs = (path: string): string[] => {
   const refs: string[] = []
   const absolutePath = resolve(path)
-  const gitRemote = retrieveGitRemote(absolutePath)
-  const normalisedRemote = gitRemote ? normaliseGitRemote(gitRemote) : null
-  const gitWorktree = detectGitWorktree(absolutePath)
+  const info = readGitInfo(absolutePath)
+
+  const originRemote = info?.remotes.origin ?? null
+  const normalisedOrigin = originRemote
+    ? normaliseGitRemote(originRemote)
+    : null
 
   // GitHub group ref - shared across every clone and worktree of the same repo.
   // Prefer the origin remote, but fall back to a dedicated `github` remote (a
   // common pattern when `origin` points at a mirror like Gitea).
+  const githubRemote = info?.remotes.github ?? null
   const githubSlug =
-    extractGitHubSlug(normalisedRemote) ??
-    extractGitHubSlug(normalisedRemoteFor(absolutePath, 'github'))
+    extractGitHubSlug(normalisedOrigin) ??
+    extractGitHubSlug(githubRemote ? normaliseGitRemote(githubRemote) : null)
   if (githubSlug) {
     refs.push(`github:${githubSlug}`)
   }
@@ -34,20 +37,16 @@ export const projectRefs = (path: string): string[] => {
   // Worktree-aware git ref: `git:<host>/<owner>/<repo>+<branch>`. Sibling
   // worktrees share the prefix up to `+` so they can be grouped while still
   // being uniquely addressable.
-  if (normalisedRemote && gitWorktree) {
-    refs.push(`git:${normalisedRemote}+${gitWorktree.branch}`)
+  if (normalisedOrigin && info?.worktree) {
+    refs.push(`git:${normalisedOrigin}+${info.worktree.branch}`)
   }
 
   // Always include a local ref to the project path
   refs.push(`local:${absolutePath}`)
 
-  // The ID is made up of the physical and git configs to get a unique hash
-  const config = {
-    path: absolutePath,
-    gitRemote,
-    gitWorktree,
-  }
-  const id = createHash('sha1').update(JSON.stringify(config)).digest('hex')
+  // The ID is a sha1 of all the other refs - stable, derivable from public
+  // state, and unique per worktree.
+  const id = createHash('sha1').update(refs.join('\n')).digest('hex')
   refs.push(`id:${id}`)
 
   return refs
@@ -56,14 +55,6 @@ export const projectRefs = (path: string): string[] => {
 const extractGitHubSlug = (normalised: string | null): string | null => {
   const match = normalised?.match(/^github\.com\/(.+\/.+)$/)
   return match ? match[1] : null
-}
-
-const normalisedRemoteFor = (
-  path: string,
-  remoteName: string,
-): string | null => {
-  const remote = retrieveGitRemote(path, remoteName)
-  return remote ? normaliseGitRemote(remote) : null
 }
 
 /**
@@ -86,23 +77,6 @@ export const projectId = (path: string): string => {
   const refs = projectRefs(path)
   const idRef = refs.find((ref) => ref.startsWith('id:')) as string
   return idRef.slice('id:'.length)
-}
-
-export const retrieveGitRemote = (
-  path: string,
-  remoteName = 'origin',
-): string | null => {
-  try {
-    const absolutePath = resolve(path)
-    const gitRemote = execSync(`git remote get-url ${remoteName}`, {
-      cwd: absolutePath,
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-    return gitRemote || null
-  } catch {
-    return null
-  }
 }
 
 /**
@@ -149,36 +123,116 @@ export type GitWorktree = {
  * branch name.
  */
 export const detectGitWorktree = (path: string): GitWorktree | null => {
+  return readGitInfo(resolve(path))?.worktree ?? null
+}
+
+type GitInfo = {
+  /** Remote URLs keyed by remote name, parsed from `.git/config`. */
+  remotes: Record<string, string>
+  /** Worktree details, or null if the path isn't a git worktree. */
+  worktree: GitWorktree | null
+}
+
+/**
+ * Read everything we need to derive project refs from a project path in one
+ * pass, using only filesystem reads (no `git` subprocesses). Returns null if
+ * the path is not a git working tree.
+ */
+const readGitInfo = (absolutePath: string): GitInfo | null => {
+  const gitMarker = resolve(absolutePath, '.git')
+  let markerStat: Stats
   try {
-    const absolutePath = resolve(path)
-
-    // A detached worktree has a `.git` *file* containing `gitdir: <primary>/.git/worktrees/<name>`.
-    const gitMarker = resolve(absolutePath, '.git')
-    if (existsSync(gitMarker) && statSync(gitMarker).isFile()) {
-      const content = readFileSync(gitMarker, 'utf-8').trim()
-      const match = content.match(/^gitdir:\s*(.+)\/\.git\/worktrees\/[^/]+$/)
-      if (match) {
-        const branch = execSync('git branch --show-current', {
-          cwd: absolutePath,
-          encoding: 'utf-8',
-          stdio: ['ignore', 'pipe', 'ignore'],
-        }).trim()
-        if (!branch) return null
-        return { primaryPath: match[1], branch }
-      }
-    }
-
-    // Primary worktree - normalise via realpath so symlinked paths (eg. /tmp on macOS)
-    // match the realpath stored inside detached worktree `.git` files. Confirm
-    // this is actually a git working tree before claiming a worktree ref.
-    if (!existsSync(gitMarker)) return null
-    execSync('git rev-parse --git-dir', {
-      cwd: absolutePath,
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-    return { primaryPath: realpathSync(absolutePath), branch: 'main' }
+    markerStat = statSync(gitMarker)
   } catch {
     return null
   }
+
+  let primaryGitDir: string
+  let worktree: GitWorktree
+
+  if (markerStat.isFile()) {
+    // Detached worktree. `.git` is a file pointing at the worktree-specific
+    // gitdir: `gitdir: <primary>/.git/worktrees/<name>`.
+    let content: string
+    try {
+      content = readFileSync(gitMarker, 'utf-8').trim()
+    } catch {
+      return null
+    }
+    const match = content.match(/^gitdir:\s*(.+)\/\.git\/worktrees\/([^/]+)$/)
+    if (!match) return null
+    const primaryPath = match[1]
+    const worktreeGitDir = `${primaryPath}/.git/worktrees/${match[2]}`
+    primaryGitDir = `${primaryPath}/.git`
+
+    // Branch comes from the worktree's HEAD ref.
+    const branch = readHeadBranch(worktreeGitDir)
+    if (!branch) return null
+    worktree = { primaryPath, branch }
+  } else if (markerStat.isDirectory()) {
+    // Primary worktree. Always reports `main` for the branch so the primary's
+    // ref stays stable as work moves between branches.
+    let primaryPath: string
+    try {
+      primaryPath = realpathSync(absolutePath)
+    } catch {
+      primaryPath = absolutePath
+    }
+    primaryGitDir = gitMarker
+    worktree = { primaryPath, branch: 'main' }
+  } else {
+    return null
+  }
+
+  return {
+    remotes: readRemotes(`${primaryGitDir}/config`),
+    worktree,
+  }
+}
+
+/** Read `<gitdir>/HEAD` and return the branch name, or null. */
+const readHeadBranch = (gitDir: string): string | null => {
+  try {
+    const head = readFileSync(`${gitDir}/HEAD`, 'utf-8').trim()
+    const match = head.match(/^ref:\s*refs\/heads\/(.+)$/)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Parse remote URLs from a `.git/config` file. Returns a map of remote name
+ * to URL. Missing or unreadable configs yield an empty map.
+ */
+const readRemotes = (configPath: string): Record<string, string> => {
+  const remotes: Record<string, string> = {}
+  let config: string
+  try {
+    config = readFileSync(configPath, 'utf-8')
+  } catch {
+    return remotes
+  }
+  // Match `[remote "<name>"]` headers and the first `url = <value>` line that
+  // follows before the next section header.
+  const re = /\[remote\s+"([^"]+)"\][^[]*?url\s*=\s*(\S+)/g
+  for (const match of config.matchAll(re)) {
+    if (!(match[1] in remotes)) {
+      remotes[match[1]] = match[2]
+    }
+  }
+  return remotes
+}
+
+/**
+ * Legacy compatibility helper. Returns the URL of a named git remote (default
+ * `origin`) parsed from `.git/config`. Returns null when the path is not a
+ * git repository or the remote isn't defined.
+ */
+export const retrieveGitRemote = (
+  path: string,
+  remoteName = 'origin',
+): string | null => {
+  const info = readGitInfo(resolve(path))
+  return info?.remotes[remoteName] ?? null
 }
