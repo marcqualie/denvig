@@ -35,6 +35,12 @@ export const infoCommand = new Command({
     console.log(`   Path: ${prettyPath(info.path)}`)
     console.log(`   Slug: ${info.slug}`)
     console.log(`     ID: ${info.id}`)
+    if (info.refs.length > 0) {
+      console.log(`   Refs: ${info.refs[0]}`)
+      for (const ref of info.refs.slice(1)) {
+        console.log(`         ${ref}`)
+      }
+    }
 
     return { success: true }
   },

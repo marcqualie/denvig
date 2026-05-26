@@ -6,6 +6,7 @@
 ### Added
 
 - New `projectRefs()` helper (`src/lib/project/refs.ts`) returns a list of identifiers for a project path: `id:` (sha1 hash of the project's path + git config), `local:` (absolute path), `github:<owner>/<repo>` (or `git:<url>` fallback) parsed from the `origin` remote, and `git-worktree:<primary-path>+<branch>`. The `git-worktree:` ref is keyed off the primary worktree path (resolved via the worktree's `.git` file) plus the current branch so the primary checkout and every detached worktree share a common path prefix while remaining uniquely addressable.
+- `denvig info` now prints a `Refs:` section listing every identifier from `projectRefs()`. The `ProjectInfo` payload returned by `getProjectInfo()` (and the `denvig info --json` output) gained a corresponding `refs: string[]` field.
 
 ### Changed
 

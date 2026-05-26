@@ -1,3 +1,4 @@
+import { projectRefs } from './project/refs.ts'
 import launchctl, { type LaunchctlListItem } from './services/launchctl.ts'
 import { ServiceManager } from './services/manager.ts'
 
@@ -11,6 +12,7 @@ export type ProjectInfo = {
   slug: string
   name: string
   path: string
+  refs: string[]
   config: ProjectConfigSchema | null
   serviceStatus: ServiceStatus
 }
@@ -70,6 +72,7 @@ export const getProjectInfo = async (
     slug: project.slug,
     name: project.name,
     path: project.path,
+    refs: projectRefs(project.path),
     config: hasConfig ? configWithoutSources : null,
     serviceStatus,
   }
