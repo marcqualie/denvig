@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { inspect } from 'node:util'
 
-import { projectRefs } from './refs.ts'
+import { normaliseGitRemote, projectRefs } from './refs.ts'
 
 const mockProjectPath = '/tmp/denvig-test-mock-project'
 const worktreePath = `${mockProjectPath}-worktree1`
@@ -15,6 +15,30 @@ function assertArrayIncludes<T>(arr: T[], value: T, context?: string) {
     `${context ? `${context}\n` : ''}Expected array to include ${inspect(value)}\nReceived: ${inspect(arr, { depth: null })}`,
   )
 }
+
+describe('normaliseGitRemote()', () => {
+  const cases: [string, string | null][] = [
+    ['git@github.com:marcqualie/denvig.git', 'github.com/marcqualie/denvig'],
+    ['git@github.com:marcqualie/denvig', 'github.com/marcqualie/denvig'],
+    [
+      'https://github.com/marcqualie/denvig.git',
+      'github.com/marcqualie/denvig',
+    ],
+    ['https://github.com/marcqualie/denvig', 'github.com/marcqualie/denvig'],
+    [
+      'ssh://git@github.com/marcqualie/denvig.git',
+      'github.com/marcqualie/denvig',
+    ],
+    ['git@gitlab.com:group/sub/repo.git', 'gitlab.com/group/sub/repo'],
+    ['not a url', null],
+  ]
+
+  for (const [input, expected] of cases) {
+    it(`normalises ${inspect(input)} -> ${inspect(expected)}`, () => {
+      assert.strictEqual(normaliseGitRemote(input), expected)
+    })
+  }
+})
 
 describe('projectRefs()', () => {
   beforeEach(() => {
@@ -58,53 +82,49 @@ describe('projectRefs()', () => {
       assertArrayIncludes(refs, 'github:marcqualie/denvig')
     })
 
-    it('adds a git-worktree: ref for the primary worktree using its real path', () => {
-      const realPath = fs.realpathSync(mockProjectPath)
+    it('adds a git: ref for the primary worktree using the normalised remote', () => {
       const refs = projectRefs(mockProjectPath)
-      assertArrayIncludes(refs, `git-worktree:${realPath}+main`)
+      assertArrayIncludes(refs, 'git:github.com/marcqualie/denvig+main')
     })
 
-    it('reports `main` for the primary worktree even on a non-main branch', () => {
+    it('reports `+main` for the primary worktree even on a non-main branch', () => {
       execSync('git checkout -q -b feature/foo', { cwd: mockProjectPath })
-      const realPath = fs.realpathSync(mockProjectPath)
       const refs = projectRefs(mockProjectPath)
-      assertArrayIncludes(refs, `git-worktree:${realPath}+main`)
+      assertArrayIncludes(refs, 'git:github.com/marcqualie/denvig+main')
     })
 
-    it('detects detached worktrees and uses the primary path as the prefix', () => {
+    it('uses the branch name in the git: ref for detached worktrees', () => {
       execSync(`git worktree add ${worktreePath} -b test-branch`, {
         cwd: mockProjectPath,
       })
-      const realPrimary = fs.realpathSync(mockProjectPath)
       const refs = projectRefs(worktreePath)
-      assertArrayIncludes(refs, `git-worktree:${realPrimary}+test-branch`)
+      assertArrayIncludes(refs, 'git:github.com/marcqualie/denvig+test-branch')
     })
 
-    it('groups primary and detached worktrees by a shared git-worktree: prefix', () => {
+    it('groups primary and detached worktrees by a shared git: prefix', () => {
       execSync(`git worktree add ${worktreePath} -b test-branch`, {
         cwd: mockProjectPath,
       })
-      const realPrimary = fs.realpathSync(mockProjectPath)
-      const primaryWorktreeRef = projectRefs(mockProjectPath).find((ref) =>
-        ref.startsWith('git-worktree:'),
+      const primaryGitRef = projectRefs(mockProjectPath).find((ref) =>
+        ref.startsWith('git:'),
       )
-      const detachedWorktreeRef = projectRefs(worktreePath).find((ref) =>
-        ref.startsWith('git-worktree:'),
+      const detachedGitRef = projectRefs(worktreePath).find((ref) =>
+        ref.startsWith('git:'),
       )
-      assert.ok(primaryWorktreeRef)
-      assert.ok(detachedWorktreeRef)
-      const prefix = `git-worktree:${realPrimary}+`
+      assert.ok(primaryGitRef)
+      assert.ok(detachedGitRef)
+      const prefix = 'git:github.com/marcqualie/denvig+'
       assert.ok(
-        primaryWorktreeRef.startsWith(prefix),
-        `expected primary worktree ref to start with ${prefix}, got ${primaryWorktreeRef}`,
+        primaryGitRef.startsWith(prefix),
+        `expected primary git ref to start with ${prefix}, got ${primaryGitRef}`,
       )
       assert.ok(
-        detachedWorktreeRef.startsWith(prefix),
-        `expected detached worktree ref to start with ${prefix}, got ${detachedWorktreeRef}`,
+        detachedGitRef.startsWith(prefix),
+        `expected detached git ref to start with ${prefix}, got ${detachedGitRef}`,
       )
       assert.notStrictEqual(
-        primaryWorktreeRef,
-        detachedWorktreeRef,
+        primaryGitRef,
+        detachedGitRef,
         'primary and detached worktree refs should be unique',
       )
     })
@@ -122,6 +142,14 @@ describe('projectRefs()', () => {
       assert.ok(primaryId)
       assert.ok(detachedId)
       assert.notStrictEqual(primaryId, detachedId)
+    })
+
+    it('does not emit a git-worktree: ref', () => {
+      const refs = projectRefs(mockProjectPath)
+      assert.ok(
+        !refs.some((ref) => ref.startsWith('git-worktree:')),
+        `expected no git-worktree: ref, got ${inspect(refs)}`,
+      )
     })
   })
 })

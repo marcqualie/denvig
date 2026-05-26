@@ -7,31 +7,31 @@ import { resolve } from 'node:path'
  * Calculate a bunch of project refs based on it's config and environment.
  *
  * Refs starting with `id:` or `local:` uniquely identify a single project /
- * worktree on this machine. Refs like `github:` and `git:` are shared across
- * sibling clones and worktrees so they can be used for group actions. The
- * `git-worktree:` ref is `<primary-worktree-path>+<branch>` so detached
- * worktrees share a common path prefix with their primary checkout while
- * remaining individually addressable.
+ * worktree on this machine. The `github:` ref is shared across sibling
+ * clones and worktrees so it can be used for group actions. The `git:` ref
+ * is `<host>/<owner>/<repo>+<branch>` (eg. `git:github.com/marcqualie/denvig+main`),
+ * giving each worktree a unique address while sharing a common prefix per
+ * project. The primary checkout always reports `+main`; only detached
+ * worktrees report their actual branch name.
  */
 export const projectRefs = (path: string): string[] => {
   const refs: string[] = []
   const absolutePath = resolve(path)
   const gitRemote = retrieveGitRemote(absolutePath)
+  const normalisedRemote = gitRemote ? normaliseGitRemote(gitRemote) : null
+  const gitWorktree = detectGitWorktree(absolutePath)
 
-  // If there's a git remote, add a ref for it. If it's a GitHub remote, add a github: ref.
-  const githubMatch = gitRemote?.match(/github\.com[:/](.+\/.+?)(?:\.git)?$/)
-  const githubSlug = githubMatch ? githubMatch[1] : null
-  if (githubSlug) {
-    refs.push(`github:${githubSlug}`)
-  } else if (gitRemote) {
-    refs.push(`git:${gitRemote}`)
+  // GitHub group ref - shared across every clone and worktree of the same repo.
+  const githubMatch = normalisedRemote?.match(/^github\.com\/(.+\/.+)$/)
+  if (githubMatch) {
+    refs.push(`github:${githubMatch[1]}`)
   }
 
-  // Git worktree detection. Format is `<primary-path>+<branch>` so the primary
-  // checkout and any detached worktrees share a common path prefix.
-  const gitWorktree = detectGitWorktree(absolutePath)
-  if (gitWorktree) {
-    refs.push(`git-worktree:${gitWorktree.primaryPath}+${gitWorktree.branch}`)
+  // Worktree-aware git ref: `git:<host>/<owner>/<repo>+<branch>`. Sibling
+  // worktrees share the prefix up to `+` so they can be grouped while still
+  // being uniquely addressable.
+  if (normalisedRemote && gitWorktree) {
+    refs.push(`git:${normalisedRemote}+${gitWorktree.branch}`)
   }
 
   // Always include a local ref to the project path
@@ -63,10 +63,36 @@ export const retrieveGitRemote = (path: string): string | null => {
   }
 }
 
+/**
+ * Normalise a git remote URL into `<host>/<owner>/<repo>` form. Supports the
+ * three common shapes: scp-style ssh (`git@host:owner/repo.git`), explicit
+ * ssh URLs (`ssh://git@host/owner/repo.git`) and http(s) URLs. Returns null
+ * for anything that doesn't parse cleanly.
+ */
+export const normaliseGitRemote = (remote: string): string | null => {
+  const stripped = remote.replace(/\.git$/, '')
+
+  // http(s):// or ssh:// or git://
+  const urlMatch = stripped.match(
+    /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?([^/]+)\/(.+)$/i,
+  )
+  if (urlMatch) {
+    return `${urlMatch[1]}/${urlMatch[2]}`
+  }
+
+  // scp-style ssh: `[user@]host:path`
+  const scpMatch = stripped.match(/^(?:[^@\s/]+@)?([^:\s/]+):(.+)$/)
+  if (scpMatch) {
+    return `${scpMatch[1]}/${scpMatch[2]}`
+  }
+
+  return null
+}
+
 export type GitWorktree = {
   /** Real path of the primary worktree (shared across all sibling worktrees). */
   primaryPath: string
-  /** Branch name checked out in the current worktree. */
+  /** Branch name for the current worktree (`main` for the primary checkout). */
   branch: string
 }
 
