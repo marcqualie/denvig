@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, realpathSync, type Stats, statSync } from 'node:fs'
+import {
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  type Stats,
+  statSync,
+} from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
@@ -126,11 +132,61 @@ export const detectGitWorktree = (path: string): GitWorktree | null => {
   return readGitInfo(resolve(path))?.worktree ?? null
 }
 
+export type ProjectWorktree = {
+  /** Absolute path of the detached worktree's checkout. */
+  path: string
+  /** Branch checked out in the detached worktree. */
+  branch: string
+}
+
+/**
+ * List every detached git worktree belonging to the project that `path` lives
+ * in. The primary checkout is **not** included, so this returns an empty
+ * array for the common single-checkout case. Returns `[]` for non-git paths
+ * too.
+ *
+ * Results are sorted by path for deterministic output.
+ */
+export const detectProjectWorktrees = (path: string): ProjectWorktree[] => {
+  const info = readGitInfo(resolve(path))
+  if (!info) return []
+
+  const worktreesDir = `${info.primaryGitDir}/worktrees`
+  let entries
+  try {
+    entries = readdirSync(worktreesDir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+
+  const worktrees: ProjectWorktree[] = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const wtDir = `${worktreesDir}/${entry.name}`
+    const branch = readHeadBranch(wtDir)
+    if (!branch) continue
+    let gitdirContent: string
+    try {
+      gitdirContent = readFileSync(`${wtDir}/gitdir`, 'utf-8').trim()
+    } catch {
+      continue
+    }
+    // `gitdir` is the absolute path to the worktree's `.git` file (or, on
+    // newer git versions, sometimes the worktree directory itself). Strip a
+    // trailing `/.git` to get the checkout path.
+    const worktreePath = gitdirContent.replace(/\/\.git$/, '')
+    worktrees.push({ path: worktreePath, branch })
+  }
+  return worktrees.sort((a, b) => a.path.localeCompare(b.path))
+}
+
 type GitInfo = {
+  /** Path to the primary worktree's `.git` directory. */
+  primaryGitDir: string
   /** Remote URLs keyed by remote name, parsed from `.git/config`. */
   remotes: Record<string, string>
-  /** Worktree details, or null if the path isn't a git worktree. */
-  worktree: GitWorktree | null
+  /** Worktree details for the current path. */
+  worktree: GitWorktree
 }
 
 /**
@@ -185,6 +241,7 @@ const readGitInfo = (absolutePath: string): GitInfo | null => {
   }
 
   return {
+    primaryGitDir,
     remotes: readRemotes(`${primaryGitDir}/config`),
     worktree,
   }
