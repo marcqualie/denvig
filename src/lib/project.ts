@@ -8,11 +8,8 @@ import {
   type ProjectDependencySchema,
 } from './dependencies.ts'
 import plugins from './plugins.ts'
-import {
-  detectProjectWorktrees,
-  type ProjectWorktree,
-  projectRefs,
-} from './project/refs.ts'
+import { detectProjectWorktrees, type ProjectWorktree } from './project/git.ts'
+import { projectRefs } from './project/refs.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 import type {

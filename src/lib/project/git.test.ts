@@ -1,10 +1,20 @@
-import { ok, strictEqual } from 'node:assert'
+import assert, { strictEqual } from 'node:assert'
+import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it } from 'node:test'
+import { inspect } from 'node:util'
 
-import { getGitHubSlug, parseGitHubRemoteUrl } from './git.ts'
+import {
+  detectProjectWorktrees,
+  getGitHubSlug,
+  normaliseGitRemote,
+  parseGitHubRemoteUrl,
+} from './git.ts'
+
+const mockProjectPath = '/tmp/denvig-test-mock-git'
+const worktreePath = `${mockProjectPath}-worktree1`
 
 describe('parseGitHubRemoteUrl()', () => {
   describe('SSH format', () => {
@@ -223,11 +233,11 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [core]
-	repositoryformatversion = 0
-	filemode = true
+\trepositoryformatversion = 0
+\tfilemode = true
 [remote "upstream"]
-	url = git@github.com:other/repo.git
-	fetch = +refs/heads/*:refs/remotes/upstream/*
+\turl = git@github.com:other/repo.git
+\tfetch = +refs/heads/*:refs/remotes/upstream/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -244,14 +254,14 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [core]
-	repositoryformatversion = 0
-	filemode = true
+\trepositoryformatversion = 0
+\tfilemode = true
 [remote "origin"]
-	url = git@github.com:marcqualie/denvig.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+\turl = git@github.com:marcqualie/denvig.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
 [branch "main"]
-	remote = origin
-	merge = refs/heads/main
+\tremote = origin
+\tmerge = refs/heads/main
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -268,8 +278,8 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "origin"]
-	url = https://github.com/owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+\turl = https://github.com/owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -286,8 +296,8 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "origin"]
-	url = git@gitlab.com:owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+\turl = git@gitlab.com:owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -304,11 +314,11 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "upstream"]
-	url = git@github.com:upstream/repo.git
-	fetch = +refs/heads/*:refs/remotes/upstream/*
+\turl = git@github.com:upstream/repo.git
+\tfetch = +refs/heads/*:refs/remotes/upstream/*
 [remote "origin"]
-	url = git@github.com:fork/repo.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+\turl = git@github.com:fork/repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -325,11 +335,11 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "origin"]
-	url = git@gitea.example.com:owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+\turl = git@gitea.example.com:owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
 [remote "github"]
-	url = https://github.com/owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/github/*
+\turl = https://github.com/owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/github/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -346,11 +356,11 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "origin"]
-	url = git@github.com:origin-owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+\turl = git@github.com:origin-owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/origin/*
 [remote "github"]
-	url = git@github.com:github-owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/github/*
+\turl = git@github.com:github-owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/github/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -367,8 +377,8 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "github"]
-	url = git@github.com:owner/repo.git
-	fetch = +refs/heads/*:refs/remotes/github/*
+\turl = git@github.com:owner/repo.git
+\tfetch = +refs/heads/*:refs/remotes/github/*
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -385,9 +395,9 @@ describe('getGitHubSlug()', () => {
         tempDir,
         `
 [remote "origin"]
-	url = git@gitea.example.com:owner/repo.git
+\turl = git@gitea.example.com:owner/repo.git
 [remote "github"]
-	url = git@gitlab.com:owner/repo.git
+\turl = git@gitlab.com:owner/repo.git
 `,
       )
       const result = await getGitHubSlug(tempDir)
@@ -400,5 +410,95 @@ describe('getGitHubSlug()', () => {
   it('should return null for non-existent directory', async () => {
     const result = await getGitHubSlug('/non/existent/path/that/does/not/exist')
     strictEqual(result, null)
+  })
+})
+
+describe('normaliseGitRemote()', () => {
+  const cases: [string, string | null][] = [
+    ['git@github.com:marcqualie/denvig.git', 'github.com/marcqualie/denvig'],
+    ['git@github.com:marcqualie/denvig', 'github.com/marcqualie/denvig'],
+    [
+      'https://github.com/marcqualie/denvig.git',
+      'github.com/marcqualie/denvig',
+    ],
+    ['https://github.com/marcqualie/denvig', 'github.com/marcqualie/denvig'],
+    [
+      'ssh://git@github.com/marcqualie/denvig.git',
+      'github.com/marcqualie/denvig',
+    ],
+    ['git@gitlab.com:group/sub/repo.git', 'gitlab.com/group/sub/repo'],
+    ['not a url', null],
+  ]
+
+  for (const [input, expected] of cases) {
+    it(`normalises ${inspect(input)} -> ${inspect(expected)}`, () => {
+      strictEqual(normaliseGitRemote(input), expected)
+    })
+  }
+})
+
+describe('detectProjectWorktrees()', () => {
+  const worktree2Path = `${mockProjectPath}-worktree2`
+
+  beforeEach(() => {
+    fs.mkdirSync(mockProjectPath, { recursive: true })
+    execSync('git init -q -b main', { cwd: mockProjectPath })
+    // CI doesn't have a global git identity; configure it locally so
+    // `git commit` and `git worktree add` (which creates a commit) succeed.
+    execSync('git config user.email "test@denvig.test"', {
+      cwd: mockProjectPath,
+    })
+    execSync('git config user.name "Denvig Test"', { cwd: mockProjectPath })
+    execSync('git commit --allow-empty -q -m "Initial commit"', {
+      cwd: mockProjectPath,
+    })
+  })
+  afterEach(() => {
+    fs.rmSync(mockProjectPath, { recursive: true, force: true })
+    fs.rmSync(worktreePath, { recursive: true, force: true })
+    fs.rmSync(worktree2Path, { recursive: true, force: true })
+  })
+
+  it('returns an empty array for a project with no detached worktrees', () => {
+    assert.deepStrictEqual(detectProjectWorktrees(mockProjectPath), [])
+  })
+
+  it('returns an empty array for a non-git directory', () => {
+    assert.deepStrictEqual(detectProjectWorktrees('/path/to/project'), [])
+  })
+
+  it('lists detached worktrees when called from the primary', () => {
+    execSync(`git worktree add ${worktreePath} -b test-branch`, {
+      cwd: mockProjectPath,
+    })
+    const realWorktreePath = fs.realpathSync(worktreePath)
+    assert.deepStrictEqual(detectProjectWorktrees(mockProjectPath), [
+      { path: realWorktreePath, branch: 'test-branch' },
+    ])
+  })
+
+  it('lists detached worktrees when called from a detached worktree', () => {
+    execSync(`git worktree add ${worktreePath} -b test-branch`, {
+      cwd: mockProjectPath,
+    })
+    const realWorktreePath = fs.realpathSync(worktreePath)
+    assert.deepStrictEqual(detectProjectWorktrees(worktreePath), [
+      { path: realWorktreePath, branch: 'test-branch' },
+    ])
+  })
+
+  it('lists multiple worktrees sorted by path', () => {
+    execSync(`git worktree add ${worktree2Path} -b branch-b`, {
+      cwd: mockProjectPath,
+    })
+    execSync(`git worktree add ${worktreePath} -b branch-a`, {
+      cwd: mockProjectPath,
+    })
+    const realWorktree = fs.realpathSync(worktreePath)
+    const realWorktree2 = fs.realpathSync(worktree2Path)
+    assert.deepStrictEqual(detectProjectWorktrees(mockProjectPath), [
+      { path: realWorktree, branch: 'branch-a' },
+      { path: realWorktree2, branch: 'branch-b' },
+    ])
   })
 })

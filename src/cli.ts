@@ -13,7 +13,7 @@ import {
 } from './lib/cli-help.ts'
 import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
-import { getGitHubSlug } from './lib/git.ts'
+import { getGitHubSlug } from './lib/project/git.ts'
 import { DenvigProject } from './lib/project.ts'
 import { resolveProjectId } from './lib/project-id.ts'
 import { listProjects } from './lib/projects.ts'

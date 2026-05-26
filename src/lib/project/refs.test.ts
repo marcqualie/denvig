@@ -4,13 +4,7 @@ import fs from 'node:fs'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { inspect } from 'node:util'
 
-import {
-  detectProjectWorktrees,
-  normaliseGitRemote,
-  projectId,
-  projectRefs,
-  projectSlug,
-} from './refs.ts'
+import { projectId, projectRefs, projectSlug } from './refs.ts'
 
 const mockProjectPath = '/tmp/denvig-test-mock-project'
 const worktreePath = `${mockProjectPath}-worktree1`
@@ -21,30 +15,6 @@ function assertArrayIncludes<T>(arr: T[], value: T, context?: string) {
     `${context ? `${context}\n` : ''}Expected array to include ${inspect(value)}\nReceived: ${inspect(arr, { depth: null })}`,
   )
 }
-
-describe('normaliseGitRemote()', () => {
-  const cases: [string, string | null][] = [
-    ['git@github.com:marcqualie/denvig.git', 'github.com/marcqualie/denvig'],
-    ['git@github.com:marcqualie/denvig', 'github.com/marcqualie/denvig'],
-    [
-      'https://github.com/marcqualie/denvig.git',
-      'github.com/marcqualie/denvig',
-    ],
-    ['https://github.com/marcqualie/denvig', 'github.com/marcqualie/denvig'],
-    [
-      'ssh://git@github.com/marcqualie/denvig.git',
-      'github.com/marcqualie/denvig',
-    ],
-    ['git@gitlab.com:group/sub/repo.git', 'gitlab.com/group/sub/repo'],
-    ['not a url', null],
-  ]
-
-  for (const [input, expected] of cases) {
-    it(`normalises ${inspect(input)} -> ${inspect(expected)}`, () => {
-      assert.strictEqual(normaliseGitRemote(input), expected)
-    })
-  }
-})
 
 describe('projectRefs()', () => {
   beforeEach(() => {
@@ -227,69 +197,5 @@ describe('projectId()', () => {
     assert.strictEqual(id.length, 40, 'id should be a sha1 hex digest')
     const refs = projectRefs('/path/to/project')
     assertArrayIncludes(refs, `id:${id}`)
-  })
-})
-
-describe('detectProjectWorktrees()', () => {
-  const worktree2Path = `${mockProjectPath}-worktree2`
-
-  beforeEach(() => {
-    fs.mkdirSync(mockProjectPath, { recursive: true })
-    execSync('git init -q -b main', { cwd: mockProjectPath })
-    execSync('git config user.email "test@denvig.test"', {
-      cwd: mockProjectPath,
-    })
-    execSync('git config user.name "Denvig Test"', { cwd: mockProjectPath })
-    execSync('git commit --allow-empty -q -m "Initial commit"', {
-      cwd: mockProjectPath,
-    })
-  })
-  afterEach(() => {
-    fs.rmSync(mockProjectPath, { recursive: true, force: true })
-    fs.rmSync(worktreePath, { recursive: true, force: true })
-    fs.rmSync(worktree2Path, { recursive: true, force: true })
-  })
-
-  it('returns an empty array for a project with no detached worktrees', () => {
-    assert.deepStrictEqual(detectProjectWorktrees(mockProjectPath), [])
-  })
-
-  it('returns an empty array for a non-git directory', () => {
-    assert.deepStrictEqual(detectProjectWorktrees('/path/to/project'), [])
-  })
-
-  it('lists detached worktrees when called from the primary', () => {
-    execSync(`git worktree add ${worktreePath} -b test-branch`, {
-      cwd: mockProjectPath,
-    })
-    const realWorktreePath = fs.realpathSync(worktreePath)
-    assert.deepStrictEqual(detectProjectWorktrees(mockProjectPath), [
-      { path: realWorktreePath, branch: 'test-branch' },
-    ])
-  })
-
-  it('lists detached worktrees when called from a detached worktree', () => {
-    execSync(`git worktree add ${worktreePath} -b test-branch`, {
-      cwd: mockProjectPath,
-    })
-    const realWorktreePath = fs.realpathSync(worktreePath)
-    assert.deepStrictEqual(detectProjectWorktrees(worktreePath), [
-      { path: realWorktreePath, branch: 'test-branch' },
-    ])
-  })
-
-  it('lists multiple worktrees sorted by path', () => {
-    execSync(`git worktree add ${worktree2Path} -b branch-b`, {
-      cwd: mockProjectPath,
-    })
-    execSync(`git worktree add ${worktreePath} -b branch-a`, {
-      cwd: mockProjectPath,
-    })
-    const realWorktree = fs.realpathSync(worktreePath)
-    const realWorktree2 = fs.realpathSync(worktree2Path)
-    assert.deepStrictEqual(detectProjectWorktrees(mockProjectPath), [
-      { path: realWorktree, branch: 'branch-a' },
-      { path: realWorktree2, branch: 'branch-b' },
-    ])
   })
 })
