@@ -74,16 +74,15 @@ export type GitWorktree = {
  * Detect the git worktree the given path lives in. Returns the primary
  * worktree path (same for the primary checkout and every detached worktree
  * that descends from it) and the branch name of the current worktree.
+ *
+ * The primary worktree always reports `main` as its branch (regardless of
+ * which branch is checked out) so the primary's ref stays stable as work
+ * moves between branches. Only detached worktrees report the checked-out
+ * branch name.
  */
 export const detectGitWorktree = (path: string): GitWorktree | null => {
   try {
     const absolutePath = resolve(path)
-    const branch = execSync('git branch --show-current', {
-      cwd: absolutePath,
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-    if (!branch) return null
 
     // A detached worktree has a `.git` *file* containing `gitdir: <primary>/.git/worktrees/<name>`.
     const gitMarker = resolve(absolutePath, '.git')
@@ -91,13 +90,26 @@ export const detectGitWorktree = (path: string): GitWorktree | null => {
       const content = readFileSync(gitMarker, 'utf-8').trim()
       const match = content.match(/^gitdir:\s*(.+)\/\.git\/worktrees\/[^/]+$/)
       if (match) {
+        const branch = execSync('git branch --show-current', {
+          cwd: absolutePath,
+          encoding: 'utf-8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim()
+        if (!branch) return null
         return { primaryPath: match[1], branch }
       }
     }
 
     // Primary worktree - normalise via realpath so symlinked paths (eg. /tmp on macOS)
-    // match the realpath stored inside detached worktree `.git` files.
-    return { primaryPath: realpathSync(absolutePath), branch }
+    // match the realpath stored inside detached worktree `.git` files. Confirm
+    // this is actually a git working tree before claiming a worktree ref.
+    if (!existsSync(gitMarker)) return null
+    execSync('git rev-parse --git-dir', {
+      cwd: absolutePath,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    return { primaryPath: realpathSync(absolutePath), branch: 'main' }
   } catch {
     return null
   }

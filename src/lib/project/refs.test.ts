@@ -64,6 +64,13 @@ describe('projectRefs()', () => {
       assertArrayIncludes(refs, `git-worktree:${realPath}+main`)
     })
 
+    it('reports `main` for the primary worktree even on a non-main branch', () => {
+      execSync('git checkout -q -b feature/foo', { cwd: mockProjectPath })
+      const realPath = fs.realpathSync(mockProjectPath)
+      const refs = projectRefs(mockProjectPath)
+      assertArrayIncludes(refs, `git-worktree:${realPath}+main`)
+    })
+
     it('detects detached worktrees and uses the primary path as the prefix', () => {
       execSync(`git worktree add ${worktreePath} -b test-branch`, {
         cwd: mockProjectPath,
