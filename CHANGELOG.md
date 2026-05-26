@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- New `projectRefs()` helper (`src/lib/project/refs.ts`) returns a list of identifiers for a project path: `id:` (sha1 hash of the project's path + git config), `local:` (absolute path), `github:<owner>/<repo>` (or `git:<url>` fallback) parsed from the `origin` remote, and `git-worktree:<primary-path>+<branch>`. The `git-worktree:` ref is keyed off the primary worktree path (resolved via the worktree's `.git` file) plus the current branch so the primary checkout and every detached worktree share a common path prefix while remaining uniquely addressable.
+
 ### Changed
 
 - CLI now errors on unknown subcommands and unrecognised flags instead of silently falling back to the default subcommand. For example `denvig services listtt` or `denvig services --al` previously ran `services list`; both now exit with code 1 and a descriptive message followed by the relevant help block (root help for unknown commands, subcommand help for unknown subcommands, command help for unknown flags / missing arguments). Commands that intentionally forward extra arguments to subprocesses (`run`, `zsh __complete__`) opt in via a new `acceptsExtraArgs` option on `Command`.
