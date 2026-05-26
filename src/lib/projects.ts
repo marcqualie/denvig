@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises'
 
 import { expandTilde, getGlobalConfig } from './config.ts'
-import { getProjectSlug } from './git.ts'
+import { projectSlug } from './project/refs.ts'
 import { isDirectory, pathExists } from './safeReadFile.ts'
 
 export type ProjectInfo = {
@@ -99,8 +99,7 @@ export const listProjects = async (
         if (!(await pathExists(configPath))) continue
       }
 
-      const slug = await getProjectSlug(projectPath)
-      projects.push({ slug, path: projectPath })
+      projects.push({ slug: projectSlug(projectPath), path: projectPath })
     }
   }
 

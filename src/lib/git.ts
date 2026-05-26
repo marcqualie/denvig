@@ -66,18 +66,6 @@ export const getGitHubSlug = async (
   }
 }
 
-/**
- * Generate the full slug for a project path.
- * Returns 'github:owner/repo' for GitHub projects, 'local:/absolute/path' otherwise.
- */
-export const getProjectSlug = async (projectPath: string): Promise<string> => {
-  const githubSlug = await getGitHubSlug(projectPath)
-  if (githubSlug) {
-    return `github:${githubSlug}`
-  }
-  return `local:${projectPath}`
-}
-
 /** Clone a git repository into the target directory. */
 export const gitClone = (url: string, target: string): Promise<boolean> => {
   return runInherit('git', ['clone', url, target])

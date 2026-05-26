@@ -4,7 +4,12 @@ import fs from 'node:fs'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { inspect } from 'node:util'
 
-import { normaliseGitRemote, projectRefs } from './refs.ts'
+import {
+  normaliseGitRemote,
+  projectId,
+  projectRefs,
+  projectSlug,
+} from './refs.ts'
 
 const mockProjectPath = '/tmp/denvig-test-mock-project'
 const worktreePath = `${mockProjectPath}-worktree1`
@@ -168,5 +173,50 @@ describe('projectRefs()', () => {
         `expected no git-worktree: ref, got ${inspect(refs)}`,
       )
     })
+
+    it('uses the `github` remote as a fallback for the github: ref when origin is not on GitHub', () => {
+      execSync('git remote remove origin', { cwd: mockProjectPath })
+      execSync('git remote add origin git@gitea.example.com:owner/mirror.git', {
+        cwd: mockProjectPath,
+      })
+      execSync('git remote add github git@github.com:marcqualie/denvig.git', {
+        cwd: mockProjectPath,
+      })
+      const refs = projectRefs(mockProjectPath)
+      assertArrayIncludes(refs, 'github:marcqualie/denvig')
+    })
+  })
+})
+
+describe('projectSlug()', () => {
+  beforeEach(() => {
+    fs.mkdirSync(mockProjectPath, { recursive: true })
+    execSync('git init -q -b main', { cwd: mockProjectPath })
+  })
+  afterEach(() => {
+    fs.rmSync(mockProjectPath, { recursive: true, force: true })
+  })
+
+  it('returns the github: ref when present', () => {
+    execSync('git remote add origin git@github.com:marcqualie/denvig.git', {
+      cwd: mockProjectPath,
+    })
+    assert.strictEqual(projectSlug(mockProjectPath), 'github:marcqualie/denvig')
+  })
+
+  it('returns the local: ref when there is no github remote', () => {
+    assert.strictEqual(
+      projectSlug('/path/to/project'),
+      'local:/path/to/project',
+    )
+  })
+})
+
+describe('projectId()', () => {
+  it('returns the hash portion of the id: ref', () => {
+    const id = projectId('/path/to/project')
+    assert.strictEqual(id.length, 40, 'id should be a sha1 hex digest')
+    const refs = projectRefs('/path/to/project')
+    assertArrayIncludes(refs, `id:${id}`)
   })
 })

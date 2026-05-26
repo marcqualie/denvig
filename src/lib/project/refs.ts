@@ -22,9 +22,13 @@ export const projectRefs = (path: string): string[] => {
   const gitWorktree = detectGitWorktree(absolutePath)
 
   // GitHub group ref - shared across every clone and worktree of the same repo.
-  const githubMatch = normalisedRemote?.match(/^github\.com\/(.+\/.+)$/)
-  if (githubMatch) {
-    refs.push(`github:${githubMatch[1]}`)
+  // Prefer the origin remote, but fall back to a dedicated `github` remote (a
+  // common pattern when `origin` points at a mirror like Gitea).
+  const githubSlug =
+    extractGitHubSlug(normalisedRemote) ??
+    extractGitHubSlug(normalisedRemoteFor(absolutePath, 'github'))
+  if (githubSlug) {
+    refs.push(`github:${githubSlug}`)
   }
 
   // Worktree-aware git ref: `git:<host>/<owner>/<repo>+<branch>`. Sibling
@@ -49,10 +53,48 @@ export const projectRefs = (path: string): string[] => {
   return refs
 }
 
-export const retrieveGitRemote = (path: string): string | null => {
+const extractGitHubSlug = (normalised: string | null): string | null => {
+  const match = normalised?.match(/^github\.com\/(.+\/.+)$/)
+  return match ? match[1] : null
+}
+
+const normalisedRemoteFor = (
+  path: string,
+  remoteName: string,
+): string | null => {
+  const remote = retrieveGitRemote(path, remoteName)
+  return remote ? normaliseGitRemote(remote) : null
+}
+
+/**
+ * Slug for a project path, derived from `projectRefs()`. Returns the
+ * `github:<owner>/<repo>` ref when present, otherwise the `local:<path>` ref.
+ */
+export const projectSlug = (path: string): string => {
+  const refs = projectRefs(path)
+  const github = refs.find((ref) => ref.startsWith('github:'))
+  if (github) return github
+  // `local:` is always emitted by projectRefs.
+  return refs.find((ref) => ref.startsWith('local:')) as string
+}
+
+/**
+ * Project ID for a path, derived from `projectRefs()`. This is the hash
+ * portion of the `id:` ref.
+ */
+export const projectId = (path: string): string => {
+  const refs = projectRefs(path)
+  const idRef = refs.find((ref) => ref.startsWith('id:')) as string
+  return idRef.slice('id:'.length)
+}
+
+export const retrieveGitRemote = (
+  path: string,
+  remoteName = 'origin',
+): string | null => {
   try {
     const absolutePath = resolve(path)
-    const gitRemote = execSync('git remote get-url origin', {
+    const gitRemote = execSync(`git remote get-url ${remoteName}`, {
       cwd: absolutePath,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
