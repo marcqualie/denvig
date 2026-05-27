@@ -16,7 +16,7 @@
 - When a worktree starts a service on a fallback port, denvig prompts to override the configured domain so the gateway points at the worktree (use `--claim-domain` / `--no-claim-domain` to skip the prompt)
 - `services list`, `services status`, and the start/restart confirmations now also show `http://localhost:<port>` when the effective port differs from the config port, giving you a direct URL even when another worktree owns the domain
 - `~/.denvig/state.json` is now the source of truth for services: `services start` snapshots the full config (command, env, http, etc.) into state and every mutating `services` command then reconciles launchctl against it (starting services that should be running, stopping unknown ones, restarting when the snapshot drifts from the on-disk plist)
-- New `denvig state sync` command runs the reconciliation manually and rebuilds the gateway configs
+- `denvig gateway configure` now runs the same reconcile pass before rebuilding nginx, so it can be used to manually re-sync launchctl with state.json
 - `~/.denvig/state.json` now also tracks SSL certs in a top-level `certs` map and each gateway route references the cert it should present; nginx is rendered from this snapshot rather than re-scanning `~/.denvig/certs/` on every regeneration
 
 ### Changed

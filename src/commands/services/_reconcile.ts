@@ -4,7 +4,7 @@ import { reconcileServices } from '../../lib/services/reconcile.ts'
  * Run the state.json → launchctl reconciler after a `services` command
  * mutated state. Errors are surfaced to stderr so they don't break the
  * command's own JSON/output contract, but a hard failure is not fatal —
- * the user can re-run `denvig state sync` to retry.
+ * the user can re-run `denvig gateway configure` to retry.
  */
 export const reconcileAfterCommand = async (options: {
   json?: boolean
