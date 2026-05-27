@@ -7,6 +7,8 @@
 
 - Projects now expose a list of refs identifying themselves and the worktree they live in, shown in a new `Refs:` block in `denvig info` and on the SDK's `ProjectResponse`
 - `denvig info` now shows a `Worktrees:` block listing detached git worktrees for the project, also exposed as `worktrees` on the SDK's `ProjectResponse`
+- `--worktree <branch>` flag on every `services` subcommand to target a sibling git worktree without switching directories (use `--worktree main` for the primary checkout)
+- Running `denvig` from inside a detached git worktree now defaults to that worktree's services instead of the primary checkout's
 
 ### Changed
 

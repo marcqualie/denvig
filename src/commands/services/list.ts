@@ -8,6 +8,7 @@ import {
   ServiceManager,
   type ServiceResponse,
 } from '../../lib/services/manager.ts'
+import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 
 const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   switch (status) {
@@ -23,7 +24,7 @@ const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
 export const servicesListCommand = new Command({
   name: 'services:list',
   description: 'List services for the current project',
-  usage: 'services list [--all] [--global]',
+  usage: 'services list [--all] [--global] [--worktree <branch>]',
   example: 'services list',
   args: [],
   flags: [
@@ -41,22 +42,50 @@ export const servicesListCommand = new Command({
       type: 'boolean',
       defaultValue: false,
     },
+    {
+      name: 'worktree',
+      description:
+        'List services for a sibling git worktree by branch name (use "main" for the primary checkout)',
+      required: false,
+      type: 'string',
+    },
   ],
   completions: () => {
     return []
   },
-  handler: async ({ project, flags }) => {
+  handler: async ({ project: currentProject, flags }) => {
     const all = flags.all as boolean
     const globalOnly = flags.global as boolean
+    const worktreeFlag =
+      typeof flags.worktree === 'string' ? flags.worktree : null
 
-    if (all && globalOnly) {
-      const message = 'Cannot use --all and --global together.'
+    const selectedCount = [all, globalOnly, worktreeFlag !== null].filter(
+      Boolean,
+    ).length
+    if (selectedCount > 1) {
+      const message =
+        'Cannot use --all, --global, and --worktree together. Choose one.'
       if (flags.json) {
         console.log(JSON.stringify({ success: false, message }))
       } else {
         console.error(message)
       }
       return { success: false, message }
+    }
+
+    let project = currentProject
+    if (worktreeFlag !== null) {
+      try {
+        project = await resolveWorktreeProject(currentProject, worktreeFlag)
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
+        if (flags.json) {
+          console.log(JSON.stringify({ success: false, message }))
+        } else {
+          console.error(message)
+        }
+        return { success: false, message }
+      }
     }
 
     // Pre-fetch launchctl list once to avoid N shell calls

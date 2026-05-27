@@ -10,6 +10,9 @@ describe('servicesStartCommand', () => {
   })
 
   it('should have correct usage', () => {
-    ok(servicesStartCommand.usage === 'services start <name>')
+    ok(
+      servicesStartCommand.usage ===
+        'services start <name> [--worktree <branch>]',
+    )
   })
 })
