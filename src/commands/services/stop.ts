@@ -5,11 +5,12 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
+import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 
 export const servicesStopCommand = new Command({
   name: 'services:stop',
   description: 'Stop a service',
-  usage: 'services stop <name>',
+  usage: 'services stop <name> [--worktree <branch>]',
   example: 'services stop api',
   args: [
     {
@@ -20,12 +21,35 @@ export const servicesStopCommand = new Command({
       type: 'string',
     },
   ],
-  flags: [],
+  flags: [
+    {
+      name: 'worktree',
+      description:
+        'Target the service in a sibling git worktree by branch name (use "main" for the primary checkout)',
+      required: false,
+      type: 'string',
+    },
+  ],
   completions: ({ project }) => {
     return getServiceCompletions(project)
   },
-  handler: async ({ project, args, flags }) => {
+  handler: async ({ project: currentProject, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
+
+    let project = currentProject
+    if (typeof flags.worktree === 'string') {
+      try {
+        project = await resolveWorktreeProject(currentProject, flags.worktree)
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
+        if (flags.json) {
+          console.log(JSON.stringify({ success: false, message }))
+        } else {
+          console.error(message)
+        }
+        return { success: false, message }
+      }
+    }
 
     const {
       manager,

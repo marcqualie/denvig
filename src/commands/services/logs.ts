@@ -6,11 +6,12 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
+import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 
 export const logsCommand = new Command({
   name: 'services:logs',
   description: 'Show logs for a service',
-  usage: 'services logs <name> [-n <lines>] [--follow]',
+  usage: 'services logs <name> [-n <lines>] [--follow] [--worktree <branch>]',
   example: 'services logs api -n 50 --follow',
   args: [
     {
@@ -36,12 +37,35 @@ export const logsCommand = new Command({
       type: 'boolean',
       defaultValue: false,
     },
+    {
+      name: 'worktree',
+      description:
+        'Target the service in a sibling git worktree by branch name (use "main" for the primary checkout)',
+      required: false,
+      type: 'string',
+    },
   ],
   completions: ({ project }) => {
     return getServiceCompletions(project)
   },
-  handler: async ({ project, args, flags }) => {
+  handler: async ({ project: currentProject, args, flags }) => {
     const nameArg = args.name as string
+
+    let project = currentProject
+    if (typeof flags.worktree === 'string') {
+      try {
+        project = await resolveWorktreeProject(currentProject, flags.worktree)
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
+        if (flags.json) {
+          console.log(JSON.stringify({ success: false, message }))
+        } else {
+          console.error(message)
+        }
+        return { success: false, message }
+      }
+    }
+
     const { manager, serviceName: name } = await getServiceContext(
       nameArg,
       project,
