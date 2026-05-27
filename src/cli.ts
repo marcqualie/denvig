@@ -122,6 +122,7 @@ async function main() {
   const { zshCommand } = await import('./commands/zsh/index.ts')
   const { certsCommand } = await import('./commands/certs/index.ts')
   const { systemCommand } = await import('./commands/system/index.ts')
+  const { stateCommand } = await import('./commands/state/index.ts')
 
   const commands = {
     run: runCommand,
@@ -140,6 +141,7 @@ async function main() {
     zsh: zshCommand,
     certs: certsCommand,
     system: systemCommand,
+    state: stateCommand,
   } as Record<string, GenericCommand>
 
   // Handle root-level help

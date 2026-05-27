@@ -318,8 +318,9 @@ export class ServiceManager {
     const label = this.getServiceLabel(name)
     const isBootstrapped = await this.isServiceBootstrapped(name)
 
-    // Record the desired state and chosen port before launching so other
-    // commands (gateway, list) immediately see the allocation.
+    // Record the desired state and a snapshot of the config before launching
+    // so the gateway, list output and the reconciler all see a single
+    // source of truth instead of re-deriving it from .denvig.yml each time.
     const domains = config.http?.domain
       ? [config.http.domain, ...(config.http.cnames ?? [])]
       : []
@@ -328,6 +329,21 @@ export class ServiceManager {
       port: effectivePort,
       domains,
       desiredStatus: 'running',
+      project: {
+        id: this.project.id,
+        slug: this.project.slug,
+        name: this.project.name,
+        path: this.project.path,
+      },
+      serviceName: name,
+      config: {
+        command: config.command,
+        env: config.env,
+        envFiles: config.envFiles,
+        http: config.http,
+        keepAlive: config.keepAlive,
+        startOnBoot: config.startOnBoot,
+      },
     })
 
     // Manage gateway routes when the service has both a port and domain(s).
@@ -422,14 +438,17 @@ export class ServiceManager {
     } catch {
       // File doesn't exist yet
     }
-    if (existingPlistContent !== plistContent) {
+    const plistChanged = existingPlistContent !== plistContent
+    if (plistChanged) {
       await writeFile(plistPath, plistContent, 'utf-8')
     }
 
     // Enable service so launchd will start it (reverses disable from stop)
     await launchctl.enable(label)
 
-    // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents
+    // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents.
+    // The reconciler relies on this being idempotent: if the plist is
+    // unchanged and the service is already bootstrapped, do nothing.
     if (!isBootstrapped) {
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
@@ -439,8 +458,8 @@ export class ServiceManager {
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
       }
-    } else {
-      // If already bootstrapped, bootout and bootstrap again to reload the plist
+    } else if (plistChanged) {
+      // Plist changed — bootout the old process and bootstrap the new plist.
       const bootoutResult = await launchctl.bootout(label)
       if (!bootoutResult.success) {
         return {
@@ -459,6 +478,13 @@ export class ServiceManager {
           success: false,
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
+      }
+    } else {
+      // Already running with the same plist — nothing to do.
+      return {
+        name,
+        success: true,
+        message: 'Service already running with current config',
       }
     }
 

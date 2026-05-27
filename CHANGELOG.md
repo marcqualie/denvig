@@ -15,6 +15,8 @@
 - Gateway routes are now tracked in `~/.denvig/state.json` and are the source of truth for nginx configs and the `services list` URL column
 - When a worktree starts a service on a fallback port, denvig prompts to override the configured domain so the gateway points at the worktree (use `--claim-domain` / `--no-claim-domain` to skip the prompt)
 - `services list`, `services status`, and the start/restart confirmations now also show `http://localhost:<port>` when the effective port differs from the config port, giving you a direct URL even when another worktree owns the domain
+- `~/.denvig/state.json` is now the source of truth for services: `services start` snapshots the full config (command, env, http, etc.) into state and every mutating `services` command then reconciles launchctl against it (starting services that should be running, stopping unknown ones, restarting when the snapshot drifts from the on-disk plist)
+- New `denvig state sync` command runs the reconciliation manually and rebuilds the gateway configs
 
 ### Changed
 

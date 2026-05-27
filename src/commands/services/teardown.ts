@@ -1,6 +1,7 @@
 import { Command } from '../../lib/command.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 import { teardownGlobal, teardownProject } from '../../lib/teardown.ts'
+import { reconcileAfterCommand } from './_reconcile.ts'
 
 export const servicesTeardownCommand = new Command({
   name: 'services:teardown',
@@ -93,6 +94,7 @@ export const servicesTeardownCommand = new Command({
         }
       }
 
+      await reconcileAfterCommand({ json: !!flags.json })
       return { success: true, message: 'Global teardown complete' }
     }
 
@@ -126,6 +128,7 @@ export const servicesTeardownCommand = new Command({
       }
     }
 
+    await reconcileAfterCommand({ json: !!flags.json })
     return { success: true, message: 'Teardown complete' }
   },
 })

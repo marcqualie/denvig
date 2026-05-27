@@ -7,6 +7,7 @@ import {
   getServiceContext,
 } from '../../lib/services/identifier.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { reconcileAfterCommand } from './_reconcile.ts'
 import { resolveServicePortForCli } from './_resolvePort.ts'
 
 export const servicesRestartCommand = new Command({
@@ -143,6 +144,7 @@ export const servicesRestartCommand = new Command({
     if (response?.status === 'running') {
       // Reconfigure gateway nginx configs
       await manager.reconfigureGateway()
+      await reconcileAfterCommand({ json: !!flags.json })
 
       if (flags.json) {
         console.log(JSON.stringify(response))

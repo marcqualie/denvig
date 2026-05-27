@@ -3,11 +3,53 @@ import { homedir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { z } from 'zod'
 
+/**
+ * Snapshot of the project the service belongs to, captured at start time
+ * so the reconciler can act on the service even when the project lookup
+ * tables aren't loaded.
+ */
+export const ProjectSnapshotSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  path: z.string(),
+})
+
+/**
+ * Snapshot of the fields from a service config that are needed to
+ * regenerate a plist. Mirrors the relevant pieces of `ServiceConfigSchema`
+ * but is duplicated here so state stays independent from the config schema
+ * and tolerates older entries.
+ */
+export const ServiceConfigSnapshotSchema = z.object({
+  command: z.string(),
+  env: z.record(z.string(), z.string()).optional(),
+  envFiles: z.array(z.string()).optional(),
+  http: z
+    .object({
+      port: z.number().optional(),
+      domain: z.string().optional(),
+      cnames: z.array(z.string()).optional(),
+      secure: z.boolean().optional(),
+    })
+    .optional(),
+  keepAlive: z.boolean().optional(),
+  startOnBoot: z.boolean().optional(),
+})
+
 export const ServiceStateEntrySchema = z.object({
   cwd: z.string(),
   port: z.number().int().positive().optional(),
   domains: z.array(z.string()).default([]),
   desiredStatus: z.enum(['running', 'stopped']).default('running'),
+  /**
+   * Project + service config snapshot. Optional so entries written by
+   * older versions of denvig still parse — the reconciler skips entries
+   * without a snapshot.
+   */
+  project: ProjectSnapshotSchema.optional(),
+  serviceName: z.string().optional(),
+  config: ServiceConfigSnapshotSchema.optional(),
 })
 
 /**
@@ -30,6 +72,8 @@ export const DenvigStateSchema = z.object({
   gatewayRoutes: z.record(z.string(), GatewayRouteSchema).default({}),
 })
 
+export type ProjectSnapshot = z.infer<typeof ProjectSnapshotSchema>
+export type ServiceConfigSnapshot = z.infer<typeof ServiceConfigSnapshotSchema>
 export type ServiceStateEntry = z.infer<typeof ServiceStateEntrySchema>
 export type GatewayRoute = z.infer<typeof GatewayRouteSchema>
 export type DenvigState = z.infer<typeof DenvigStateSchema>
@@ -88,6 +132,9 @@ export const updateServiceState = async (
     port: entry.port ?? existing?.port,
     domains: entry.domains ?? existing?.domains ?? [],
     desiredStatus: entry.desiredStatus ?? existing?.desiredStatus ?? 'running',
+    project: entry.project ?? existing?.project,
+    serviceName: entry.serviceName ?? existing?.serviceName ?? serviceName,
+    config: entry.config ?? existing?.config,
   }
   await writeState(state)
 }

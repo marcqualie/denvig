@@ -50,6 +50,7 @@ describe('service state', () => {
       port: 8080,
       domains: ['api.test'],
       desiredStatus: 'running',
+      serviceName: 'api',
     })
   })
 
@@ -184,6 +185,7 @@ describe('service state', () => {
       port: 8080,
       domains: ['api.test'],
       desiredStatus: 'running',
+      serviceName: 'api',
     })
   })
 })
