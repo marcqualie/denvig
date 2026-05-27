@@ -10,8 +10,9 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
-import { resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
 
+import { findCertForDomain, resolveSslPaths } from '../gateway/certs.ts'
 import { configureGateway } from '../gateway/configure.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
@@ -24,6 +25,7 @@ import {
   markServiceStopped,
   removeGatewayRoutesForService,
   removeServiceState,
+  setCert,
   setGatewayRoute,
   updateServiceState,
 } from './state.ts'
@@ -358,6 +360,26 @@ export class ServiceManager {
     // Manage gateway routes when the service has both a port and domain(s).
     if (effectivePort !== undefined && domains.length > 0) {
       const secure = config.http?.secure ?? false
+      // Resolve the cert once per start so all routes for this service
+      // share the same cert entry (typical for cnames sitting under a
+      // single wildcard). Persisted into state.certs and referenced by
+      // each route via the `cert` field.
+      let certKey: string | undefined
+      if (secure) {
+        const certDir = await findCertForDomain(domains[0])
+        if (certDir) {
+          const sslPaths = await resolveSslPaths(certDir)
+          if (sslPaths) {
+            certKey = basename(certDir)
+            await setCert(certKey, {
+              dir: certDir,
+              certPath: sslPaths.sslCertPath,
+              keyPath: sslPaths.sslKeyPath,
+              domains: domains,
+            })
+          }
+        }
+      }
       for (const domain of domains) {
         const existing = await getGatewayRoute(domain)
         const isOwnedByThisService =
@@ -380,6 +402,7 @@ export class ServiceManager {
               ? (existing?.defaultService ?? true)
               : true,
             desiredStatus: 'running',
+            cert: certKey,
           })
         } else if (options?.claimDomain === true) {
           await setGatewayRoute(domain, {
@@ -389,6 +412,7 @@ export class ServiceManager {
             secure,
             defaultService: false,
             desiredStatus: 'running',
+            cert: certKey,
           })
         }
         // Otherwise (existing route owned by an active service in another

@@ -3,7 +3,6 @@ import { DenvigProject } from '../project.ts'
 import { listProjects } from '../projects.ts'
 import { createGlobalProject } from '../services/global.ts'
 import { readState } from '../services/state.ts'
-import { findCertForDomain, resolveSslPaths } from './certs.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
   reloadNginx,
@@ -11,6 +10,8 @@ import {
   writeNginxConfig,
   writeNginxMainConfig,
 } from './nginx.ts'
+
+import type { Cert } from '../services/state.ts'
 
 export type ConfigureServiceResult = {
   projectSlug: string
@@ -41,6 +42,8 @@ type RouteGroup = {
   secure: boolean
   /** Order: first entry is the primary domain, the rest are cnames. */
   domains: string[]
+  /** Key into `state.certs` shared by all routes in this group, if any. */
+  certKey?: string
 }
 
 /**
@@ -114,6 +117,9 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
     const existing = groups.get(key)
     if (existing) {
       existing.domains.push(domain)
+      // Routes inside a group should all reference the same cert, but
+      // tolerate one missing the key by preferring whichever does carry one.
+      if (!existing.certKey && route.cert) existing.certKey = route.cert
     } else {
       groups.set(key, {
         projectId: route.project,
@@ -121,6 +127,7 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
         port: route.port,
         secure: route.secure,
         domains: [domain],
+        certKey: route.cert,
       })
     }
   }
@@ -140,21 +147,19 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
     let certMessage: string | undefined
 
     if (secure) {
-      const certDir = await findCertForDomain(primary)
-      if (certDir) {
-        const sslPaths = await resolveSslPaths(certDir)
-        if (sslPaths) {
-          sslCertPath = sslPaths.sslCertPath
-          sslKeyPath = sslPaths.sslKeyPath
-          certStatus = 'valid'
-          resolvedCertDir = certDir
-        } else {
-          certStatus = 'missing'
-          certMessage = 'cert directory found but files missing'
-        }
+      const cert: Cert | undefined = group.certKey
+        ? state.certs[group.certKey]
+        : undefined
+      if (cert) {
+        sslCertPath = cert.certPath
+        sslKeyPath = cert.keyPath
+        certStatus = 'valid'
+        resolvedCertDir = cert.dir
       } else {
         certStatus = 'missing'
-        certMessage = 'no matching certificate found'
+        certMessage = group.certKey
+          ? `cert "${group.certKey}" referenced by route is not in state.certs`
+          : 'route has no cert reference; restart the service to refresh state.certs'
       }
     }
 

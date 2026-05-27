@@ -57,6 +57,10 @@ export const ServiceStateEntrySchema = z.object({
  * whether the route was registered as the natural owner of the domain
  * (`true`, the first claim) or a worktree override (`false`, claimed via
  * the conflict prompt).
+ *
+ * `cert` is the key into `state.certs` for the cert this route should
+ * present in nginx. Only populated for secure routes whose cert was
+ * resolved at start time.
  */
 export const GatewayRouteSchema = z.object({
   project: z.string(),
@@ -65,22 +69,41 @@ export const GatewayRouteSchema = z.object({
   defaultService: z.boolean().default(true),
   secure: z.boolean().default(false),
   desiredStatus: z.enum(['running', 'stopped']).default('running'),
+  cert: z.string().optional(),
+})
+
+/**
+ * SSL cert on disk that's been resolved against a domain. Keyed in
+ * `state.certs` by the cert directory's basename so multiple routes
+ * sharing a wildcard cert reuse a single entry.
+ */
+export const CertSchema = z.object({
+  dir: z.string(),
+  certPath: z.string(),
+  keyPath: z.string(),
+  domains: z.array(z.string()).default([]),
 })
 
 export const DenvigStateSchema = z.object({
   services: z.record(z.string(), ServiceStateEntrySchema).default({}),
   gatewayRoutes: z.record(z.string(), GatewayRouteSchema).default({}),
+  certs: z.record(z.string(), CertSchema).default({}),
 })
 
 export type ProjectSnapshot = z.infer<typeof ProjectSnapshotSchema>
 export type ServiceConfigSnapshot = z.infer<typeof ServiceConfigSnapshotSchema>
 export type ServiceStateEntry = z.infer<typeof ServiceStateEntrySchema>
 export type GatewayRoute = z.infer<typeof GatewayRouteSchema>
+export type Cert = z.infer<typeof CertSchema>
 export type DenvigState = z.infer<typeof DenvigStateSchema>
 
 const stateFilePath = (): string => resolve(homedir(), '.denvig', 'state.json')
 
-const emptyState = (): DenvigState => ({ services: {}, gatewayRoutes: {} })
+const emptyState = (): DenvigState => ({
+  services: {},
+  gatewayRoutes: {},
+  certs: {},
+})
 
 /** Stable key used to address a service in the state file. */
 export const serviceStateKey = (
@@ -231,4 +254,17 @@ export const removeGatewayRoutesForService = async (
     }
   }
   if (changed) await writeState(state)
+}
+
+/** Get a cert entry by its key (cert directory basename), or null when absent. */
+export const getCert = async (key: string): Promise<Cert | null> => {
+  const state = await readState()
+  return state.certs[key] ?? null
+}
+
+/** Write or replace a cert entry keyed by `key` (typically the cert dir basename). */
+export const setCert = async (key: string, cert: Cert): Promise<void> => {
+  const state = await readState()
+  state.certs[key] = cert
+  await writeState(state)
 }

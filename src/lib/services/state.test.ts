@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import {
+  getCert,
   getGatewayRoute,
   getServiceState,
   markGatewayRoutesStoppedForService,
@@ -13,6 +14,7 @@ import {
   removeGatewayRoutesForService,
   removeServiceState,
   reservedPorts,
+  setCert,
   setGatewayRoute,
   updateServiceState,
 } from './state.ts'
@@ -34,7 +36,11 @@ describe('service state', () => {
 
   it('returns an empty state when the file does not exist', async () => {
     const state = await readState()
-    assert.deepStrictEqual(state, { services: {}, gatewayRoutes: {} })
+    assert.deepStrictEqual(state, {
+      services: {},
+      gatewayRoutes: {},
+      certs: {},
+    })
   })
 
   it('writes and reads a service entry', async () => {
@@ -84,7 +90,11 @@ describe('service state', () => {
     await fs.mkdir(`${tmpHome}/.denvig`, { recursive: true })
     await fs.writeFile(`${tmpHome}/.denvig/state.json`, 'not json', 'utf-8')
     const state = await readState()
-    assert.deepStrictEqual(state, { services: {}, gatewayRoutes: {} })
+    assert.deepStrictEqual(state, {
+      services: {},
+      gatewayRoutes: {},
+      certs: {},
+    })
   })
 
   it('only treats running entries as reserved ports', () => {
@@ -104,6 +114,7 @@ describe('service state', () => {
         },
       },
       gatewayRoutes: {},
+      certs: {},
     })
     assert.deepStrictEqual([...ports], [8001])
   })
@@ -169,6 +180,23 @@ describe('service state', () => {
     assert.strictEqual(await getGatewayRoute('api.test'), null)
     const survivor = await getGatewayRoute('shared.test')
     assert.strictEqual(survivor?.service, 'other')
+  })
+
+  it('sets and reads a cert entry', async () => {
+    await setCert('_wildcard.denvig.me', {
+      dir: '/certs/_wildcard.denvig.me',
+      certPath: '/certs/_wildcard.denvig.me/fullchain.pem',
+      keyPath: '/certs/_wildcard.denvig.me/privkey.pem',
+      domains: ['*.denvig.me'],
+    })
+    const cert = await getCert('_wildcard.denvig.me')
+    assert.strictEqual(cert?.dir, '/certs/_wildcard.denvig.me')
+    assert.deepStrictEqual(cert?.domains, ['*.denvig.me'])
+  })
+
+  it('returns an empty state with a certs map', async () => {
+    const state = await readState()
+    assert.deepStrictEqual(state.certs, {})
   })
 
   it('persists state through the filesystem', async () => {
