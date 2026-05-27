@@ -4,12 +4,7 @@ import fs from 'node:fs'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { inspect } from 'node:util'
 
-import {
-  normaliseGitRemote,
-  projectId,
-  projectRefs,
-  projectSlug,
-} from './refs.ts'
+import { projectId, projectRefs, projectSlug } from './refs.ts'
 
 const mockProjectPath = '/tmp/denvig-test-mock-project'
 const worktreePath = `${mockProjectPath}-worktree1`
@@ -20,30 +15,6 @@ function assertArrayIncludes<T>(arr: T[], value: T, context?: string) {
     `${context ? `${context}\n` : ''}Expected array to include ${inspect(value)}\nReceived: ${inspect(arr, { depth: null })}`,
   )
 }
-
-describe('normaliseGitRemote()', () => {
-  const cases: [string, string | null][] = [
-    ['git@github.com:marcqualie/denvig.git', 'github.com/marcqualie/denvig'],
-    ['git@github.com:marcqualie/denvig', 'github.com/marcqualie/denvig'],
-    [
-      'https://github.com/marcqualie/denvig.git',
-      'github.com/marcqualie/denvig',
-    ],
-    ['https://github.com/marcqualie/denvig', 'github.com/marcqualie/denvig'],
-    [
-      'ssh://git@github.com/marcqualie/denvig.git',
-      'github.com/marcqualie/denvig',
-    ],
-    ['git@gitlab.com:group/sub/repo.git', 'gitlab.com/group/sub/repo'],
-    ['not a url', null],
-  ]
-
-  for (const [input, expected] of cases) {
-    it(`normalises ${inspect(input)} -> ${inspect(expected)}`, () => {
-      assert.strictEqual(normaliseGitRemote(input), expected)
-    })
-  }
-})
 
 describe('projectRefs()', () => {
   beforeEach(() => {

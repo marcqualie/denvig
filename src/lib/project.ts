@@ -8,6 +8,7 @@ import {
   type ProjectDependencySchema,
 } from './dependencies.ts'
 import plugins from './plugins.ts'
+import { detectProjectWorktrees, type ProjectWorktree } from './project/git.ts'
 import { projectRefs } from './project/refs.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
@@ -30,6 +31,7 @@ export class DenvigProject {
   private _slug: string
   private _id: string
   private _refs: string[]
+  private _worktreesCache: ProjectWorktree[] | null = null
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
 
@@ -78,6 +80,19 @@ export class DenvigProject {
    */
   get refs(): string[] {
     return this._refs
+  }
+
+  /**
+   * Detached git worktrees that belong to this project. The primary
+   * checkout is intentionally excluded, so this is `[]` for projects
+   * without any `git worktree add`-style sibling checkouts. Computed
+   * lazily on first access.
+   */
+  get worktrees(): ProjectWorktree[] {
+    if (this._worktreesCache === null) {
+      this._worktreesCache = detectProjectWorktrees(this._path)
+    }
+    return this._worktreesCache
   }
 
   get name(): string {

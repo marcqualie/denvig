@@ -2,6 +2,7 @@ import launchctl, { type LaunchctlListItem } from './services/launchctl.ts'
 import { ServiceManager } from './services/manager.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
+import type { ProjectWorktree } from './project/git.ts'
 import type { DenvigProject } from './project.ts'
 
 export type ServiceStatus = 'running' | 'stopped' | 'none'
@@ -12,6 +13,7 @@ export type ProjectInfo = {
   name: string
   path: string
   refs: string[]
+  worktrees: ProjectWorktree[]
   config: ProjectConfigSchema | null
   serviceStatus: ServiceStatus
 }
@@ -72,6 +74,7 @@ export const getProjectInfo = async (
     name: project.name,
     path: project.path,
     refs: project.refs,
+    worktrees: project.worktrees,
     config: hasConfig ? configWithoutSources : null,
     serviceStatus,
   }

@@ -3,9 +3,9 @@ import path from 'node:path'
 
 import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'
-import { gitPull, isWorkingTreeDirty } from '../../lib/git.ts'
 import { confirm } from '../../lib/input.ts'
 import { prettyPath } from '../../lib/path.ts'
+import { gitPull, isWorkingTreeDirty } from '../../lib/project/git.ts'
 import { isDirectory } from '../../lib/safeReadFile.ts'
 import {
   brewUpdate,

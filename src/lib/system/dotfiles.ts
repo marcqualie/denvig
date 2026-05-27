@@ -1,8 +1,12 @@
 import { homedir } from 'node:os'
 import path from 'node:path'
 
-import { getGitHubSlug, gitClone, parseGitHubRemoteUrl } from '../git.ts'
 import { prettyPath } from '../path.ts'
+import {
+  getGitHubSlug,
+  gitClone,
+  parseGitHubRemoteUrl,
+} from '../project/git.ts'
 import { isDirectory } from '../safeReadFile.ts'
 import { runDenvig } from './denvig.ts'
 
