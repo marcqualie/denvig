@@ -5,8 +5,8 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
+import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
-import { reconcileAfterCommand } from './_reconcile.ts'
 
 export const servicesStopCommand = new Command({
   name: 'services:stop',

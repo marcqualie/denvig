@@ -6,9 +6,9 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
+import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
+import { resolveServicePortForCli } from '../../lib/services/resolvePort.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
-import { reconcileAfterCommand } from './_reconcile.ts'
-import { resolveServicePortForCli } from './_resolvePort.ts'
 
 export const servicesRestartCommand = new Command({
   name: 'services:restart',

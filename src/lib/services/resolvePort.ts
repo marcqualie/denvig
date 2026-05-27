@@ -1,10 +1,7 @@
-import { confirm } from '../../lib/input.ts'
-import { type GatewayRoute, getGatewayRoute } from '../../lib/services/state.ts'
+import { confirm } from '../input.ts'
+import { type GatewayRoute, getGatewayRoute } from './state.ts'
 
-import type {
-  ServiceManager,
-  ServiceManagerProject,
-} from '../../lib/services/manager.ts'
+import type { ServiceManager, ServiceManagerProject } from './manager.ts'
 
 type Flags = {
   json?: unknown

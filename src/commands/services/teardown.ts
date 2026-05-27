@@ -1,7 +1,7 @@
 import { Command } from '../../lib/command.ts'
+import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 import { teardownGlobal, teardownProject } from '../../lib/teardown.ts'
-import { reconcileAfterCommand } from './_reconcile.ts'
 
 export const servicesTeardownCommand = new Command({
   name: 'services:teardown',
