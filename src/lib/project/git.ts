@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import {
+  type Dirent,
   readdirSync,
   readFileSync,
   realpathSync,
@@ -171,7 +172,7 @@ export const detectProjectWorktrees = (path: string): ProjectWorktree[] => {
   if (!info) return []
 
   const worktreesDir = `${info.primaryGitDir}/worktrees`
-  let entries
+  let entries: Dirent[]
   try {
     entries = readdirSync(worktreesDir, { withFileTypes: true })
   } catch {
