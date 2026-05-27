@@ -26,6 +26,10 @@ src/
 - After making big changes run `pnpm run test` to ensure all tests pass.
 - Run `bin/denvig-dev version` and verify it works to ensure your changes have not broken the CLI.
 - Update the `[Unreleased]` section of CHANGELOG.md before committing changes to git. Create this section if it's missing.
+  - Entries are a quick TL;DR for humans skimming the changelog — keep them to one short sentence each.
+  - Describe user-visible behaviour only. Do not mention file paths, function names, internal helpers, refactors, or implementation details.
+  - No multi-clause sentences explaining the "how". If you feel the urge to write "Backed by…", "via a new…", or "(eg. …)" with deep specifics, cut it.
+  - A short parenthetical example of user-facing output or a flag value is fine; anything longer belongs in the PR description, not the changelog.
 - Never amend git commits, always create new ones to avoid force pushing.
 - Never delete the log files in the `~/.denvig/logs` directory as they are live logs from general use.
 - Always run `pnpm run codegen` before committing to ensure generated files are up to date.

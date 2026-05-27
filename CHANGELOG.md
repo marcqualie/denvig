@@ -5,22 +5,16 @@
 
 ### Added
 
-- Projects now expose a list of refs identifying themselves and the git worktree they live in. Available as `project.refs` in code, `refs: string[]` on the SDK's `ProjectResponse`, and in a new `Refs:` block in `denvig info`. The `git:` ref is worktree-aware (eg. `git:github.com/marcqualie/denvig+main` for the primary checkout, `+<branch>` for detached worktrees), so sibling worktrees share a common prefix while remaining uniquely addressable.
-- `project.worktrees` getter lists every detached git worktree belonging to a project as `{ path, branch }` objects, sorted by path. The primary checkout is intentionally excluded, so the array is empty for projects without `git worktree add`-style sibling checkouts. Backed by a new `detectProjectWorktrees()` helper in `src/lib/project/git.ts` that reads `.git/worktrees/*/` directly (no `git` subprocesses). Computed lazily on first access. `denvig info` now prints a `Worktrees:` block (one entry per line as `<absolute-path> (<branch>)`) when any are present, and the same array is exposed as `worktrees: ProjectWorktree[]` on the SDK's `ProjectResponse`.
+- Projects now expose a list of refs identifying themselves and the worktree they live in, shown in a new `Refs:` block in `denvig info` and on the SDK's `ProjectResponse`
+- `denvig info` now shows a `Worktrees:` block listing detached git worktrees for the project, also exposed as `worktrees` on the SDK's `ProjectResponse`
 
 ### Changed
 
-- CLI now errors on unknown subcommands and unrecognised flags instead of silently falling back to the default subcommand. For example `denvig services listtt` or `denvig services --al` previously ran `services list`; both now exit with code 1 and a descriptive message followed by the relevant help block (root help for unknown commands, subcommand help for unknown subcommands, command help for unknown flags / missing arguments). Commands that intentionally forward extra arguments to subprocesses (`run`, `zsh __complete__`) opt in via a new `acceptsExtraArgs` option on `Command`.
-- `bin/denvig-dev` no longer passes `--cpu-prof` to node by default. Set `DEBUG=denvig:*` or `DEBUG=denvig:cpu` to opt in to CPU profiling (which writes `.cpuprofile` files into the working directory).
-- `services list` now defaults to listing services for the current project only (matching the convention of other commands). Use `--all` to list services across every project plus global services, `--global` to list only global services, or the existing `--project <slug>` to scope to a different project.
-- Upgraded `semver` from 7.7.4 to 7.8.1
-- Upgraded `@biomejs/biome` from 2.4.14 to 2.4.15
-- Upgraded `@types/node` from 25.6.0 to 25.9.1
-- Upgraded `yaml` from 2.8.4 to 2.9.0
-- Upgraded `rolldown` from 1.0.1 to 1.0.2
-- Replaced invalid `:TYPE:` predefined group in `biome.json` `organizeImports` config with `{ "type": true }` (biome 2.4.15 now errors on unknown predefined groups)
-- Migrated the build from `tsup` to `rolldown` (with `rolldown-plugin-dts` for bundled type declarations). Output layout, formats, and externalisation behaviour are unchanged; `dist/sdk.d.cts` is no longer emitted since `package.json` only references `dist/sdk.d.ts`.
-- Removed the `export default DenvigSDK` from the SDK entry point. Consumers must now use the named import (`import { DenvigSDK } from 'denvig'`) which has been the documented usage since the SDK was introduced.
+- CLI now errors on unknown subcommands and unrecognised flags instead of silently falling back to the default subcommand
+- `bin/denvig-dev` no longer enables CPU profiling by default; opt in with `DEBUG=denvig:*` or `DEBUG=denvig:cpu`
+- `services list` now defaults to the current project; use `--all` for every project plus globals, or `--global` for globals only
+- Migrated the build from `tsup` to `rolldown`
+- Removed the default export from the SDK entry point; use the named import (`import { DenvigSDK } from 'denvig'`)
 
 ## [0.6.7] - 2026-05-08
 
