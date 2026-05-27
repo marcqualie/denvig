@@ -12,6 +12,9 @@
 - `services start` and `services restart` detect when the configured port is already in use and prompt to fall back to a randomly allocated dev port (auto-allocates when non-interactive or with `--random-port`)
 - Services without a `http.port` in config now get a randomly allocated `PORT` env var when started
 - Runtime service state (allocated ports, domains, desired status) is persisted to `~/.denvig/state.json` and used by the gateway and `services list` so multiple worktrees can run services that share a config port
+- Gateway routes are now tracked in `~/.denvig/state.json` and are the source of truth for nginx configs and the `services list` URL column
+- When a worktree starts a service on a fallback port, denvig prompts to override the configured domain so the gateway points at the worktree (use `--claim-domain` / `--no-claim-domain` to skip the prompt)
+- `services list`, `services status`, and the start/restart confirmations now also show `http://localhost:<port>` when the effective port differs from the config port, giving you a direct URL even when another worktree owns the domain
 
 ### Changed
 

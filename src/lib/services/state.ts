@@ -10,16 +10,33 @@ export const ServiceStateEntrySchema = z.object({
   desiredStatus: z.enum(['running', 'stopped']).default('running'),
 })
 
+/**
+ * One mapping in the gateway routing table. `defaultService` records
+ * whether the route was registered as the natural owner of the domain
+ * (`true`, the first claim) or a worktree override (`false`, claimed via
+ * the conflict prompt).
+ */
+export const GatewayRouteSchema = z.object({
+  project: z.string(),
+  service: z.string(),
+  port: z.number().int().positive(),
+  defaultService: z.boolean().default(true),
+  secure: z.boolean().default(false),
+  desiredStatus: z.enum(['running', 'stopped']).default('running'),
+})
+
 export const DenvigStateSchema = z.object({
   services: z.record(z.string(), ServiceStateEntrySchema).default({}),
+  gatewayRoutes: z.record(z.string(), GatewayRouteSchema).default({}),
 })
 
 export type ServiceStateEntry = z.infer<typeof ServiceStateEntrySchema>
+export type GatewayRoute = z.infer<typeof GatewayRouteSchema>
 export type DenvigState = z.infer<typeof DenvigStateSchema>
 
 const stateFilePath = (): string => resolve(homedir(), '.denvig', 'state.json')
 
-const emptyState = (): DenvigState => ({ services: {} })
+const emptyState = (): DenvigState => ({ services: {}, gatewayRoutes: {} })
 
 /** Stable key used to address a service in the state file. */
 export const serviceStateKey = (
@@ -113,4 +130,58 @@ export const reservedPorts = (state: DenvigState): Set<number> => {
     }
   }
   return ports
+}
+
+/** Get the gateway route for a domain, or null when none is recorded. */
+export const getGatewayRoute = async (
+  domain: string,
+): Promise<GatewayRoute | null> => {
+  const state = await readState()
+  return state.gatewayRoutes[domain] ?? null
+}
+
+/** Write a gateway route, replacing any existing entry for the domain. */
+export const setGatewayRoute = async (
+  domain: string,
+  route: GatewayRoute,
+): Promise<void> => {
+  const state = await readState()
+  state.gatewayRoutes[domain] = route
+  await writeState(state)
+}
+
+/**
+ * Mark every route owned by a given service as stopped so the nginx
+ * regenerator skips it. The route entry is preserved so a restart can
+ * pick the same port back up.
+ */
+export const markGatewayRoutesStoppedForService = async (
+  projectId: string,
+  serviceName: string,
+): Promise<void> => {
+  const state = await readState()
+  let changed = false
+  for (const [domain, route] of Object.entries(state.gatewayRoutes)) {
+    if (route.project === projectId && route.service === serviceName) {
+      state.gatewayRoutes[domain] = { ...route, desiredStatus: 'stopped' }
+      changed = true
+    }
+  }
+  if (changed) await writeState(state)
+}
+
+/** Remove every gateway route entry owned by a given service. */
+export const removeGatewayRoutesForService = async (
+  projectId: string,
+  serviceName: string,
+): Promise<void> => {
+  const state = await readState()
+  let changed = false
+  for (const [domain, route] of Object.entries(state.gatewayRoutes)) {
+    if (route.project === projectId && route.service === serviceName) {
+      delete state.gatewayRoutes[domain]
+      changed = true
+    }
+  }
+  if (changed) await writeState(state)
 }

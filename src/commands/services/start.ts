@@ -12,7 +12,8 @@ import { resolveServicePortForCli } from './_resolvePort.ts'
 export const servicesStartCommand = new Command({
   name: 'services:start',
   description: 'Start a service',
-  usage: 'services start <name> [--worktree <branch>] [--random-port]',
+  usage:
+    'services start <name> [--worktree <branch>] [--random-port] [--claim-domain]',
   example: 'services start api',
   args: [
     {
@@ -35,6 +36,22 @@ export const servicesStartCommand = new Command({
       name: 'random-port',
       description:
         'Skip the config port and start on a randomly allocated dev port',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'claim-domain',
+      description:
+        'Override the existing gateway route so the configured domain points at this start',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'no-claim-domain',
+      description:
+        'Leave the existing gateway route untouched even when the config port is busy',
       required: false,
       type: 'boolean',
       defaultValue: false,
@@ -81,6 +98,7 @@ export const servicesStartCommand = new Command({
       manager,
       serviceName,
       flags,
+      targetProject,
     )
     if (portResolution === null) {
       return { success: false, message: 'Port resolution aborted.' }
@@ -93,6 +111,7 @@ export const servicesStartCommand = new Command({
     const result = await manager.startService(serviceName, {
       port: portResolution.port,
       portResolved: true,
+      claimDomain: portResolution.claimDomain ?? undefined,
     })
 
     if (!result.success) {
@@ -132,6 +151,14 @@ export const servicesStartCommand = new Command({
         console.log(
           `✓ ${projectPrefix}${serviceName} started successfully${urlInfo}`,
         )
+        const showLocal =
+          response.localUrl &&
+          response.localUrl !== response.url &&
+          (response.configPort === null ||
+            response.configPort !== response.port)
+        if (showLocal) {
+          console.log(`  ↳ direct: ${response.localUrl}`)
+        }
       }
       return { success: true, message: 'Service started successfully.' }
     }

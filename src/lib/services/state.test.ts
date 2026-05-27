@@ -5,11 +5,15 @@ import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import {
+  getGatewayRoute,
   getServiceState,
+  markGatewayRoutesStoppedForService,
   markServiceStopped,
   readState,
+  removeGatewayRoutesForService,
   removeServiceState,
   reservedPorts,
+  setGatewayRoute,
   updateServiceState,
 } from './state.ts'
 
@@ -30,7 +34,7 @@ describe('service state', () => {
 
   it('returns an empty state when the file does not exist', async () => {
     const state = await readState()
-    assert.deepStrictEqual(state, { services: {} })
+    assert.deepStrictEqual(state, { services: {}, gatewayRoutes: {} })
   })
 
   it('writes and reads a service entry', async () => {
@@ -79,7 +83,7 @@ describe('service state', () => {
     await fs.mkdir(`${tmpHome}/.denvig`, { recursive: true })
     await fs.writeFile(`${tmpHome}/.denvig/state.json`, 'not json', 'utf-8')
     const state = await readState()
-    assert.deepStrictEqual(state, { services: {} })
+    assert.deepStrictEqual(state, { services: {}, gatewayRoutes: {} })
   })
 
   it('only treats running entries as reserved ports', () => {
@@ -98,8 +102,72 @@ describe('service state', () => {
           desiredStatus: 'stopped',
         },
       },
+      gatewayRoutes: {},
     })
     assert.deepStrictEqual([...ports], [8001])
+  })
+
+  it('sets and reads a gateway route', async () => {
+    await setGatewayRoute('api.test', {
+      project: 'abc',
+      service: 'api',
+      port: 8000,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    const route = await getGatewayRoute('api.test')
+    assert.strictEqual(route?.project, 'abc')
+    assert.strictEqual(route?.port, 8000)
+    assert.strictEqual(route?.defaultService, true)
+  })
+
+  it('marks all routes for a service stopped', async () => {
+    await setGatewayRoute('api.test', {
+      project: 'abc',
+      service: 'api',
+      port: 8000,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    await setGatewayRoute('api2.test', {
+      project: 'abc',
+      service: 'api',
+      port: 8000,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    await markGatewayRoutesStoppedForService('abc', 'api')
+    const a = await getGatewayRoute('api.test')
+    const b = await getGatewayRoute('api2.test')
+    assert.strictEqual(a?.desiredStatus, 'stopped')
+    assert.strictEqual(b?.desiredStatus, 'stopped')
+    assert.strictEqual(a?.port, 8000)
+  })
+
+  it('removes all routes for a service', async () => {
+    await setGatewayRoute('api.test', {
+      project: 'abc',
+      service: 'api',
+      port: 8000,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    await setGatewayRoute('shared.test', {
+      project: 'xyz',
+      service: 'other',
+      port: 8001,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    await removeGatewayRoutesForService('abc', 'api')
+    assert.strictEqual(await getGatewayRoute('api.test'), null)
+    const survivor = await getGatewayRoute('shared.test')
+    assert.strictEqual(survivor?.service, 'other')
   })
 
   it('persists state through the filesystem', async () => {

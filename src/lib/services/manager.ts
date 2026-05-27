@@ -18,9 +18,13 @@ import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
 import { allocateRandomPort, isPortInUse } from './ports.ts'
 import {
+  getGatewayRoute,
   getServiceState,
+  markGatewayRoutesStoppedForService,
   markServiceStopped,
+  removeGatewayRoutesForService,
   removeServiceState,
+  setGatewayRoute,
   updateServiceState,
 } from './state.ts'
 
@@ -258,10 +262,20 @@ export class ServiceManager {
    * @param options.port - Pre-resolved port to use for this service. When
    *   omitted, the manager resolves the port itself, auto-allocating a
    *   random port if the config port is busy.
+   * @param options.claimDomain - When the service's configured domain is
+   *   already claimed by a different project, this flag controls whether
+   *   this start should replace the route as an override (`true`) or
+   *   leave the existing route alone (`false`). When undefined and the
+   *   domain has no existing owner, the route is registered as the
+   *   natural owner (`defaultService: true`).
    */
   async startService(
     name: string,
-    options?: { port?: number; portResolved?: boolean },
+    options?: {
+      port?: number
+      portResolved?: boolean
+      claimDomain?: boolean
+    },
   ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
     if (!config) {
@@ -315,6 +329,48 @@ export class ServiceManager {
       domains,
       desiredStatus: 'running',
     })
+
+    // Manage gateway routes when the service has both a port and domain(s).
+    if (effectivePort !== undefined && domains.length > 0) {
+      const secure = config.http?.secure ?? false
+      for (const domain of domains) {
+        const existing = await getGatewayRoute(domain)
+        const isOwnedByThisService =
+          existing?.project === this.project.id && existing?.service === name
+        // A stopped route held by another service is effectively vacant —
+        // claim it back as a default mapping rather than waiting for the
+        // previous owner to clean up.
+        const previousOwnerInactive =
+          existing !== null &&
+          !isOwnedByThisService &&
+          existing.desiredStatus === 'stopped'
+
+        if (!existing || isOwnedByThisService || previousOwnerInactive) {
+          await setGatewayRoute(domain, {
+            project: this.project.id,
+            service: name,
+            port: effectivePort,
+            secure,
+            defaultService: isOwnedByThisService
+              ? (existing?.defaultService ?? true)
+              : true,
+            desiredStatus: 'running',
+          })
+        } else if (options?.claimDomain === true) {
+          await setGatewayRoute(domain, {
+            project: this.project.id,
+            service: name,
+            port: effectivePort,
+            secure,
+            defaultService: false,
+            desiredStatus: 'running',
+          })
+        }
+        // Otherwise (existing route owned by an active service in another
+        // project, no explicit claim): leave it untouched — the service
+        // runs but isn't routed.
+      }
+    }
 
     // Ensure denvig directories exist
     await this.ensureDenvigDirectories()
@@ -447,6 +503,7 @@ export class ServiceManager {
 
     // For startOnBoot services, use stop() to keep them registered for next boot
     // For regular services, use bootout() to fully unload them
+    let shouldReconfigureGateway = false
     if (config.startOnBoot) {
       const result = await launchctl.stop(label)
       if (!result.success) {
@@ -468,8 +525,7 @@ export class ServiceManager {
       }
       // Disable so launchd won't auto-start on login (plist stays for next manual start)
       await launchctl.disable(label)
-      // Reconfigure gateway to remove this service's nginx config
-      await this.reconfigureGateway()
+      shouldReconfigureGateway = true
     }
 
     // Append Service Stopped entry to current log (via latest symlink)
@@ -486,8 +542,16 @@ export class ServiceManager {
 
     // Mark the service stopped in state so its port becomes available to
     // other services, while keeping the allocation around so a restart can
-    // reclaim the same port if it's still free.
+    // reclaim the same port if it's still free. Any gateway routes claimed
+    // by this service are also marked stopped so nginx stops proxying them.
     await markServiceStopped(this.project.id, name)
+    await markGatewayRoutesStoppedForService(this.project.id, name)
+
+    // Reconfigure the gateway after the routes are marked stopped so the
+    // regenerated nginx configs no longer include this service.
+    if (shouldReconfigureGateway) {
+      await this.reconfigureGateway()
+    }
 
     return {
       name,
@@ -501,7 +565,11 @@ export class ServiceManager {
    */
   async restartService(
     name: string,
-    options?: { port?: number; portResolved?: boolean },
+    options?: {
+      port?: number
+      portResolved?: boolean
+      claimDomain?: boolean
+    },
   ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
     if (!config) {
@@ -699,11 +767,15 @@ export class ServiceManager {
       )
     }
 
-    // Remove state entries for services that were successfully torn down.
+    // Remove state and gateway-route entries for services that were
+    // successfully torn down.
     await Promise.all(
-      successfullyRemovedLabels.map((label) => {
+      successfullyRemovedLabels.flatMap((label) => {
         const serviceName = label.replace(labelPrefix, '')
-        return removeServiceState(this.project.id, serviceName)
+        return [
+          removeServiceState(this.project.id, serviceName),
+          removeGatewayRoutesForService(this.project.id, serviceName),
+        ]
       }),
     )
 
@@ -890,29 +962,37 @@ export class ServiceManager {
   }
 
   /**
-   * Get the URL where a service can be accessed. Uses the live port from
-   * state when available so commands like `services list` reflect the
-   * actual allocated port (which can differ from the config port when
-   * dynamically allocated).
+   * Get the canonical URL where a service can be accessed. Returns the
+   * domain URL only when this service currently owns the gateway route for
+   * its configured domain; otherwise (or when no domain is configured)
+   * falls back to a direct `http://localhost:<port>` URL.
    */
   async getServiceUrl(name: string): Promise<string | null> {
     const config = this.getServiceConfig(name)
-    if (!config) {
-      return null
-    }
+    if (!config) return null
 
     if (config.http?.domain) {
-      const protocol = config.http.secure ? 'https' : 'http'
-      return `${protocol}://${config.http.domain}`
+      const route = await getGatewayRoute(config.http.domain)
+      const ownsRoute =
+        route?.project === this.project.id &&
+        route?.service === name &&
+        route?.desiredStatus === 'running'
+      if (ownsRoute) {
+        const protocol = config.http.secure ? 'https' : 'http'
+        return `${protocol}://${config.http.domain}`
+      }
     }
 
-    const state = await getServiceState(this.project.id, name)
-    const port = state?.port ?? config.http?.port
-    if (port !== undefined) {
-      return `http://localhost:${port}`
-    }
+    return await this.getServiceLocalUrl(name)
+  }
 
-    return null
+  /**
+   * Get the direct localhost URL for a service (`http://localhost:<port>`),
+   * or null if there's no effective port yet.
+   */
+  async getServiceLocalUrl(name: string): Promise<string | null> {
+    const port = await this.getEffectivePort(name)
+    return port !== undefined ? `http://localhost:${port}` : null
   }
 
   /**
@@ -1004,6 +1084,7 @@ export class ServiceManager {
       }
     }
 
+    const effectivePort = await this.getEffectivePort(name)
     const response: ServiceResponse = {
       name,
       project: {
@@ -1015,6 +1096,9 @@ export class ServiceManager {
       status,
       pid,
       url: await this.getServiceUrl(name),
+      localUrl: await this.getServiceLocalUrl(name),
+      port: effectivePort ?? null,
+      configPort: config.http?.port ?? null,
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name),

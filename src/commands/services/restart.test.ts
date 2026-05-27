@@ -12,7 +12,7 @@ describe('servicesRestartCommand', () => {
   it('should have correct usage', () => {
     ok(
       servicesRestartCommand.usage ===
-        'services restart <name> [--worktree <branch>] [--random-port]',
+        'services restart <name> [--worktree <branch>] [--random-port] [--claim-domain]',
     )
   })
 })
