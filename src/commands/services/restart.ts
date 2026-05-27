@@ -7,11 +7,12 @@ import {
   getServiceContext,
 } from '../../lib/services/identifier.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveServicePortForCli } from './_resolvePort.ts'
 
 export const servicesRestartCommand = new Command({
   name: 'services:restart',
   description: 'Restart a service',
-  usage: 'services restart <name> [--worktree <branch>]',
+  usage: 'services restart <name> [--worktree <branch>] [--random-port]',
   example: 'services restart api',
   args: [
     {
@@ -29,6 +30,14 @@ export const servicesRestartCommand = new Command({
         'Target the service in a sibling git worktree by branch name (use "main" for the primary checkout)',
       required: false,
       type: 'string',
+    },
+    {
+      name: 'random-port',
+      description:
+        'Skip the config port and start on a randomly allocated dev port',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
     },
   ],
   completions: ({ project }) => {
@@ -68,11 +77,23 @@ export const servicesRestartCommand = new Command({
       })
     }
 
+    const portResolution = await resolveServicePortForCli(
+      manager,
+      serviceName,
+      flags,
+    )
+    if (portResolution === null) {
+      return { success: false, message: 'Port resolution aborted.' }
+    }
+
     if (!flags.json) {
       console.log(`Restarting ${projectPrefix}${serviceName}...`)
     }
 
-    const result = await manager.restartService(serviceName)
+    const result = await manager.restartService(serviceName, {
+      port: portResolution.port,
+      portResolved: true,
+    })
 
     if (!result.success) {
       if (flags.json) {

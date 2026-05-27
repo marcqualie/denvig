@@ -9,6 +9,9 @@
 - `denvig info` now shows a `Worktrees:` block listing detached git worktrees for the project, also exposed as `worktrees` on the SDK's `ProjectResponse`
 - `--worktree <branch>` flag on every `services` subcommand to target a sibling git worktree without switching directories (use `--worktree main` for the primary checkout)
 - Running `denvig` from inside a detached git worktree now defaults to that worktree's services instead of the primary checkout's
+- `services start` and `services restart` detect when the configured port is already in use and prompt to fall back to a randomly allocated dev port (auto-allocates when non-interactive or with `--random-port`)
+- Services without a `http.port` in config now get a randomly allocated `PORT` env var when started
+- Runtime service state (allocated ports, domains, desired status) is persisted to `~/.denvig/state.json` and used by the gateway and `services list` so multiple worktrees can run services that share a config port
 
 ### Changed
 

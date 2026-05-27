@@ -16,6 +16,13 @@ import { configureGateway } from '../gateway/configure.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
+import { allocateRandomPort, isPortInUse } from './ports.ts'
+import {
+  getServiceState,
+  markServiceStopped,
+  removeServiceState,
+  updateServiceState,
+} from './state.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
 
@@ -77,9 +84,14 @@ export class ServiceManager {
    * Build environment variables for a service.
    * This loads env files and merges with explicit env config.
    * All env files are optional - missing files are silently skipped.
+   *
+   * @param options.port - Effective port for the service. When provided,
+   *   overrides any port defined in config and is exported as `PORT` in
+   *   the service environment.
    */
   async buildServiceEnvironment(
     name: string,
+    options?: { port?: number },
   ): Promise<
     | { success: true; env: Record<string, string> }
     | { success: false; message: string }
@@ -132,27 +144,125 @@ export class ServiceManager {
       Object.assign(environmentVariables, config.env)
     }
 
-    // Add PORT environment variable if port is configured
-    if (config.http?.port !== undefined) {
-      environmentVariables.PORT = config.http.port.toString()
+    // Add PORT environment variable. Prefer the explicit override (used
+    // when a port has been dynamically allocated), then fall back to the
+    // port declared in the service config.
+    const effectivePort = options?.port ?? config.http?.port
+    if (effectivePort !== undefined) {
+      environmentVariables.PORT = effectivePort.toString()
     }
 
     return { success: true, env: environmentVariables }
   }
 
   /**
-   * Start a specific service.
+   * Decide which port to run a service on.
+   *
+   * Resolution order:
+   * 1. If `forceRandom`, always allocate a fresh random port (preferring the
+   *    previously-allocated one when free).
+   * 2. If state already records a port for this service, reuse it. State is
+   *    authoritative once allocated so restarts stay on the same port and
+   *    don't re-prompt about the config port being busy. Run
+   *    `services teardown` to reset.
+   * 3. Otherwise try the config port — falling back to a random port and
+   *    flagging `conflict: true` when it's already in use.
+   * 4. Otherwise (no config port, no state) allocate a random port.
    */
-  async startService(name: string): Promise<ServiceResult> {
-    const envResult = await this.buildServiceEnvironment(name)
-    if (!envResult.success) {
+  async resolveServicePort(
+    name: string,
+    options?: { forceRandom?: boolean },
+  ): Promise<
+    | {
+        success: true
+        port: number | undefined
+        source: 'config' | 'allocated' | 'state' | 'none'
+        conflict: boolean
+        configPort?: number
+      }
+    | { success: false; message: string }
+  > {
+    const config = this.getServiceConfig(name)
+    if (!config) {
       return {
-        name,
         success: false,
-        message: envResult.message,
+        message: `Service "${name}" not found in configuration`,
       }
     }
 
+    const configPort = config.http?.port
+    const previous = await getServiceState(this.project.id, name)
+
+    if (options?.forceRandom) {
+      const allocated = await allocateRandomPort({
+        preferredPort: previous?.port,
+      })
+      return {
+        success: true,
+        port: allocated ?? undefined,
+        source: allocated === null ? 'none' : 'allocated',
+        conflict: false,
+        configPort,
+      }
+    }
+
+    // Reuse the previously-allocated port from state. On restart the same
+    // port is still bound by our service mid-bootout; on a fresh start
+    // after a stop, this keeps the port sticky.
+    if (previous?.port !== undefined) {
+      return {
+        success: true,
+        port: previous.port,
+        source: 'state',
+        conflict: false,
+        configPort,
+      }
+    }
+
+    if (configPort !== undefined) {
+      const inUse = await isPortInUse(configPort)
+      if (!inUse) {
+        return {
+          success: true,
+          port: configPort,
+          source: 'config',
+          conflict: false,
+          configPort,
+        }
+      }
+      // Allocated fallback path used when the caller resolves the conflict.
+      const fallback = await allocateRandomPort()
+      return {
+        success: true,
+        port: fallback ?? undefined,
+        source: fallback === null ? 'none' : 'allocated',
+        conflict: true,
+        configPort,
+      }
+    }
+
+    // No config port and no state entry: pick any free port.
+    const allocated = await allocateRandomPort()
+    return {
+      success: true,
+      port: allocated ?? undefined,
+      source: allocated === null ? 'none' : 'allocated',
+      conflict: false,
+      configPort,
+    }
+  }
+
+  /**
+   * Start a specific service.
+   *
+   * @param options.port - Pre-resolved port to use for this service. When
+   *   omitted, the manager resolves the port itself, auto-allocating a
+   *   random port if the config port is busy.
+   */
+  async startService(
+    name: string,
+    options?: { port?: number; portResolved?: boolean },
+  ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
     if (!config) {
       return {
@@ -161,8 +271,50 @@ export class ServiceManager {
         message: `Service "${name}" not found in configuration`,
       }
     }
+
+    // Resolve effective port unless the caller has already done so. The
+    // default behaviour silently falls back to a random port on conflict,
+    // matching the user-chosen non-interactive default.
+    let effectivePort = options?.port
+    if (!options?.portResolved) {
+      const resolved = await this.resolveServicePort(name)
+      if (!resolved.success) {
+        return { name, success: false, message: resolved.message }
+      }
+      if (resolved.conflict && resolved.source === 'none') {
+        return {
+          name,
+          success: false,
+          message: `Port ${resolved.configPort} is in use and no free port could be allocated`,
+        }
+      }
+      effectivePort = resolved.port
+    }
+
+    const envResult = await this.buildServiceEnvironment(name, {
+      port: effectivePort,
+    })
+    if (!envResult.success) {
+      return {
+        name,
+        success: false,
+        message: envResult.message,
+      }
+    }
     const label = this.getServiceLabel(name)
     const isBootstrapped = await this.isServiceBootstrapped(name)
+
+    // Record the desired state and chosen port before launching so other
+    // commands (gateway, list) immediately see the allocation.
+    const domains = config.http?.domain
+      ? [config.http.domain, ...(config.http.cnames ?? [])]
+      : []
+    await updateServiceState(this.project.id, name, {
+      cwd: this.resolveServiceCwd(config),
+      port: effectivePort,
+      domains,
+      desiredStatus: 'running',
+    })
 
     // Ensure denvig directories exist
     await this.ensureDenvigDirectories()
@@ -332,6 +484,11 @@ export class ServiceManager {
       // ignore logging errors
     }
 
+    // Mark the service stopped in state so its port becomes available to
+    // other services, while keeping the allocation around so a restart can
+    // reclaim the same port if it's still free.
+    await markServiceStopped(this.project.id, name)
+
     return {
       name,
       success: true,
@@ -342,7 +499,10 @@ export class ServiceManager {
   /**
    * Restart a specific service.
    */
-  async restartService(name: string): Promise<ServiceResult> {
+  async restartService(
+    name: string,
+    options?: { port?: number; portResolved?: boolean },
+  ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
     if (!config) {
       return {
@@ -363,7 +523,7 @@ export class ServiceManager {
     }
 
     // Start the service
-    return await this.startService(name)
+    return await this.startService(name, options)
   }
 
   /**
@@ -538,6 +698,14 @@ export class ServiceManager {
         ]),
       )
     }
+
+    // Remove state entries for services that were successfully torn down.
+    await Promise.all(
+      successfullyRemovedLabels.map((label) => {
+        const serviceName = label.replace(labelPrefix, '')
+        return removeServiceState(this.project.id, serviceName)
+      }),
+    )
 
     // Reconfigure gateway to remove this project's nginx configs
     await this.reconfigureGateway()
@@ -722,9 +890,12 @@ export class ServiceManager {
   }
 
   /**
-   * Get the URL where a service can be accessed.
+   * Get the URL where a service can be accessed. Uses the live port from
+   * state when available so commands like `services list` reflect the
+   * actual allocated port (which can differ from the config port when
+   * dynamically allocated).
    */
-  getServiceUrl(name: string): string | null {
+  async getServiceUrl(name: string): Promise<string | null> {
     const config = this.getServiceConfig(name)
     if (!config) {
       return null
@@ -735,11 +906,23 @@ export class ServiceManager {
       return `${protocol}://${config.http.domain}`
     }
 
-    if (config.http?.port) {
-      return `http://localhost:${config.http.port}`
+    const state = await getServiceState(this.project.id, name)
+    const port = state?.port ?? config.http?.port
+    if (port !== undefined) {
+      return `http://localhost:${port}`
     }
 
     return null
+  }
+
+  /**
+   * Get the effective runtime port for a service, considering state-tracked
+   * allocations first and falling back to the config port.
+   */
+  async getEffectivePort(name: string): Promise<number | undefined> {
+    const state = await getServiceState(this.project.id, name)
+    if (state?.port !== undefined) return state.port
+    return this.getServiceConfig(name)?.http?.port
   }
 
   /**
@@ -831,7 +1014,7 @@ export class ServiceManager {
       },
       status,
       pid,
-      url: this.getServiceUrl(name),
+      url: await this.getServiceUrl(name),
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name),

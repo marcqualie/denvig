@@ -12,7 +12,7 @@ describe('servicesStartCommand', () => {
   it('should have correct usage', () => {
     ok(
       servicesStartCommand.usage ===
-        'services start <name> [--worktree <branch>]',
+        'services start <name> [--worktree <branch>] [--random-port]',
     )
   })
 })

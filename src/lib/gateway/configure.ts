@@ -2,6 +2,7 @@ import { getGlobalConfig } from '../config.ts'
 import { DenvigProject } from '../project.ts'
 import { listProjects } from '../projects.ts'
 import { createGlobalProject } from '../services/global.ts'
+import { getServiceState } from '../services/state.ts'
 import { findCertForDomain, resolveSslPaths } from './certs.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
@@ -46,13 +47,21 @@ async function configureProjectServices(
   const projectServices = project.config.services || {}
 
   for (const [name, config] of Object.entries(projectServices)) {
-    if (!config.http?.domain || !config.http?.port) {
+    if (!config.http?.domain) {
+      continue
+    }
+
+    // Prefer the runtime-allocated port from state when present so the
+    // nginx config follows dynamic allocations (e.g. when the config port
+    // was busy and we fell back to a random one).
+    const state = await getServiceState(project.id, name)
+    const port = state?.port ?? config.http?.port
+    if (port === undefined) {
       continue
     }
 
     const domain = config.http.domain
     const cnames = config.http.cnames || []
-    const port = config.http.port
     const secure = config.http.secure ?? false
 
     // Resolve SSL paths by finding matching certs
