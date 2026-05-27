@@ -316,7 +316,16 @@ export class ServiceManager {
       }
     }
     const label = this.getServiceLabel(name)
-    const isBootstrapped = await this.isServiceBootstrapped(name)
+    const printInfo = await launchctl.print(label)
+    const isBootstrapped = printInfo !== null
+    // "Live" means the service has an active PID. A bootstrapped service
+    // can still be dead (crashed and not yet restarted, exited cleanly,
+    // etc.) — in which case we want to bootout and bootstrap again rather
+    // than declaring it "already running".
+    const isLive =
+      printInfo !== null &&
+      printInfo.pid !== undefined &&
+      printInfo.state === 'running'
 
     // Record the desired state and a snapshot of the config before launching
     // so the gateway, list output and the reconciler all see a single
@@ -458,8 +467,10 @@ export class ServiceManager {
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
       }
-    } else if (plistChanged) {
-      // Plist changed — bootout the old process and bootstrap the new plist.
+    } else if (plistChanged || !isLive) {
+      // Plist changed, or the service is bootstrapped but no longer running
+      // (e.g. it crashed and isn't being restarted). Bootout and bootstrap
+      // again to give launchd a fresh start.
       const bootoutResult = await launchctl.bootout(label)
       if (!bootoutResult.success) {
         return {
