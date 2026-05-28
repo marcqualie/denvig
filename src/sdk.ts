@@ -71,6 +71,8 @@ export type DenvigSDKOptions = {
   client: string
 }
 
+export type ServiceRuntimeStatus = 'running' | 'stopped' | 'error'
+
 export type ListServicesOptions = {
   /**
    * Filter to a specific project slug (e.g., `github:marcqualie/denvig`).
@@ -82,6 +84,11 @@ export type ListServicesOptions = {
    * Use `main` to target the primary checkout. Requires `project`.
    */
   worktree?: string
+  /**
+   * Filter by runtime status. Pass a single status or an array to match any
+   * of multiple (e.g., `['stopped', 'error']` for everything that isn't running).
+   */
+  status?: ServiceRuntimeStatus | ServiceRuntimeStatus[]
 }
 
 export type ServiceOperationOptions = {
@@ -282,12 +289,17 @@ export class DenvigSDK {
           'services.list: `worktree` requires `project` to be specified.',
         )
       }
-      const flags = options?.project
+      const status = Array.isArray(options?.status)
+        ? options.status.join(',')
+        : options?.status
+      const scopeFlags = options?.project
         ? this.buildFlags({
             project: options.project,
             worktree: options.worktree,
           })
         : '--all'
+      const statusFlags = status ? this.buildFlags({ status }) : ''
+      const flags = [scopeFlags, statusFlags].filter(Boolean).join(' ')
       return this.run<ServiceResponse[]>(`services ${flags}`.trim())
     },
 

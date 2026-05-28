@@ -24,7 +24,8 @@ const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
 export const servicesListCommand = new Command({
   name: 'services:list',
   description: 'List services for the current project',
-  usage: 'services list [--all] [--global] [--worktree <branch>]',
+  usage:
+    'services list [--all] [--global] [--worktree <branch>] [--status <status>]',
   example: 'services list',
   args: [],
   flags: [
@@ -49,6 +50,13 @@ export const servicesListCommand = new Command({
       required: false,
       type: 'string',
     },
+    {
+      name: 'status',
+      description:
+        'Filter by runtime status. Accepts a single value or a comma-separated list (running, stopped, error).',
+      required: false,
+      type: 'string',
+    },
   ],
   completions: () => {
     return []
@@ -58,6 +66,24 @@ export const servicesListCommand = new Command({
     const globalOnly = flags.global as boolean
     const worktreeFlag =
       typeof flags.worktree === 'string' ? flags.worktree : null
+    const statusFlag = typeof flags.status === 'string' ? flags.status : null
+
+    const validStatuses = new Set(['running', 'stopped', 'error'])
+    const statusFilter = statusFlag
+      ? statusFlag.split(',').map((s) => s.trim().toLowerCase())
+      : null
+    if (statusFilter) {
+      const invalid = statusFilter.filter((s) => !validStatuses.has(s))
+      if (invalid.length > 0) {
+        const message = `Invalid --status value(s): ${invalid.join(', ')}. Allowed: running, stopped, error.`
+        if (flags.json) {
+          console.log(JSON.stringify({ success: false, message }))
+        } else {
+          console.error(message)
+        }
+        return { success: false, message }
+      }
+    }
 
     if ((all || globalOnly) && worktreeFlag !== null) {
       const message = '--worktree cannot be combined with --all or --global.'
@@ -139,23 +165,27 @@ export const servicesListCommand = new Command({
       await collectFromManager(new ServiceManager(project), allServices)
     }
 
-    if (allServices.length === 0) {
+    const filteredServices = statusFilter
+      ? allServices.filter((s) => statusFilter.includes(s.status))
+      : allServices
+
+    if (filteredServices.length === 0) {
       if (flags.json) {
         console.log(JSON.stringify([]))
+      } else if (statusFilter) {
+        console.log(`No services matching status: ${statusFilter.join(', ')}.`)
+      } else if (globalOnly) {
+        console.log('No global services configured.')
+      } else if (all) {
+        console.log('No services configured across any project.')
       } else {
-        if (globalOnly) {
-          console.log('No global services configured.')
-        } else if (all) {
-          console.log('No services configured across any project.')
-        } else {
-          console.log(`No services configured for ${project.slug}.`)
-        }
+        console.log(`No services configured for ${project.slug}.`)
       }
       return { success: true, message: 'No services configured.' }
     }
 
     const currentProjectSlug = project.slug
-    const sortedServices = allServices.sort((a, b) => {
+    const sortedServices = filteredServices.sort((a, b) => {
       const aIsCurrent = a.project.slug === currentProjectSlug
       const bIsCurrent = b.project.slug === currentProjectSlug
 
@@ -207,17 +237,21 @@ export const servicesListCommand = new Command({
     }
 
     console.log('')
+    const shown = filteredServices.length
+    const statusSuffix = statusFilter
+      ? ` (filtered by status: ${statusFilter.join(', ')})`
+      : ''
     if (all) {
       console.log(
-        `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured across ${projectCount} project${projectCount === 1 ? '' : 's'}`,
+        `${shown} service${shown === 1 ? '' : 's'} configured across ${projectCount} project${projectCount === 1 ? '' : 's'}${statusSuffix}`,
       )
     } else if (globalOnly) {
       console.log(
-        `${allServices.length} global service${allServices.length === 1 ? '' : 's'} configured`,
+        `${shown} global service${shown === 1 ? '' : 's'} configured${statusSuffix}`,
       )
     } else {
       console.log(
-        `${allServices.length} service${allServices.length === 1 ? '' : 's'} configured for ${project.slug}`,
+        `${shown} service${shown === 1 ? '' : 's'} configured for ${project.slug}${statusSuffix}`,
       )
     }
 
