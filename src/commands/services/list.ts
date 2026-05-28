@@ -168,6 +168,14 @@ export const servicesListCommand = new Command({
     }
 
     const showProjectColumn = all || globalOnly
+    const formatUrlCell = (s: ServiceResponse): string => {
+      if (!s.url) return '-'
+      const showLocal =
+        s.localUrl &&
+        s.localUrl !== s.url &&
+        (s.configPort === null || s.configPort !== s.port)
+      return showLocal ? `${s.url}  ${s.localUrl}` : s.url
+    }
     const lines = formatTable({
       columns: [
         {
@@ -183,7 +191,7 @@ export const servicesListCommand = new Command({
             ]
           : []),
         { header: 'Name', accessor: (s: ServiceResponse) => s.name },
-        { header: 'URL', accessor: (s: ServiceResponse) => s.url || '-' },
+        { header: 'URL', accessor: formatUrlCell },
       ],
       data: sortedServices,
     })

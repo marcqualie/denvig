@@ -5,6 +5,7 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
+import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 
 export const servicesStopCommand = new Command({
@@ -86,6 +87,8 @@ export const servicesStopCommand = new Command({
 
     // Get service response after stopping
     const response = await manager.getServiceResponse(serviceName)
+
+    await reconcileAfterCommand({ json: !!flags.json })
 
     if (flags.json) {
       console.log(JSON.stringify(response))

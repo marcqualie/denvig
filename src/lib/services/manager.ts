@@ -10,12 +10,25 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
-import { resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
 
+import { findCertForDomain, resolveSslPaths } from '../gateway/certs.ts'
 import { configureGateway } from '../gateway/configure.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
+import { allocateRandomPort, isPortInUse } from './ports.ts'
+import {
+  getGatewayRoute,
+  getServiceState,
+  markGatewayRoutesStoppedForService,
+  markServiceStopped,
+  removeGatewayRoutesForService,
+  removeServiceState,
+  setCert,
+  setGatewayRoute,
+  updateServiceState,
+} from './state.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
 
@@ -77,9 +90,14 @@ export class ServiceManager {
    * Build environment variables for a service.
    * This loads env files and merges with explicit env config.
    * All env files are optional - missing files are silently skipped.
+   *
+   * @param options.port - Effective port for the service. When provided,
+   *   overrides any port defined in config and is exported as `PORT` in
+   *   the service environment.
    */
   async buildServiceEnvironment(
     name: string,
+    options?: { port?: number },
   ): Promise<
     | { success: true; env: Record<string, string> }
     | { success: false; message: string }
@@ -132,27 +150,135 @@ export class ServiceManager {
       Object.assign(environmentVariables, config.env)
     }
 
-    // Add PORT environment variable if port is configured
-    if (config.http?.port !== undefined) {
-      environmentVariables.PORT = config.http.port.toString()
+    // Add PORT environment variable. Prefer the explicit override (used
+    // when a port has been dynamically allocated), then fall back to the
+    // port declared in the service config.
+    const effectivePort = options?.port ?? config.http?.port
+    if (effectivePort !== undefined) {
+      environmentVariables.PORT = effectivePort.toString()
     }
 
     return { success: true, env: environmentVariables }
   }
 
   /**
-   * Start a specific service.
+   * Decide which port to run a service on.
+   *
+   * Resolution order:
+   * 1. If `forceRandom`, always allocate a fresh random port (preferring the
+   *    previously-allocated one when free).
+   * 2. If state already records a port for this service, reuse it. State is
+   *    authoritative once allocated so restarts stay on the same port and
+   *    don't re-prompt about the config port being busy. Run
+   *    `services teardown` to reset.
+   * 3. Otherwise try the config port — falling back to a random port and
+   *    flagging `conflict: true` when it's already in use.
+   * 4. Otherwise (no config port, no state) allocate a random port.
    */
-  async startService(name: string): Promise<ServiceResult> {
-    const envResult = await this.buildServiceEnvironment(name)
-    if (!envResult.success) {
+  async resolveServicePort(
+    name: string,
+    options?: { forceRandom?: boolean },
+  ): Promise<
+    | {
+        success: true
+        port: number | undefined
+        source: 'config' | 'allocated' | 'state' | 'none'
+        conflict: boolean
+        configPort?: number
+      }
+    | { success: false; message: string }
+  > {
+    const config = this.getServiceConfig(name)
+    if (!config) {
       return {
-        name,
         success: false,
-        message: envResult.message,
+        message: `Service "${name}" not found in configuration`,
       }
     }
 
+    const configPort = config.http?.port
+    const previous = await getServiceState(this.project.id, name)
+
+    if (options?.forceRandom) {
+      const allocated = await allocateRandomPort({
+        preferredPort: previous?.port,
+      })
+      return {
+        success: true,
+        port: allocated ?? undefined,
+        source: allocated === null ? 'none' : 'allocated',
+        conflict: false,
+        configPort,
+      }
+    }
+
+    // Reuse the previously-allocated port from state. On restart the same
+    // port is still bound by our service mid-bootout; on a fresh start
+    // after a stop, this keeps the port sticky.
+    if (previous?.port !== undefined) {
+      return {
+        success: true,
+        port: previous.port,
+        source: 'state',
+        conflict: false,
+        configPort,
+      }
+    }
+
+    if (configPort !== undefined) {
+      const inUse = await isPortInUse(configPort)
+      if (!inUse) {
+        return {
+          success: true,
+          port: configPort,
+          source: 'config',
+          conflict: false,
+          configPort,
+        }
+      }
+      // Allocated fallback path used when the caller resolves the conflict.
+      const fallback = await allocateRandomPort()
+      return {
+        success: true,
+        port: fallback ?? undefined,
+        source: fallback === null ? 'none' : 'allocated',
+        conflict: true,
+        configPort,
+      }
+    }
+
+    // No config port and no state entry: pick any free port.
+    const allocated = await allocateRandomPort()
+    return {
+      success: true,
+      port: allocated ?? undefined,
+      source: allocated === null ? 'none' : 'allocated',
+      conflict: false,
+      configPort,
+    }
+  }
+
+  /**
+   * Start a specific service.
+   *
+   * @param options.port - Pre-resolved port to use for this service. When
+   *   omitted, the manager resolves the port itself, auto-allocating a
+   *   random port if the config port is busy.
+   * @param options.claimDomain - When the service's configured domain is
+   *   already claimed by a different project, this flag controls whether
+   *   this start should replace the route as an override (`true`) or
+   *   leave the existing route alone (`false`). When undefined and the
+   *   domain has no existing owner, the route is registered as the
+   *   natural owner (`defaultService: true`).
+   */
+  async startService(
+    name: string,
+    options?: {
+      port?: number
+      portResolved?: boolean
+      claimDomain?: boolean
+    },
+  ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
     if (!config) {
       return {
@@ -161,8 +287,139 @@ export class ServiceManager {
         message: `Service "${name}" not found in configuration`,
       }
     }
+
+    // Resolve effective port unless the caller has already done so. The
+    // default behaviour silently falls back to a random port on conflict,
+    // matching the user-chosen non-interactive default.
+    let effectivePort = options?.port
+    if (!options?.portResolved) {
+      const resolved = await this.resolveServicePort(name)
+      if (!resolved.success) {
+        return { name, success: false, message: resolved.message }
+      }
+      if (resolved.conflict && resolved.source === 'none') {
+        return {
+          name,
+          success: false,
+          message: `Port ${resolved.configPort} is in use and no free port could be allocated`,
+        }
+      }
+      effectivePort = resolved.port
+    }
+
+    const envResult = await this.buildServiceEnvironment(name, {
+      port: effectivePort,
+    })
+    if (!envResult.success) {
+      return {
+        name,
+        success: false,
+        message: envResult.message,
+      }
+    }
     const label = this.getServiceLabel(name)
-    const isBootstrapped = await this.isServiceBootstrapped(name)
+    const printInfo = await launchctl.print(label)
+    const isBootstrapped = printInfo !== null
+    // "Live" means the service has an active PID. A bootstrapped service
+    // can still be dead (crashed and not yet restarted, exited cleanly,
+    // etc.) — in which case we want to bootout and bootstrap again rather
+    // than declaring it "already running".
+    const isLive =
+      printInfo !== null &&
+      printInfo.pid !== undefined &&
+      printInfo.state === 'running'
+
+    // Record the desired state and a snapshot of the config before launching
+    // so the gateway, list output and the reconciler all see a single
+    // source of truth instead of re-deriving it from .denvig.yml each time.
+    const domains = config.http?.domain
+      ? [config.http.domain, ...(config.http.cnames ?? [])]
+      : []
+    await updateServiceState(this.project.id, name, {
+      cwd: this.resolveServiceCwd(config),
+      port: effectivePort,
+      domains,
+      desiredStatus: 'running',
+      project: {
+        id: this.project.id,
+        slug: this.project.slug,
+        name: this.project.name,
+        path: this.project.path,
+      },
+      serviceName: name,
+      config: {
+        command: config.command,
+        env: config.env,
+        envFiles: config.envFiles,
+        http: config.http,
+        keepAlive: config.keepAlive,
+        startOnBoot: config.startOnBoot,
+      },
+    })
+
+    // Manage gateway routes when the service has both a port and domain(s).
+    if (effectivePort !== undefined && domains.length > 0) {
+      const secure = config.http?.secure ?? false
+      // Resolve the cert once per start so all routes for this service
+      // share the same cert entry (typical for cnames sitting under a
+      // single wildcard). Persisted into state.certs and referenced by
+      // each route via the `cert` field.
+      let certKey: string | undefined
+      if (secure) {
+        const certDir = await findCertForDomain(domains[0])
+        if (certDir) {
+          const sslPaths = await resolveSslPaths(certDir)
+          if (sslPaths) {
+            certKey = basename(certDir)
+            await setCert(certKey, {
+              dir: certDir,
+              certPath: sslPaths.sslCertPath,
+              keyPath: sslPaths.sslKeyPath,
+              domains: domains,
+            })
+          }
+        }
+      }
+      for (const domain of domains) {
+        const existing = await getGatewayRoute(domain)
+        const isOwnedByThisService =
+          existing?.project === this.project.id && existing?.service === name
+        // A stopped route held by another service is effectively vacant —
+        // claim it back as a default mapping rather than waiting for the
+        // previous owner to clean up.
+        const previousOwnerInactive =
+          existing !== null &&
+          !isOwnedByThisService &&
+          existing.desiredStatus === 'stopped'
+
+        if (!existing || isOwnedByThisService || previousOwnerInactive) {
+          await setGatewayRoute(domain, {
+            project: this.project.id,
+            service: name,
+            port: effectivePort,
+            secure,
+            defaultService: isOwnedByThisService
+              ? (existing?.defaultService ?? true)
+              : true,
+            desiredStatus: 'running',
+            cert: certKey,
+          })
+        } else if (options?.claimDomain === true) {
+          await setGatewayRoute(domain, {
+            project: this.project.id,
+            service: name,
+            port: effectivePort,
+            secure,
+            defaultService: false,
+            desiredStatus: 'running',
+            cert: certKey,
+          })
+        }
+        // Otherwise (existing route owned by an active service in another
+        // project, no explicit claim): leave it untouched — the service
+        // runs but isn't routed.
+      }
+    }
 
     // Ensure denvig directories exist
     await this.ensureDenvigDirectories()
@@ -214,14 +471,17 @@ export class ServiceManager {
     } catch {
       // File doesn't exist yet
     }
-    if (existingPlistContent !== plistContent) {
+    const plistChanged = existingPlistContent !== plistContent
+    if (plistChanged) {
       await writeFile(plistPath, plistContent, 'utf-8')
     }
 
     // Enable service so launchd will start it (reverses disable from stop)
     await launchctl.enable(label)
 
-    // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents
+    // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents.
+    // The reconciler relies on this being idempotent: if the plist is
+    // unchanged and the service is already bootstrapped, do nothing.
     if (!isBootstrapped) {
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
@@ -231,8 +491,10 @@ export class ServiceManager {
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
       }
-    } else {
-      // If already bootstrapped, bootout and bootstrap again to reload the plist
+    } else if (plistChanged || !isLive) {
+      // Plist changed, or the service is bootstrapped but no longer running
+      // (e.g. it crashed and isn't being restarted). Bootout and bootstrap
+      // again to give launchd a fresh start.
       const bootoutResult = await launchctl.bootout(label)
       if (!bootoutResult.success) {
         return {
@@ -251,6 +513,13 @@ export class ServiceManager {
           success: false,
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
+      }
+    } else {
+      // Already running with the same plist — nothing to do.
+      return {
+        name,
+        success: true,
+        message: 'Service already running with current config',
       }
     }
 
@@ -295,6 +564,7 @@ export class ServiceManager {
 
     // For startOnBoot services, use stop() to keep them registered for next boot
     // For regular services, use bootout() to fully unload them
+    let shouldReconfigureGateway = false
     if (config.startOnBoot) {
       const result = await launchctl.stop(label)
       if (!result.success) {
@@ -316,8 +586,7 @@ export class ServiceManager {
       }
       // Disable so launchd won't auto-start on login (plist stays for next manual start)
       await launchctl.disable(label)
-      // Reconfigure gateway to remove this service's nginx config
-      await this.reconfigureGateway()
+      shouldReconfigureGateway = true
     }
 
     // Append Service Stopped entry to current log (via latest symlink)
@@ -332,6 +601,19 @@ export class ServiceManager {
       // ignore logging errors
     }
 
+    // Mark the service stopped in state so its port becomes available to
+    // other services, while keeping the allocation around so a restart can
+    // reclaim the same port if it's still free. Any gateway routes claimed
+    // by this service are also marked stopped so nginx stops proxying them.
+    await markServiceStopped(this.project.id, name)
+    await markGatewayRoutesStoppedForService(this.project.id, name)
+
+    // Reconfigure the gateway after the routes are marked stopped so the
+    // regenerated nginx configs no longer include this service.
+    if (shouldReconfigureGateway) {
+      await this.reconfigureGateway()
+    }
+
     return {
       name,
       success: true,
@@ -342,7 +624,14 @@ export class ServiceManager {
   /**
    * Restart a specific service.
    */
-  async restartService(name: string): Promise<ServiceResult> {
+  async restartService(
+    name: string,
+    options?: {
+      port?: number
+      portResolved?: boolean
+      claimDomain?: boolean
+    },
+  ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
     if (!config) {
       return {
@@ -363,7 +652,7 @@ export class ServiceManager {
     }
 
     // Start the service
-    return await this.startService(name)
+    return await this.startService(name, options)
   }
 
   /**
@@ -538,6 +827,18 @@ export class ServiceManager {
         ]),
       )
     }
+
+    // Remove state and gateway-route entries for services that were
+    // successfully torn down.
+    await Promise.all(
+      successfullyRemovedLabels.flatMap((label) => {
+        const serviceName = label.replace(labelPrefix, '')
+        return [
+          removeServiceState(this.project.id, serviceName),
+          removeGatewayRoutesForService(this.project.id, serviceName),
+        ]
+      }),
+    )
 
     // Reconfigure gateway to remove this project's nginx configs
     await this.reconfigureGateway()
@@ -722,24 +1023,47 @@ export class ServiceManager {
   }
 
   /**
-   * Get the URL where a service can be accessed.
+   * Get the canonical URL where a service can be accessed. Returns the
+   * domain URL only when this service currently owns the gateway route for
+   * its configured domain; otherwise (or when no domain is configured)
+   * falls back to a direct `http://localhost:<port>` URL.
    */
-  getServiceUrl(name: string): string | null {
+  async getServiceUrl(name: string): Promise<string | null> {
     const config = this.getServiceConfig(name)
-    if (!config) {
-      return null
-    }
+    if (!config) return null
 
     if (config.http?.domain) {
-      const protocol = config.http.secure ? 'https' : 'http'
-      return `${protocol}://${config.http.domain}`
+      const route = await getGatewayRoute(config.http.domain)
+      const ownsRoute =
+        route?.project === this.project.id &&
+        route?.service === name &&
+        route?.desiredStatus === 'running'
+      if (ownsRoute) {
+        const protocol = config.http.secure ? 'https' : 'http'
+        return `${protocol}://${config.http.domain}`
+      }
     }
 
-    if (config.http?.port) {
-      return `http://localhost:${config.http.port}`
-    }
+    return await this.getServiceLocalUrl(name)
+  }
 
-    return null
+  /**
+   * Get the direct localhost URL for a service (`http://localhost:<port>`),
+   * or null if there's no effective port yet.
+   */
+  async getServiceLocalUrl(name: string): Promise<string | null> {
+    const port = await this.getEffectivePort(name)
+    return port !== undefined ? `http://localhost:${port}` : null
+  }
+
+  /**
+   * Get the effective runtime port for a service, considering state-tracked
+   * allocations first and falling back to the config port.
+   */
+  async getEffectivePort(name: string): Promise<number | undefined> {
+    const state = await getServiceState(this.project.id, name)
+    if (state?.port !== undefined) return state.port
+    return this.getServiceConfig(name)?.http?.port
   }
 
   /**
@@ -821,6 +1145,7 @@ export class ServiceManager {
       }
     }
 
+    const effectivePort = await this.getEffectivePort(name)
     const response: ServiceResponse = {
       name,
       project: {
@@ -831,7 +1156,10 @@ export class ServiceManager {
       },
       status,
       pid,
-      url: this.getServiceUrl(name),
+      url: await this.getServiceUrl(name),
+      localUrl: await this.getServiceLocalUrl(name),
+      port: effectivePort ?? null,
+      configPort: config.http?.port ?? null,
       command: config.command,
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name),

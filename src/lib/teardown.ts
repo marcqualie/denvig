@@ -1,4 +1,4 @@
-import { readdir, rm, unlink } from 'node:fs/promises'
+import { readdir, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
@@ -116,6 +116,18 @@ export async function teardownGlobal(
     } catch {
       // Ignore errors reading directory (may not exist)
     }
+  }
+
+  // Clear the state file so the reconciler doesn't try to restart any of
+  // the services we just removed. The global teardown is a hard reset.
+  try {
+    await writeFile(
+      resolve(homedir(), '.denvig', 'state.json'),
+      `${JSON.stringify({ services: {}, gatewayRoutes: {} }, null, 2)}\n`,
+      'utf-8',
+    )
+  } catch {
+    // ignore — state file may not exist
   }
 
   return {

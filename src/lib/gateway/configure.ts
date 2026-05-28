@@ -2,7 +2,7 @@ import { getGlobalConfig } from '../config.ts'
 import { DenvigProject } from '../project.ts'
 import { listProjects } from '../projects.ts'
 import { createGlobalProject } from '../services/global.ts'
-import { findCertForDomain, resolveSslPaths } from './certs.ts'
+import { readState } from '../services/state.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
   reloadNginx,
@@ -11,7 +11,7 @@ import {
   writeNginxMainConfig,
 } from './nginx.ts'
 
-import type { ServiceManagerProject } from '../services/manager.ts'
+import type { Cert } from '../services/state.ts'
 
 export type ConfigureServiceResult = {
   projectSlug: string
@@ -35,94 +35,27 @@ export type ConfigureGatewayResult = {
   message?: string
 }
 
-/**
- * Process services for a single project and write nginx configs for each.
- */
-async function configureProjectServices(
-  project: ServiceManagerProject,
-  configsPath: string,
-): Promise<ConfigureServiceResult[]> {
-  const results: ConfigureServiceResult[] = []
-  const projectServices = project.config.services || {}
-
-  for (const [name, config] of Object.entries(projectServices)) {
-    if (!config.http?.domain || !config.http?.port) {
-      continue
-    }
-
-    const domain = config.http.domain
-    const cnames = config.http.cnames || []
-    const port = config.http.port
-    const secure = config.http.secure ?? false
-
-    // Resolve SSL paths by finding matching certs
-    let sslCertPath: string | undefined
-    let sslKeyPath: string | undefined
-    let certStatus: ConfigureServiceResult['certStatus'] = 'not_configured'
-    let resolvedCertDir: string | undefined
-    let certMessage: string | undefined
-
-    if (secure) {
-      const certDir = await findCertForDomain(domain)
-      if (certDir) {
-        const sslPaths = await resolveSslPaths(certDir)
-        if (sslPaths) {
-          sslCertPath = sslPaths.sslCertPath
-          sslKeyPath = sslPaths.sslKeyPath
-          certStatus = 'valid'
-          resolvedCertDir = certDir
-        } else {
-          certStatus = 'missing'
-          certMessage = 'cert directory found but files missing'
-        }
-      } else {
-        certStatus = 'missing'
-        certMessage = 'no matching certificate found'
-      }
-    }
-
-    const result: ConfigureServiceResult = {
-      projectSlug: project.slug,
-      serviceName: name,
-      domain,
-      cnames,
-      port,
-      certStatus,
-      certDir: resolvedCertDir,
-      certMessage,
-      configStatus: 'written',
-    }
-
-    // Write nginx config
-    const writeResult = await writeNginxConfig(
-      {
-        projectId: project.id,
-        projectPath: project.path,
-        projectSlug: project.slug,
-        serviceName: name,
-        port,
-        domain,
-        cnames,
-        sslCertPath,
-        sslKeyPath,
-      },
-      configsPath,
-    )
-
-    if (!writeResult.success) {
-      result.configStatus = 'error'
-      result.configMessage = writeResult.message
-    }
-
-    results.push(result)
-  }
-
-  return results
+type RouteGroup = {
+  projectId: string
+  serviceName: string
+  port: number
+  secure: boolean
+  /** Order: first entry is the primary domain, the rest are cnames. */
+  domains: string[]
+  /** Key into `state.certs` shared by all routes in this group, if any. */
+  certKey?: string
 }
 
 /**
- * Remove all denvig nginx configs and rebuild from current service definitions
- * across all projects. Returns null if gateway is not enabled.
+ * Remove all denvig nginx configs and rebuild from the runtime gateway
+ * routes recorded in `~/.denvig/state.json`. Returns null if gateway is
+ * not enabled.
+ *
+ * The state's `gatewayRoutes` map is the source of truth: each running
+ * route generates an nginx server block that proxies the domain to the
+ * service's allocated port. Routes for the same `(project, service)`
+ * pair are merged into a single nginx config so cnames sit alongside
+ * the primary domain in the same `server_name` directive.
  */
 export async function configureGateway(): Promise<ConfigureGatewayResult | null> {
   const globalConfig = await getGlobalConfig()
@@ -158,23 +91,111 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
     }
   }
 
-  // Iterate all projects that have a .denvig.yml
+  // Resolve project metadata (slug + path) by ID. The route only stores
+  // the project ID, but the nginx template wants the slug and absolute
+  // path for comments and the document root.
   const projects = await listProjects({ withConfig: true })
-  const services: ConfigureServiceResult[] = []
+  const projectsById = new Map<string, { slug: string; path: string }>()
+  await Promise.all(
+    projects.map(async (info) => {
+      const project = await DenvigProject.retrieve(info.path)
+      projectsById.set(project.id, { slug: project.slug, path: project.path })
+    }),
+  )
+  const globalProject = await createGlobalProject()
+  projectsById.set(globalProject.id, {
+    slug: globalProject.slug,
+    path: globalProject.path,
+  })
 
-  for (const projectInfo of projects) {
-    const project = await DenvigProject.retrieve(projectInfo.path)
-    const results = await configureProjectServices(project, configsPath)
-    services.push(...results)
+  // Group routes by (projectId, serviceName) so cnames stay co-located.
+  const state = await readState()
+  const groups = new Map<string, RouteGroup>()
+  for (const [domain, route] of Object.entries(state.gatewayRoutes)) {
+    if (route.desiredStatus !== 'running') continue
+    const key = `${route.project}.${route.service}`
+    const existing = groups.get(key)
+    if (existing) {
+      existing.domains.push(domain)
+      // Routes inside a group should all reference the same cert, but
+      // tolerate one missing the key by preferring whichever does carry one.
+      if (!existing.certKey && route.cert) existing.certKey = route.cert
+    } else {
+      groups.set(key, {
+        projectId: route.project,
+        serviceName: route.service,
+        port: route.port,
+        secure: route.secure,
+        domains: [domain],
+        certKey: route.cert,
+      })
+    }
   }
 
-  // Include global services
-  const globalProject = await createGlobalProject()
-  const globalResults = await configureProjectServices(
-    globalProject,
-    configsPath,
-  )
-  services.push(...globalResults)
+  const services: ConfigureServiceResult[] = []
+  for (const group of groups.values()) {
+    const projectMeta = projectsById.get(group.projectId)
+    if (!projectMeta) continue
+
+    const [primary, ...cnames] = group.domains
+    const secure = group.secure
+
+    let sslCertPath: string | undefined
+    let sslKeyPath: string | undefined
+    let certStatus: ConfigureServiceResult['certStatus'] = 'not_configured'
+    let resolvedCertDir: string | undefined
+    let certMessage: string | undefined
+
+    if (secure) {
+      const cert: Cert | undefined = group.certKey
+        ? state.certs[group.certKey]
+        : undefined
+      if (cert) {
+        sslCertPath = cert.certPath
+        sslKeyPath = cert.keyPath
+        certStatus = 'valid'
+        resolvedCertDir = cert.dir
+      } else {
+        certStatus = 'missing'
+        certMessage = group.certKey
+          ? `cert "${group.certKey}" referenced by route is not in state.certs`
+          : 'route has no cert reference; restart the service to refresh state.certs'
+      }
+    }
+
+    const result: ConfigureServiceResult = {
+      projectSlug: projectMeta.slug,
+      serviceName: group.serviceName,
+      domain: primary,
+      cnames,
+      port: group.port,
+      certStatus,
+      certDir: resolvedCertDir,
+      certMessage,
+      configStatus: 'written',
+    }
+
+    const writeResult = await writeNginxConfig(
+      {
+        projectId: group.projectId,
+        projectPath: projectMeta.path,
+        projectSlug: projectMeta.slug,
+        serviceName: group.serviceName,
+        port: group.port,
+        domain: primary,
+        cnames,
+        sslCertPath,
+        sslKeyPath,
+      },
+      configsPath,
+    )
+
+    if (!writeResult.success) {
+      result.configStatus = 'error'
+      result.configMessage = writeResult.message
+    }
+    services.push(result)
+  }
 
   // Reload nginx
   const reloadResult = await reloadNginx()

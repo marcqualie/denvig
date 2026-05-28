@@ -6,12 +6,15 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
+import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
+import { resolveServicePortForCli } from '../../lib/services/resolvePort.ts'
 import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
 
 export const servicesStartCommand = new Command({
   name: 'services:start',
   description: 'Start a service',
-  usage: 'services start <name> [--worktree <branch>]',
+  usage:
+    'services start <name> [--worktree <branch>] [--random-port] [--claim-domain]',
   example: 'services start api',
   args: [
     {
@@ -29,6 +32,30 @@ export const servicesStartCommand = new Command({
         'Target the service in a sibling git worktree by branch name (use "main" for the primary checkout)',
       required: false,
       type: 'string',
+    },
+    {
+      name: 'random-port',
+      description:
+        'Skip the config port and start on a randomly allocated dev port',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'claim-domain',
+      description:
+        'Override the existing gateway route so the configured domain points at this start',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'no-claim-domain',
+      description:
+        'Leave the existing gateway route untouched even when the config port is busy',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
     },
   ],
   completions: ({ project }) => {
@@ -68,11 +95,25 @@ export const servicesStartCommand = new Command({
       })
     }
 
+    const portResolution = await resolveServicePortForCli(
+      manager,
+      serviceName,
+      flags,
+      targetProject,
+    )
+    if (portResolution === null) {
+      return { success: false, message: 'Port resolution aborted.' }
+    }
+
     if (!flags.json) {
       console.log(`Starting ${projectPrefix}${serviceName}...`)
     }
 
-    const result = await manager.startService(serviceName)
+    const result = await manager.startService(serviceName, {
+      port: portResolution.port,
+      portResolved: true,
+      claimDomain: portResolution.claimDomain ?? undefined,
+    })
 
     if (!result.success) {
       if (flags.json) {
@@ -103,6 +144,7 @@ export const servicesStartCommand = new Command({
     if (response?.status === 'running') {
       // Reconfigure gateway nginx configs
       await manager.reconfigureGateway()
+      await reconcileAfterCommand({ json: !!flags.json })
 
       if (flags.json) {
         console.log(JSON.stringify(response))
@@ -111,6 +153,14 @@ export const servicesStartCommand = new Command({
         console.log(
           `✓ ${projectPrefix}${serviceName} started successfully${urlInfo}`,
         )
+        const showLocal =
+          response.localUrl &&
+          response.localUrl !== response.url &&
+          (response.configPort === null ||
+            response.configPort !== response.port)
+        if (showLocal) {
+          console.log(`  ↳ direct: ${response.localUrl}`)
+        }
       }
       return { success: true, message: 'Service started successfully.' }
     }

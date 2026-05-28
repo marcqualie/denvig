@@ -1,0 +1,200 @@
+import launchctl from './launchctl.ts'
+import { ServiceManager, type ServiceManagerProject } from './manager.ts'
+import { readState, type ServiceStateEntry } from './state.ts'
+
+export type ReconcileAction =
+  | { type: 'started'; project: string; service: string; reason: string }
+  | { type: 'stopped'; project: string; service: string; reason: string }
+  | { type: 'restarted'; project: string; service: string; reason: string }
+  | { type: 'skipped'; project: string; service: string; reason: string }
+
+export type ReconcileResult = {
+  actions: ReconcileAction[]
+  errors: Array<{
+    project: string
+    service: string
+    message: string
+  }>
+}
+
+const LABEL_PREFIX = 'denvig.'
+
+/**
+ * Parse a launchctl label of the form `denvig.{projectId}.{serviceName}`.
+ * Service names can contain dots, so the project ID is the first segment
+ * after `denvig.` (project IDs are sha1 hashes — hex only).
+ */
+const parseLabel = (
+  label: string,
+): { projectId: string; serviceName: string } | null => {
+  if (!label.startsWith(LABEL_PREFIX)) return null
+  const rest = label.slice(LABEL_PREFIX.length)
+  const dot = rest.indexOf('.')
+  if (dot === -1) return null
+  return { projectId: rest.slice(0, dot), serviceName: rest.slice(dot + 1) }
+}
+
+/**
+ * Build a synthetic `ServiceManagerProject` from a state entry so the
+ * ServiceManager can act on services without going back to the live
+ * `.denvig.yml`. This is what makes state.json the source of truth — the
+ * reconciler operates entirely off the snapshot captured at start time.
+ */
+const projectFromStateEntry = (
+  entry: ServiceStateEntry,
+): ServiceManagerProject | null => {
+  if (!entry.project || !entry.serviceName || !entry.config) return null
+  return {
+    id: entry.project.id,
+    slug: entry.project.slug,
+    name: entry.project.name,
+    path: entry.project.path,
+    config: {
+      services: {
+        [entry.serviceName]: {
+          // Resolve cwd to absolute so ServiceManager.resolveServiceCwd
+          // doesn't double-join the project path. Passing the absolute
+          // state cwd works because `resolve()` returns the second arg
+          // unchanged when it's already absolute.
+          cwd: entry.cwd,
+          command: entry.config.command,
+          env: entry.config.env,
+          envFiles: entry.config.envFiles,
+          http: entry.config.http,
+          keepAlive: entry.config.keepAlive,
+          startOnBoot: entry.config.startOnBoot,
+        },
+      },
+    },
+  }
+}
+
+/**
+ * Reconcile actual launchctl state with the desired state recorded in
+ * `~/.denvig/state.json`.
+ *
+ * Three categories of action:
+ * 1. State says running, launchctl agrees, plist matches → no-op.
+ * 2. State says running, but launchctl is missing the service or the
+ *    plist on disk differs from what the snapshot would produce → call
+ *    startService (idempotent: it only re-bootstraps when the plist
+ *    content actually changed).
+ * 3. launchctl has a `denvig.*` service that state doesn't know about,
+ *    or marks as `desiredStatus: stopped` → bootout it.
+ */
+export const reconcileServices = async (): Promise<ReconcileResult> => {
+  const state = await readState()
+  const launchctlEntries = await launchctl.list(LABEL_PREFIX)
+  const result: ReconcileResult = { actions: [], errors: [] }
+
+  // Index launchctl entries by label for quick lookup.
+  const launchctlByLabel = new Map<
+    string,
+    { projectId: string; serviceName: string }
+  >()
+  for (const item of launchctlEntries) {
+    const parsed = parseLabel(item.label)
+    if (parsed) launchctlByLabel.set(item.label, parsed)
+  }
+
+  // Labels we shouldn't bootout in pass 2 — either because we've launched
+  // them ourselves or because state claims them (even if we can't act on
+  // them yet due to a missing snapshot).
+  const protectedLabels = new Set<string>()
+
+  // Helper: derive the launchctl label from a serviceStateKey
+  // (`id:<projectId>:<serviceName>`). Used when we can't construct a full
+  // ServiceManager from the state entry (legacy entry without snapshot).
+  const labelFromKey = (key: string): string | null => {
+    if (!key.startsWith('id:')) return null
+    const rest = key.slice(3)
+    const colon = rest.indexOf(':')
+    if (colon === -1) return null
+    return `${LABEL_PREFIX}${rest.slice(0, colon)}.${rest.slice(colon + 1)}`
+  }
+
+  // Pass 1: drive state entries with desiredStatus 'running' towards being
+  // bootstrapped with up-to-date plists.
+  for (const [key, entry] of Object.entries(state.services)) {
+    if (entry.desiredStatus !== 'running') continue
+    const project = projectFromStateEntry(entry)
+    if (!project || !entry.serviceName) {
+      // Legacy entry without a snapshot — leave it bootstrapped but skip
+      // the reconcile action. Protect the label so pass 2 doesn't tear it
+      // down on a partial migration.
+      const legacyLabel = labelFromKey(key)
+      if (legacyLabel) protectedLabels.add(legacyLabel)
+      continue
+    }
+    const manager = new ServiceManager(project)
+    const label = manager.getServiceLabel(entry.serviceName)
+    protectedLabels.add(label)
+    try {
+      const start = await manager.startService(entry.serviceName, {
+        port: entry.port,
+        portResolved: true,
+      })
+      if (!start.success) {
+        result.errors.push({
+          project: project.slug,
+          service: entry.serviceName,
+          message: start.message,
+        })
+        continue
+      }
+      if (start.message === 'Service already running with current config') {
+        result.actions.push({
+          type: 'skipped',
+          project: project.slug,
+          service: entry.serviceName,
+          reason: 'already running with current config',
+        })
+      } else if (launchctlByLabel.has(label)) {
+        result.actions.push({
+          type: 'restarted',
+          project: project.slug,
+          service: entry.serviceName,
+          reason: 'config changed since last bootstrap',
+        })
+      } else {
+        result.actions.push({
+          type: 'started',
+          project: project.slug,
+          service: entry.serviceName,
+          reason: 'desiredStatus is running but service was not bootstrapped',
+        })
+      }
+    } catch (e) {
+      result.errors.push({
+        project: project.slug,
+        service: entry.serviceName,
+        message: e instanceof Error ? e.message : String(e),
+      })
+    }
+  }
+
+  // Pass 2: bootout any launchctl entries that state doesn't claim.
+  for (const item of launchctlEntries) {
+    if (protectedLabels.has(item.label)) continue
+    const bootoutResult = await launchctl.bootout(item.label)
+    const parsed = parseLabel(item.label)
+    const slug = parsed?.projectId.slice(0, 8) ?? 'unknown'
+    const serviceName = parsed?.serviceName ?? item.label
+    if (bootoutResult.success) {
+      result.actions.push({
+        type: 'stopped',
+        project: slug,
+        service: serviceName,
+        reason: 'no matching entry in state.json',
+      })
+    } else {
+      result.errors.push({
+        project: slug,
+        service: serviceName,
+        message: `Failed to bootout: ${bootoutResult.output}`,
+      })
+    }
+  }
+
+  return result
+}

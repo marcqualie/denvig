@@ -115,6 +115,13 @@ export const servicesStatusCommand = new Command({
     if (response.url) {
       console.log(`URL:     ${response.url}`)
     }
+    if (
+      response.localUrl &&
+      response.localUrl !== response.url &&
+      (response.configPort === null || response.configPort !== response.port)
+    ) {
+      console.log(`Direct:  ${response.localUrl}`)
+    }
 
     console.log(`Command: ${response.command}`)
     console.log(`CWD:     ${response.cwd.replace(homedir(), '~')}`)

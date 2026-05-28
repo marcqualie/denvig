@@ -1,15 +1,17 @@
 import { Command } from '../../lib/command.ts'
 import { configureGateway } from '../../lib/gateway/configure.ts'
+import { reconcileServices } from '../../lib/services/reconcile.ts'
 
 export const gatewayConfigureCommand = new Command({
   name: 'gateway:configure',
   description:
-    'Rebuild all nginx configs from service definitions across all projects',
+    'Reconcile launchctl with ~/.denvig/state.json and rebuild all nginx configs',
   usage: 'gateway configure',
   example: 'gateway configure',
   args: [],
   flags: [],
   handler: async ({ flags }) => {
+    const reconcileResult = await reconcileServices()
     const result = await configureGateway()
 
     if (!result) {
@@ -20,8 +22,35 @@ export const gatewayConfigureCommand = new Command({
     }
 
     if (flags.json) {
-      console.log(JSON.stringify(result, null, 2))
+      console.log(
+        JSON.stringify(
+          { reconcile: reconcileResult, gateway: result },
+          null,
+          2,
+        ),
+      )
     } else {
+      if (reconcileResult.actions.length > 0) {
+        for (const action of reconcileResult.actions) {
+          const icon =
+            action.type === 'started'
+              ? '▶'
+              : action.type === 'stopped'
+                ? '■'
+                : action.type === 'restarted'
+                  ? '↻'
+                  : '·'
+          console.log(
+            `${icon} ${action.type} ${action.project}/${action.service} — ${action.reason}`,
+          )
+        }
+        console.log('')
+      }
+      for (const err of reconcileResult.errors) {
+        console.error(
+          `reconcile: ${err.project}/${err.service}: ${err.message}`,
+        )
+      }
       console.log('')
 
       if (result.removed.length > 0) {

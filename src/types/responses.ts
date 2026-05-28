@@ -64,7 +64,21 @@ export type ServiceResponse = {
   project: ServiceProjectData
   status: 'running' | 'error' | 'stopped'
   pid: number | null
+  /**
+   * Canonical URL for the service. The domain URL when this service owns
+   * the gateway route, otherwise a direct `http://localhost:<port>` URL.
+   */
   url: string | null
+  /**
+   * Direct `http://localhost:<port>` URL when an effective port is known.
+   * Useful when the gateway route is held by another service (e.g. a
+   * sibling worktree) and `url` falls back to the localhost form already.
+   */
+  localUrl: string | null
+  /** Effective port the service is configured to listen on. */
+  port: number | null
+  /** Port declared in the service config, if any. */
+  configPort: number | null
   command: string
   cwd: string
   logPath: string

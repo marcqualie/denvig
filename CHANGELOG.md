@@ -9,6 +9,15 @@
 - `denvig info` now shows a `Worktrees:` block listing detached git worktrees for the project, also exposed as `worktrees` on the SDK's `ProjectResponse`
 - `--worktree <branch>` flag on every `services` subcommand to target a sibling git worktree without switching directories (use `--worktree main` for the primary checkout)
 - Running `denvig` from inside a detached git worktree now defaults to that worktree's services instead of the primary checkout's
+- `services start` and `services restart` detect when the configured port is already in use and prompt to fall back to a randomly allocated dev port (auto-allocates when non-interactive or with `--random-port`)
+- Services without a `http.port` in config now get a randomly allocated `PORT` env var when started
+- Runtime service state (allocated ports, domains, desired status) is persisted to `~/.denvig/state.json` and used by the gateway and `services list` so multiple worktrees can run services that share a config port
+- Gateway routes are now tracked in `~/.denvig/state.json` and are the source of truth for nginx configs and the `services list` URL column
+- When a worktree starts a service on a fallback port, denvig prompts to override the configured domain so the gateway points at the worktree (use `--claim-domain` / `--no-claim-domain` to skip the prompt)
+- `services list`, `services status`, and the start/restart confirmations now also show `http://localhost:<port>` when the effective port differs from the config port, giving you a direct URL even when another worktree owns the domain
+- `~/.denvig/state.json` is now the source of truth for services: `services start` snapshots the full config (command, env, http, etc.) into state and every mutating `services` command then reconciles launchctl against it (starting services that should be running, stopping unknown ones, restarting when the snapshot drifts from the on-disk plist)
+- `denvig gateway configure` now runs the same reconcile pass before rebuilding nginx, so it can be used to manually re-sync launchctl with state.json
+- `~/.denvig/state.json` now also tracks SSL certs in a top-level `certs` map and each gateway route references the cert it should present; nginx is rendered from this snapshot rather than re-scanning `~/.denvig/certs/` on every regeneration
 
 ### Changed
 
