@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [0.7.0-alpha.2] - 2026-05-28
+
 ### Changed
 
 - Prerelease tags (`vX.Y.Z-alpha.N` / `-beta.N` / `-rc.N`) now publish to npm under matching dist-tags (`@alpha`, `@beta`, `@rc`) instead of `@latest`, so `pnpm add denvig` keeps tracking stable releases
