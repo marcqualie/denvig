@@ -24,4 +24,12 @@ jobs:
       - run: pnpm install
       - run: pnpm run build
       - run: pnpm test
-      - run: pnpm publish --no-git-checks
+      - name: Choose npm dist-tag
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            *-alpha.*) echo "NPM_TAG=alpha"  >> "$GITHUB_ENV" ;;
+            *-beta.*)  echo "NPM_TAG=beta"   >> "$GITHUB_ENV" ;;
+            *-rc.*)    echo "NPM_TAG=rc"     >> "$GITHUB_ENV" ;;
+            *)         echo "NPM_TAG=latest" >> "$GITHUB_ENV" ;;
+          esac
+      - run: pnpm publish --no-git-checks --tag "$NPM_TAG"
