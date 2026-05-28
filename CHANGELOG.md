@@ -18,6 +18,7 @@
 - `~/.denvig/state.json` is now the source of truth for services: `services start` snapshots the full config (command, env, http, etc.) into state and every mutating `services` command then reconciles launchctl against it (starting services that should be running, stopping unknown ones, restarting when the snapshot drifts from the on-disk plist)
 - `denvig gateway configure` now runs the same reconcile pass before rebuilding nginx, so it can be used to manually re-sync launchctl with state.json
 - `~/.denvig/state.json` now also tracks SSL certs in a top-level `certs` map and each gateway route references the cert it should present; nginx is rendered from this snapshot rather than re-scanning `~/.denvig/certs/` on every regeneration
+- `services list --status <running|stopped|error>` filters the output by runtime status, and accepts a comma-separated list (e.g., `--status stopped,error`)
 
 ### Changed
 
@@ -26,6 +27,7 @@
 - `services list` now defaults to the current project; use `--all` for every project plus globals, or `--global` for globals only
 - Migrated the build from `tsup` to `rolldown`
 - Removed the default export from the SDK entry point; use the named import (`import { DenvigSDK } from 'denvig'`)
+- SDK `services.list()` now returns services from every project by default; pass `{ project }` to scope to one project, `{ project, worktree }` to target a worktree, and `{ status }` to filter by runtime status
 
 ## [0.6.7] - 2026-05-08
 
