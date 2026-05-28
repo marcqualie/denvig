@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [0.7.0-alpha.1] - 2026-05-28
+
 ### Added
 
 - Projects now expose a list of refs identifying themselves and the worktree they live in, shown in a new `Refs:` block in `denvig info` and on the SDK's `ProjectResponse`
