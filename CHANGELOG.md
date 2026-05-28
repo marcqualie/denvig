@@ -26,6 +26,7 @@
 - `services list` now defaults to the current project; use `--all` for every project plus globals, or `--global` for globals only
 - Migrated the build from `tsup` to `rolldown`
 - Removed the default export from the SDK entry point; use the named import (`import { DenvigSDK } from 'denvig'`)
+- SDK `services.list()` now returns services from every project by default; pass `{ project }` to scope to one project and `{ project, worktree }` to target a worktree
 
 ## [0.6.7] - 2026-05-08
 

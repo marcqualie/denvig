@@ -72,13 +72,24 @@ export type DenvigSDKOptions = {
 }
 
 export type ListServicesOptions = {
-  /** Filter to a specific project slug */
+  /**
+   * Filter to a specific project slug (e.g., `github:marcqualie/denvig`).
+   * When omitted, services from all projects are returned.
+   */
   project?: string
+  /**
+   * Filter to a specific git worktree branch within the project.
+   * Use `main` to target the primary checkout. Requires `project`.
+   */
+  worktree?: string
 }
 
 export type ServiceOperationOptions = {
-  /** Filter to a specific project slug */
-  project?: string
+  /**
+   * Target a specific git worktree branch by name. Use `main` for the
+   * primary checkout.
+   */
+  worktree?: string
 }
 
 export type DepsListOptions = {
@@ -261,10 +272,22 @@ export class DenvigSDK {
    */
   services = {
     /**
-     * List all services across all projects.
+     * List services. By default returns services for all projects.
+     * Pass `project` to filter to a single project, and optionally
+     * `worktree` to target one of its worktrees.
      */
     list: async (options?: ListServicesOptions): Promise<ServiceResponse[]> => {
-      const flags = options ? this.buildFlags(options) : ''
+      if (options?.worktree && !options.project) {
+        throw new Error(
+          'services.list: `worktree` requires `project` to be specified.',
+        )
+      }
+      const flags = options?.project
+        ? this.buildFlags({
+            project: options.project,
+            worktree: options.worktree,
+          })
+        : '--all'
       return this.run<ServiceResponse[]>(`services ${flags}`.trim())
     },
 

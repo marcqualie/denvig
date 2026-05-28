@@ -45,7 +45,7 @@ export const servicesListCommand = new Command({
     {
       name: 'worktree',
       description:
-        'List services for a sibling git worktree by branch name (use "main" for the primary checkout)',
+        'List services for a sibling git worktree by branch name (use "main" for the primary checkout). Pair with the global --project flag to target a worktree of another project.',
       required: false,
       type: 'string',
     },
@@ -59,12 +59,18 @@ export const servicesListCommand = new Command({
     const worktreeFlag =
       typeof flags.worktree === 'string' ? flags.worktree : null
 
-    const selectedCount = [all, globalOnly, worktreeFlag !== null].filter(
-      Boolean,
-    ).length
-    if (selectedCount > 1) {
-      const message =
-        'Cannot use --all, --global, and --worktree together. Choose one.'
+    if ((all || globalOnly) && worktreeFlag !== null) {
+      const message = '--worktree cannot be combined with --all or --global.'
+      if (flags.json) {
+        console.log(JSON.stringify({ success: false, message }))
+      } else {
+        console.error(message)
+      }
+      return { success: false, message }
+    }
+
+    if (all && globalOnly) {
+      const message = 'Cannot combine --all and --global. Choose one.'
       if (flags.json) {
         console.log(JSON.stringify({ success: false, message }))
       } else {
