@@ -1,7 +1,7 @@
 import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
 import { prettyPath } from '../../lib/path.ts'
-import { DenvigProject, shortProjectId } from '../../lib/project.ts'
+import { DenvigProject } from '../../lib/project.ts'
 import {
   getProjectInfo,
   type ProjectInfo,
@@ -27,17 +27,14 @@ const getStatusIcon = (status: ServiceStatus): string => {
   }
 }
 
-/** A row in the rendered tree: a project, or one of its worktrees. */
+/** A row in the rendered list: a project, or one of its worktrees. */
 type ProjectRow = {
   status: ServiceStatus
-  id: string
   /** Project name for the primary row, branch name for worktree rows. */
   label: string
   path: string
+  /** 0 for a project, 1 for one of its worktrees. */
   depth: number
-  isLast: boolean
-  hasChildren: boolean
-  parentPath: boolean[]
 }
 
 /**
@@ -120,34 +117,23 @@ export const projectsListCommand = new Command({
     const launchctlList = await launchctl.list('denvig.')
 
     const rows: ProjectRow[] = []
-    for (let i = 0; i < families.length; i++) {
-      const family = families[i]
-      const isLastFamily = i === families.length - 1
+    for (const family of families) {
       const worktrees = family.worktrees.filter((wt) => !wt.isPrimary)
 
       const primary = family.primaryWorktree
       rows.push({
         status: await worktreeStatus(family, primary, launchctlList),
-        id: primary.id,
         label: primary.config.name || primary.slug,
         path: primary.path,
         depth: 0,
-        isLast: isLastFamily,
-        hasChildren: worktrees.length > 0,
-        parentPath: [],
       })
 
-      for (let j = 0; j < worktrees.length; j++) {
-        const worktree = worktrees[j]
+      for (const worktree of worktrees) {
         rows.push({
           status: await worktreeStatus(family, worktree, launchctlList),
-          id: worktree.id,
           label: worktree.branch,
           path: worktree.path,
           depth: 1,
-          isLast: j === worktrees.length - 1,
-          hasChildren: false,
-          parentPath: [isLastFamily],
         })
       }
     }
@@ -158,19 +144,16 @@ export const projectsListCommand = new Command({
           header: 'Name',
           accessor: (r) => {
             const icon = getStatusIcon(r.status)
-            return icon ? `${icon} ${r.label}` : r.label
+            // Reserve the indicator slot so projects without a service still
+            // line up with those that have one. Worktrees indent one extra char.
+            const indicator = icon ? `${icon} ` : '  '
+            const indent = r.depth > 0 ? ' ' : ''
+            return `${indent}${indicator}${r.label}`
           },
         },
-        { header: 'ID', accessor: (r) => shortProjectId(r.id) },
         { header: 'Path', accessor: (r) => prettyPath(r.path) },
       ],
       data: rows,
-      tree: {
-        getDepth: (r) => r.depth,
-        getIsLast: (r) => r.isLast,
-        getHasChildren: (r) => r.hasChildren,
-        getParentPath: (r) => r.parentPath,
-      },
     })
 
     for (const line of lines) {
