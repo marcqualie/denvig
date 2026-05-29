@@ -24,10 +24,10 @@ export const depsListCommand = new Command({
       defaultValue: undefined,
     },
   ],
-  handler: async ({ project, flags }) => {
+  handler: async ({ worktree, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
     const maxDepth = (flags.depth as number) ?? 0
-    const dependencies = await project.dependencies()
+    const dependencies = await worktree.dependencies()
 
     if (dependencies.length === 0) {
       if (flags.json) {

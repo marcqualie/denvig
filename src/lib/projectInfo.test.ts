@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import { createMockProject } from '../test/mock.ts'
 import { getProjectInfo } from './projectInfo.ts'
 
-import type { DenvigProject } from './project.ts'
+import type { Worktree } from './project/worktree.ts'
 
 describe('getProjectInfo()', () => {
   it('should return project info with correct slug', async () => {
@@ -30,7 +30,7 @@ describe('getProjectInfo()', () => {
 
   it('should return null config when no $sources', async () => {
     const project = createMockProject({
-      config: { name: 'test', $sources: [] } as DenvigProject['config'],
+      config: { name: 'test', $sources: [] } as Worktree['config'],
     })
     const info = await getProjectInfo(project)
 
@@ -42,7 +42,7 @@ describe('getProjectInfo()', () => {
       config: {
         name: 'configured-project',
         $sources: ['/path/to/.denvig.yml'],
-      } as DenvigProject['config'],
+      } as Worktree['config'],
     })
     const info = await getProjectInfo(project)
 

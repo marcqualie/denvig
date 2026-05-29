@@ -31,9 +31,9 @@ export const configCommand = new Command({
   subcommands: {
     verify: configVerifyCommand,
   },
-  handler: async ({ project, flags }) => {
+  handler: async ({ worktree, flags }) => {
     const globalConfig = await getGlobalConfig()
-    const projectConfig = project.config
+    const projectConfig = worktree.config
 
     if (flags.json) {
       const { $sources: globalSources, ...globalConfigWithoutSources } =
@@ -47,7 +47,7 @@ export const configCommand = new Command({
             config: globalConfigWithoutSources,
           },
           project: {
-            slug: project.slug,
+            slug: worktree.slug,
             sources: projectSources,
             config: projectConfigWithoutSources,
           },
@@ -66,9 +66,9 @@ export const configCommand = new Command({
 
     console.log('')
     console.log(
-      `Project: ${project.config.$sources.map((path) => prettyPath(path)).join(', ') || 'default'}`,
+      `Project: ${worktree.config.$sources.map((path) => prettyPath(path)).join(', ') || 'default'}`,
     )
-    console.log(`  slug: ${project.slug}`)
+    console.log(`  slug: ${worktree.slug}`)
     printConfig(projectConfig)
 
     return { success: true, message: 'Configuration displayed.' }

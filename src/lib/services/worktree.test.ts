@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { DenvigProject } from '../project.ts'
-import { resolveWorktreeProject } from './worktree.ts'
+import { resolveWorktree } from './worktree.ts'
 
 const primaryPath = '/tmp/denvig-test-worktree-primary'
 const worktreePath = `${primaryPath}+feature`
@@ -19,7 +19,7 @@ const initRepo = () => {
   })
 }
 
-describe('resolveWorktreeProject()', () => {
+describe('resolveWorktree()', () => {
   beforeEach(() => initRepo())
   afterEach(() => {
     fs.rmSync(primaryPath, { recursive: true, force: true })
@@ -31,9 +31,11 @@ describe('resolveWorktreeProject()', () => {
       cwd: primaryPath,
     })
     const primary = await DenvigProject.retrieve(primaryPath)
-    const worktreeProject = await resolveWorktreeProject(primary, 'feature')
+    const worktree = resolveWorktree(primary, 'feature')
     const realWorktreePath = fs.realpathSync(worktreePath)
-    assert.strictEqual(worktreeProject.path, realWorktreePath)
+    assert.strictEqual(worktree.path, realWorktreePath)
+    assert.strictEqual(worktree.branch, 'feature')
+    assert.strictEqual(worktree.isPrimary, false)
   })
 
   it('resolves "main" to the primary checkout when called from a worktree', async () => {
@@ -41,15 +43,16 @@ describe('resolveWorktreeProject()', () => {
       cwd: primaryPath,
     })
     const worktreeProject = await DenvigProject.retrieve(worktreePath)
-    const primaryProject = await resolveWorktreeProject(worktreeProject, 'main')
+    const primary = resolveWorktree(worktreeProject, 'main')
     const realPrimaryPath = fs.realpathSync(primaryPath)
-    assert.strictEqual(primaryProject.path, realPrimaryPath)
+    assert.strictEqual(primary.path, realPrimaryPath)
+    assert.strictEqual(primary.isPrimary, true)
   })
 
   it('throws when the branch does not match any worktree', async () => {
     const primary = await DenvigProject.retrieve(primaryPath)
-    await assert.rejects(
-      () => resolveWorktreeProject(primary, 'nonexistent'),
+    assert.throws(
+      () => resolveWorktree(primary, 'nonexistent'),
       /Worktree with branch "nonexistent" not found/,
     )
   })

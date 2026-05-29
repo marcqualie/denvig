@@ -6,7 +6,7 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
-import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveWorktree } from '../../lib/services/worktree.ts'
 
 export const logsCommand = new Command({
   name: 'services:logs',
@@ -48,13 +48,13 @@ export const logsCommand = new Command({
   completions: ({ project }) => {
     return getServiceCompletions(project)
   },
-  handler: async ({ project: currentProject, args, flags }) => {
+  handler: async ({ project, worktree, args, flags }) => {
     const nameArg = args.name as string
 
-    let project = currentProject
+    let activeWorktree = worktree
     if (typeof flags.worktree === 'string') {
       try {
-        project = await resolveWorktreeProject(currentProject, flags.worktree)
+        activeWorktree = resolveWorktree(project, flags.worktree)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -65,6 +65,7 @@ export const logsCommand = new Command({
         return { success: false, message }
       }
     }
+    project.activeWorktree = activeWorktree
 
     const { manager, serviceName: name } = await getServiceContext(
       nameArg,

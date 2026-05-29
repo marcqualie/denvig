@@ -9,7 +9,7 @@ import {
   getServiceCompletions,
   getServiceContext,
 } from '../../lib/services/identifier.ts'
-import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveWorktree } from '../../lib/services/worktree.ts'
 
 export const servicesStatusCommand = new Command({
   name: 'services:status',
@@ -37,13 +37,13 @@ export const servicesStatusCommand = new Command({
   completions: ({ project }) => {
     return getServiceCompletions(project)
   },
-  handler: async ({ project: currentProject, args, flags }) => {
+  handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
 
-    let project = currentProject
+    let activeWorktree = worktree
     if (typeof flags.worktree === 'string') {
       try {
-        project = await resolveWorktreeProject(currentProject, flags.worktree)
+        activeWorktree = resolveWorktree(project, flags.worktree)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -54,6 +54,7 @@ export const servicesStatusCommand = new Command({
         return { success: false, message }
       }
     }
+    project.activeWorktree = activeWorktree
 
     const {
       manager,
@@ -67,7 +68,7 @@ export const servicesStatusCommand = new Command({
 
     if (!response) {
       const projectInfo =
-        targetProject.slug !== project.slug
+        targetProject.slug !== activeWorktree.slug
           ? ` in project "${targetProject.slug}"`
           : ''
       if (flags.json) {
@@ -96,7 +97,7 @@ export const servicesStatusCommand = new Command({
     }
 
     const projectPrefix =
-      targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
+      targetProject.slug !== activeWorktree.slug ? `${targetProject.slug}/` : ''
 
     const statusText =
       response.status === 'running'

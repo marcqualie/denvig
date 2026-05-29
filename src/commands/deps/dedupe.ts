@@ -18,10 +18,10 @@ export const depsDedupeCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: async ({ project, flags }) => {
+  handler: async ({ worktree, flags }) => {
     const apply = flags.apply as boolean
 
-    const results = await project.deduplicateDependencies({ dryRun: !apply })
+    const results = await worktree.deduplicateDependencies({ dryRun: !apply })
 
     if (results.length === 0) {
       console.error(

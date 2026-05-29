@@ -1,6 +1,6 @@
 import { Command } from '../../lib/command.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
-import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveWorktree } from '../../lib/services/worktree.ts'
 import { teardownGlobal, teardownProject } from '../../lib/teardown.ts'
 
 export const servicesTeardownCommand = new Command({
@@ -32,7 +32,7 @@ export const servicesTeardownCommand = new Command({
       type: 'string',
     },
   ],
-  handler: async ({ project: currentProject, flags }) => {
+  handler: async ({ project, worktree, flags }) => {
     const removeLogs = flags['remove-logs'] as boolean
     const global = flags.global as boolean
     const worktreeFlag =
@@ -48,10 +48,10 @@ export const servicesTeardownCommand = new Command({
       return { success: false, message }
     }
 
-    let project = currentProject
+    let activeWorktree = worktree
     if (worktreeFlag !== null) {
       try {
-        project = await resolveWorktreeProject(currentProject, worktreeFlag)
+        activeWorktree = resolveWorktree(project, worktreeFlag)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -62,6 +62,7 @@ export const servicesTeardownCommand = new Command({
         return { success: false, message }
       }
     }
+    project.activeWorktree = activeWorktree
 
     if (global) {
       // Global teardown - all denvig services across all projects
@@ -100,7 +101,7 @@ export const servicesTeardownCommand = new Command({
 
     // Project-specific teardown
     if (!flags.json) {
-      console.log(`Tearing down all services for ${project.slug}...`)
+      console.log(`Tearing down all services for ${activeWorktree.slug}...`)
     }
 
     const result = await teardownProject(project, { removeLogs })

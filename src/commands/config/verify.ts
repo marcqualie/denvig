@@ -20,9 +20,9 @@ export const configVerifyCommand = new Command({
     },
   ],
   flags: [],
-  handler: async ({ project, args, flags }) => {
+  handler: async ({ worktree, args, flags }) => {
     const configPath = resolve(
-      project.path,
+      worktree.path,
       args.path?.toString() || '.denvig.yml',
     )
     const configRaw = await safeReadTextFile(configPath)

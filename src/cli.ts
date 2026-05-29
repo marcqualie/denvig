@@ -105,7 +105,7 @@ async function main() {
   // Quick actions
   const quickActions = [
     ...(globalConfig.quickActions ?? []),
-    ...(project?.config?.quickActions ?? []),
+    ...(project?.activeWorktree.config?.quickActions ?? []),
   ].sort()
   if (quickActions.includes(commandName as (typeof quickActions)[number])) {
     args = ['run', ...process.argv.slice(2)]

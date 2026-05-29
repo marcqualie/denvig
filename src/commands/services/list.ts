@@ -8,7 +8,7 @@ import {
   ServiceManager,
   type ServiceResponse,
 } from '../../lib/services/manager.ts'
-import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveWorktree } from '../../lib/services/worktree.ts'
 
 const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   switch (status) {
@@ -61,7 +61,7 @@ export const servicesListCommand = new Command({
   completions: () => {
     return []
   },
-  handler: async ({ project: currentProject, flags }) => {
+  handler: async ({ project, worktree, flags }) => {
     const all = flags.all as boolean
     const globalOnly = flags.global as boolean
     const worktreeFlag =
@@ -105,10 +105,10 @@ export const servicesListCommand = new Command({
       return { success: false, message }
     }
 
-    let project = currentProject
+    let activeWorktree = worktree
     if (worktreeFlag !== null) {
       try {
-        project = await resolveWorktreeProject(currentProject, worktreeFlag)
+        activeWorktree = resolveWorktree(project, worktreeFlag)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -151,7 +151,10 @@ export const servicesListCommand = new Command({
       const projectInfos = await listProjects()
       for (const projectInfo of projectInfos) {
         const proj = await DenvigProject.retrieve(projectInfo.path)
-        await collectFromManager(new ServiceManager(proj), allServices)
+        await collectFromManager(
+          new ServiceManager(proj.activeWorktree),
+          allServices,
+        )
       }
       projectCount = projectInfos.length
 
@@ -162,7 +165,7 @@ export const servicesListCommand = new Command({
       }
     } else {
       projectCount = 1
-      await collectFromManager(new ServiceManager(project), allServices)
+      await collectFromManager(new ServiceManager(activeWorktree), allServices)
     }
 
     const filteredServices = statusFilter
@@ -184,7 +187,7 @@ export const servicesListCommand = new Command({
       return { success: true, message: 'No services configured.' }
     }
 
-    const currentProjectSlug = project.slug
+    const currentProjectSlug = activeWorktree.slug
     const sortedServices = filteredServices.sort((a, b) => {
       const aIsCurrent = a.project.slug === currentProjectSlug
       const bIsCurrent = b.project.slug === currentProjectSlug

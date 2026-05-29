@@ -9,16 +9,19 @@ export type MockProjectOptions = {
   slug?: string
   name?: string
   path?: string
-  config?: DenvigProject['config']
+  config?: Worktree['config']
 }
 
 /**
  * Create a mock DenvigProject for testing.
- * This creates a minimal mock with stub properties.
+ *
+ * The returned mock is backed by a single primary {@link Worktree} (exposed as
+ * `activeWorktree`/`primaryWorktree`) and also carries `config` at the top
+ * level so it satisfies `ServiceManagerProject` for service tests.
  */
 export const createMockProject = (
   options: MockProjectOptions | string = {},
-): DenvigProject => {
+): DenvigProject & { config: Worktree['config'] } => {
   // Support legacy signature: createMockProject(slug, path?)
   if (typeof options === 'string') {
     options = { slug: options }
@@ -33,14 +36,29 @@ export const createMockProject = (
     $sources: [],
   }
 
+  const worktree = {
+    id,
+    slug,
+    name,
+    path,
+    config,
+    isPrimary: true,
+    branch: 'main',
+    refs: [],
+    rootFiles: [],
+  } as unknown as Worktree
+
   return {
     id,
     slug,
     name,
     path,
     config,
-    worktrees: [],
-  } as unknown as DenvigProject
+    primaryWorktree: worktree,
+    activeWorktree: worktree,
+    worktrees: [worktree],
+    worktree: (branch: string) => (branch === 'main' ? worktree : null),
+  } as unknown as DenvigProject & { config: Worktree['config'] }
 }
 
 /**
