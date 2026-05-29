@@ -29,7 +29,7 @@ type CommandsMap = Record<string, GenericCommand>
 const hiddenCommands = new Set([
   'internals:resource-hash',
   'internals:resource-id',
-  'zsh:__complete__',
+  'shell:__complete__',
 ])
 
 /**

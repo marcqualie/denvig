@@ -2,11 +2,11 @@ import { Command } from '../../lib/command.ts'
 import { getCommands } from '../../lib/zsh/commands.ts'
 import { zshCompletionsFor } from '../../lib/zsh/completions.ts'
 
-export const zshCompleteCommand = new Command({
-  name: 'zsh:__complete__',
-  description: 'Handle zsh completion requests (internal)',
-  usage: 'zsh __complete__ -- <words...>',
-  example: 'denvig zsh __complete__ -- denvig services',
+export const shellCompleteCommand = new Command({
+  name: 'shell:__complete__',
+  description: 'Handle shell completion requests (internal)',
+  usage: 'shell __complete__ -- <words...>',
+  example: 'denvig shell __complete__ -- denvig services',
   args: [],
   flags: [],
   acceptsExtraArgs: true,

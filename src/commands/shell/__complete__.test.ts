@@ -3,10 +3,10 @@ import { describe, it } from 'node:test'
 
 import { runTestCommand } from '../../test/utils/runTestCommand.ts'
 
-describe('commands / zsh __complete__', () => {
+describe('commands / shell __complete__', () => {
   it('should return subcommands for services command', async () => {
     const result = await runTestCommand(
-      'denvig zsh __complete__ -- denvig services',
+      'denvig shell __complete__ -- denvig services',
     )
 
     strictEqual(result.code, 0)
@@ -23,7 +23,7 @@ describe('commands / zsh __complete__', () => {
 
   it('should return service names for services start command', async () => {
     const result = await runTestCommand(
-      'denvig zsh __complete__ -- denvig services start',
+      'denvig shell __complete__ -- denvig services start',
     )
 
     strictEqual(result.code, 0)
@@ -35,7 +35,9 @@ describe('commands / zsh __complete__', () => {
   })
 
   it('should return all detected actions for run command', async () => {
-    const result = await runTestCommand('denvig zsh __complete__ -- denvig run')
+    const result = await runTestCommand(
+      'denvig shell __complete__ -- denvig run',
+    )
 
     strictEqual(result.code, 0)
     strictEqual(result.stderr, '')
@@ -48,5 +50,16 @@ describe('commands / zsh __complete__', () => {
     strictEqual(completions.includes('build'), true)
     strictEqual(completions.includes('test'), true)
     strictEqual(completions.includes('lint'), true)
+  })
+
+  it('should not suggest internal __complete__ under shell', async () => {
+    const result = await runTestCommand(
+      'denvig shell __complete__ -- denvig shell',
+    )
+
+    strictEqual(result.code, 0)
+    const completions = result.stdout.split('\n').filter(Boolean)
+    strictEqual(completions.includes('completions'), true)
+    strictEqual(completions.includes('__complete__'), false)
   })
 })

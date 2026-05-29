@@ -6,7 +6,7 @@
 import type { GenericCommand } from './command.ts'
 
 /** Commands that should be hidden from completions */
-export const HIDDEN_COMMANDS = ['internals', 'zsh'] as const
+export const HIDDEN_COMMANDS = ['internals'] as const
 
 /** Derive root command names from a commands map */
 export function getRootCommands(

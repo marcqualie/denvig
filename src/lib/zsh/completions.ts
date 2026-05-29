@@ -11,6 +11,10 @@ type CompletionContext = {
   commands: Record<string, GenericCommand>
 }
 
+/** Subcommand names that should be suggested, hiding internal ones (e.g. `__complete__`). */
+const visibleSubcommands = (command: GenericCommand): string[] =>
+  Object.keys(command.subcommands).filter((name) => !name.startsWith('__'))
+
 /**
  * Resolve the command and remaining words by walking the subcommand tree.
  * Returns the resolved command (or undefined) and any unconsumed words.
@@ -66,7 +70,7 @@ export const zshCompletionsFor = async (
   if (words.length === 2) {
     // Complete command with subcommands
     if (topCommand?.hasSubcommands) {
-      return Object.keys(topCommand.subcommands)
+      return visibleSubcommands(topCommand)
     }
     // Complete direct command (no subcommands) - get command completions
     if (
@@ -99,7 +103,7 @@ export const zshCompletionsFor = async (
   // (which may be partial), offer subcommand completions
   if (resolved.hasSubcommands && remaining.length <= 1) {
     const partial = remaining[0] || ''
-    const subcmdNames = Object.keys(resolved.subcommands)
+    const subcmdNames = visibleSubcommands(resolved)
     if (partial && !resolved.subcommands[partial]) {
       return subcmdNames.filter((name) => name.startsWith(partial))
     }
@@ -107,7 +111,7 @@ export const zshCompletionsFor = async (
     if (partial && resolved.subcommands[partial]) {
       const child = resolved.subcommands[partial]
       if (child.hasSubcommands) {
-        return Object.keys(child.subcommands)
+        return visibleSubcommands(child)
       }
       if (child.completions && context?.project) {
         return await child.completions({ project: context.project }, [])
