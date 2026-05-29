@@ -13,11 +13,15 @@ describe('commands / shell completions', () => {
     strictEqual(result.stdout.includes('denvig shell __complete__'), true)
   })
 
-  it('should default to zsh when no shell is provided', async () => {
+  it('should show help when no shell is provided', async () => {
     const result = await runTestCommand('denvig shell completions')
 
-    strictEqual(result.code, 0)
-    strictEqual(result.stdout.includes('#compdef denvig'), true)
+    strictEqual(result.code, 1)
+    strictEqual(
+      result.stderr.includes('Missing required argument: shell'),
+      true,
+    )
+    strictEqual(result.stdout.includes('#compdef denvig'), false)
   })
 
   it('should error with a helpful message for unsupported shells', async () => {

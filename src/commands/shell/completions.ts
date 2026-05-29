@@ -48,9 +48,8 @@ export const shellCompletionsCommand = new Command({
     {
       name: 'shell',
       description: `Shell to generate completions for (${SUPPORTED_SHELLS.join(', ')})`,
-      required: false,
+      required: true,
       type: 'string',
-      defaultValue: 'zsh',
     },
   ],
   flags: [
@@ -63,7 +62,7 @@ export const shellCompletionsCommand = new Command({
     },
   ],
   handler: async ({ args, flags }) => {
-    const shell = args.shell ? String(args.shell) : 'zsh'
+    const shell = String(args.shell)
 
     if (!SUPPORTED_SHELLS.includes(shell as SupportedShell)) {
       const message = `Unsupported shell for completions: ${shell}. Supported shells: ${SUPPORTED_SHELLS.join(', ')}`
