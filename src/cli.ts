@@ -114,9 +114,7 @@ async function main() {
     await import('./commands/internals.ts')
   const { depsCommand } = await import('./commands/deps/index.ts')
   const { projectsCommand } = await import('./commands/projects/index.ts')
-  const { zshCompletionsCommand } = await import(
-    './commands/zsh/completions.ts'
-  )
+  const { shellCommand } = await import('./commands/shell/index.ts')
   const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
   const { gatewayCommand } = await import('./commands/gateway/index.ts')
   const { zshCommand } = await import('./commands/zsh/index.ts')
@@ -134,7 +132,7 @@ async function main() {
     'internals:resource-hash': internalsResourceHashCommand,
     'internals:resource-id': internalsResourceIdCommand,
     projects: projectsCommand,
-    'zsh:completions': zshCompletionsCommand,
+    shell: shellCommand,
     'zsh:__complete__': zshCompleteCommand,
     gateway: gatewayCommand,
     zsh: zshCommand,

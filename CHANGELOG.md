@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Shell completions moved to `denvig shell completions zsh` (pass the shell as an argument); unsupported shells now show a helpful error instead of being silently ignored
+
 ### Fixed
 
 - `denvig projects` and the SDK's `projects.list` no longer list detached git worktrees as standalone projects

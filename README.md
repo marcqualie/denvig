@@ -122,7 +122,7 @@ denvig config verify path/to/file.yml
 denvig info                      # Show information about current project
 denvig plugins                   # List available plugins and their actions
 denvig version                   # Show version
-denvig zsh completions --install # Install shell completions
+denvig shell completions zsh --install # Install shell completions
 ```
 
 Most commands accept `--json` for programmatic output and `--project` to target a different project.
