@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { parseToml } from './toml.ts'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
-import type { DenvigProject } from '../project.ts'
+import type { Worktree } from '../project/worktree.ts'
 
 type PyProjectDependency = {
   name: string
@@ -159,7 +159,7 @@ export const parseUvLock = (content: string): UvLockData => {
  * Parse Python dependencies from pyproject.toml and uv.lock
  */
 export const parseUvDependencies = async (
-  project: DenvigProject,
+  project: Worktree,
 ): Promise<ProjectDependencySchema[]> => {
   const pyprojectPath = `${project.path}/pyproject.toml`
   const lockfilePath = `${project.path}/uv.lock`

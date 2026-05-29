@@ -15,7 +15,7 @@ export const pluginsCommand = new Command({
     > = {}
 
     for (const [key, plugin] of Object.entries(plugins)) {
-      const actions = await plugin.actions(project)
+      const actions = await plugin.actions(project.activeWorktree)
       pluginData[key] = {
         name: plugin.name,
         actions,

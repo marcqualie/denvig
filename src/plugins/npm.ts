@@ -1,12 +1,12 @@
 import { readPackageJson } from '../lib/packageJson.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
-import type { DenvigProject } from '../lib/project.ts'
+import type { Worktree } from '../lib/project/worktree.ts'
 
 const plugin = definePlugin({
   name: 'npm',
 
-  actions: async (project: DenvigProject) => {
+  actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles
     const hasPackageJson = rootFiles.includes('package.json')
     const hasNpmLock = rootFiles.includes('package-lock.json')

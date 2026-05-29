@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import plugins from './plugins.ts'
 
-import type { DenvigProject } from './project.ts'
+import type { Worktree } from './project/worktree.ts'
 
 // Re-export dependency types from shared types file
 export type {
@@ -95,7 +95,7 @@ export const dedupeDependencies = (
 }
 
 export const detectDependencies = async (
-  project: DenvigProject,
+  project: Worktree,
 ): Promise<ProjectDependencySchema[]> => {
   // Run all plugin dependency detections in parallel
   const pluginResults = await Promise.all(

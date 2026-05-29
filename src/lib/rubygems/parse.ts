@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
-import type { DenvigProject } from '../project.ts'
+import type { Worktree } from '../project/worktree.ts'
 
 type GemfileDependency = {
   name: string
@@ -189,7 +189,7 @@ export const parseGemfileLock = (content: string): GemfileLockData => {
  * Parse Ruby dependencies from Gemfile and Gemfile.lock
  */
 export const parseRubyDependencies = async (
-  project: DenvigProject,
+  project: Worktree,
 ): Promise<ProjectDependencySchema[]> => {
   const gemfilePath = `${project.path}/Gemfile`
   const lockfilePath = `${project.path}/Gemfile.lock`

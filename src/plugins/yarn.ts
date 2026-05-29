@@ -14,7 +14,7 @@ import { definePlugin } from '../lib/plugin.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
-import type { DenvigProject } from '../lib/project.ts'
+import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
 const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
@@ -64,7 +64,7 @@ function extractPackageName(key: string): string {
 const plugin = definePlugin({
   name: 'yarn',
 
-  actions: async (project: DenvigProject) => {
+  actions: async (project: Worktree) => {
     const hasPackageJson = project.rootFiles.includes('package.json')
     const hasYarnLock = project.rootFiles.includes('yarn.lock')
     const canHandle = hasPackageJson && hasYarnLock
@@ -93,7 +93,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: DenvigProject,
+    project: Worktree,
   ): Promise<ProjectDependencySchema[]> => {
     const lockfilePath = `${project.path}/yarn.lock`
     const packageJsonPath = `${project.path}/package.json`
@@ -349,7 +349,7 @@ const plugin = definePlugin({
     return result
   },
 
-  outdatedDependencies: async (project: DenvigProject, options) => {
+  outdatedDependencies: async (project: Worktree, options) => {
     if (!(await pathExists(`${project.path}/yarn.lock`))) {
       return []
     }

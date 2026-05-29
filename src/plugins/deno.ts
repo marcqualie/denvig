@@ -8,7 +8,7 @@ import { definePlugin } from '../lib/plugin.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
-import type { DenvigProject } from '../lib/project.ts'
+import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
 const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
@@ -101,7 +101,7 @@ const readJsonFile = async (
 const plugin = definePlugin({
   name: 'deno',
 
-  actions: async (project: DenvigProject) => {
+  actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles
     const hasDenoConfig =
       rootFiles.includes('deno.json') || rootFiles.includes('deno.jsonc')
@@ -155,7 +155,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: DenvigProject,
+    project: Worktree,
   ): Promise<ProjectDependencySchema[]> => {
     if (!(await pathExists(`${project.path}/deno.lock`))) {
       return []
@@ -286,7 +286,7 @@ const plugin = definePlugin({
     return result
   },
 
-  outdatedDependencies: async (project: DenvigProject, options) => {
+  outdatedDependencies: async (project: Worktree, options) => {
     if (!(await pathExists(`${project.path}/deno.lock`))) {
       return []
     }

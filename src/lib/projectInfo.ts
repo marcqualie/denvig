@@ -74,7 +74,9 @@ export const getProjectInfo = async (
     name: project.name,
     path: project.path,
     refs: project.refs,
-    worktrees: project.worktrees,
+    worktrees: project.worktrees
+      .filter((wt) => !wt.isPrimary)
+      .map((wt) => ({ path: wt.path, branch: wt.branch })),
     config: hasConfig ? configWithoutSources : null,
     serviceStatus,
   }

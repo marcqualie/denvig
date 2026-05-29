@@ -2,6 +2,7 @@ import fs from 'node:fs'
 
 import { projectId } from '../lib/project/refs.ts'
 
+import type { Worktree } from '../lib/project/worktree.ts'
 import type { DenvigProject } from '../lib/project.ts'
 
 export type MockProjectOptions = {
@@ -38,16 +39,15 @@ export const createMockProject = (
     name,
     path,
     config,
+    worktrees: [],
   } as unknown as DenvigProject
 }
 
 /**
- * Create a mock DenvigProject that reads from a real directory.
+ * Create a mock Worktree that reads from a real directory.
  * Use this when tests need actual filesystem access (e.g., plugin tests).
  */
-export const createMockProjectFromPath = (
-  projectPath: string,
-): DenvigProject => {
+export const createMockProjectFromPath = (projectPath: string): Worktree => {
   return {
     path: projectPath,
     rootFiles: fs.readdirSync(projectPath),
@@ -68,5 +68,5 @@ export const createMockProjectFromPath = (
       walk(projectPath)
       return results
     },
-  } as DenvigProject
+  } as unknown as Worktree
 }
