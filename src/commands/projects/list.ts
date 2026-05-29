@@ -35,6 +35,8 @@ type ProjectRow = {
   path: string
   /** 0 for a project, 1 for one of its worktrees. */
   depth: number
+  /** Whether a worktree row is the last child of its project. */
+  isLastChild: boolean
 }
 
 /**
@@ -126,29 +128,33 @@ export const projectsListCommand = new Command({
         label: primary.config.name || primary.slug,
         path: primary.path,
         depth: 0,
+        isLastChild: false,
       })
 
-      for (const worktree of worktrees) {
+      for (let j = 0; j < worktrees.length; j++) {
+        const worktree = worktrees[j]
         rows.push({
           status: await worktreeStatus(family, worktree, launchctlList),
           label: worktree.branch,
           path: worktree.path,
           depth: 1,
+          isLastChild: j === worktrees.length - 1,
         })
       }
     }
 
     const lines = formatTable({
       columns: [
+        // Service indicator, kept in its own left-aligned column so every
+        // project's status icon lines up regardless of name indentation.
+        { header: '', accessor: (r) => getStatusIcon(r.status) },
         {
           header: 'Name',
           accessor: (r) => {
-            const icon = getStatusIcon(r.status)
-            // Reserve the indicator slot so projects without a service still
-            // line up with those that have one. Worktrees indent one extra char.
-            const indicator = icon ? `${icon} ` : '  '
-            const indent = r.depth > 0 ? ' ' : ''
-            return `${indent}${indicator}${r.label}`
+            // Worktrees are nested under their project with the same tree
+            // connector `denvig deps` uses.
+            const prefix = r.depth > 0 ? (r.isLastChild ? '└── ' : '├── ') : ''
+            return `${prefix}${r.label}`
           },
         },
         { header: 'Path', accessor: (r) => prettyPath(r.path) },
