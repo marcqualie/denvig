@@ -13,7 +13,7 @@ import {
 } from './lib/cli-help.ts'
 import { createCliLogTracker } from './lib/cli-logs.ts'
 import { expandTilde, getGlobalConfig } from './lib/config.ts'
-import { getGitHubSlug } from './lib/project/git.ts'
+import { findDetachedWorktreeRoot, getGitHubSlug } from './lib/project/git.ts'
 import { DenvigProject } from './lib/project.ts'
 import { resolveProjectId } from './lib/project-id.ts'
 import { listProjects } from './lib/projects.ts'
@@ -62,16 +62,25 @@ async function main() {
     const resolved = await resolveProjectId(projectFlag, expandTilde)
     projectPath = resolved.path
   } else {
-    // Check if current directory matches any projectPaths pattern
-    const projects = await listProjects()
-    const match = projects.find(
-      (p) => currentDir === p.path || currentDir.startsWith(`${p.path}/`),
-    )
-    if (match) {
-      projectPath = match.path
+    // A detached worktree resolves to its own checkout: `retrieve` roots the
+    // project at the primary and makes this worktree the active one. This is
+    // checked first so worktrees resolve even when the project glob doesn't
+    // match their (possibly nested) location.
+    const detachedWorktreeRoot = findDetachedWorktreeRoot(currentDir)
+    if (detachedWorktreeRoot) {
+      projectPath = detachedWorktreeRoot
     } else {
-      // Fall back to current directory
-      projectPath = currentDir
+      // Check if current directory matches any projectPaths pattern
+      const projects = await listProjects()
+      const match = projects.find(
+        (p) => currentDir === p.path || currentDir.startsWith(`${p.path}/`),
+      )
+      if (match) {
+        projectPath = match.path
+      } else {
+        // Fall back to current directory
+        projectPath = currentDir
+      }
     }
   }
 

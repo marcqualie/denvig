@@ -8,6 +8,7 @@ import { inspect } from 'node:util'
 
 import {
   detectProjectWorktrees,
+  findDetachedWorktreeRoot,
   getGitHubSlug,
   normaliseGitRemote,
   parseGitHubRemoteUrl,
@@ -500,5 +501,53 @@ describe('detectProjectWorktrees()', () => {
       { path: realWorktree, branch: 'branch-a' },
       { path: realWorktree2, branch: 'branch-b' },
     ])
+  })
+})
+
+describe('findDetachedWorktreeRoot()', () => {
+  beforeEach(() => {
+    fs.mkdirSync(mockProjectPath, { recursive: true })
+    execSync('git init -q -b main', { cwd: mockProjectPath })
+    execSync('git config user.email "test@denvig.test"', {
+      cwd: mockProjectPath,
+    })
+    execSync('git config user.name "Denvig Test"', { cwd: mockProjectPath })
+    execSync('git commit --allow-empty -q -m "Initial commit"', {
+      cwd: mockProjectPath,
+    })
+  })
+  afterEach(() => {
+    fs.rmSync(mockProjectPath, { recursive: true, force: true })
+    fs.rmSync(worktreePath, { recursive: true, force: true })
+  })
+
+  it('returns null for a primary checkout', () => {
+    strictEqual(findDetachedWorktreeRoot(mockProjectPath), null)
+  })
+
+  it('returns null from a subdirectory of a primary checkout', () => {
+    const subDir = path.join(mockProjectPath, 'src', 'commands')
+    fs.mkdirSync(subDir, { recursive: true })
+    strictEqual(findDetachedWorktreeRoot(subDir), null)
+  })
+
+  it('returns null for a path outside any git checkout', () => {
+    strictEqual(findDetachedWorktreeRoot('/tmp'), null)
+  })
+
+  it('returns the worktree root from a detached worktree', () => {
+    execSync(`git worktree add ${worktreePath} -b test-branch`, {
+      cwd: mockProjectPath,
+    })
+    strictEqual(findDetachedWorktreeRoot(worktreePath), worktreePath)
+  })
+
+  it('walks up to the worktree root from a worktree subdirectory', () => {
+    execSync(`git worktree add ${worktreePath} -b test-branch`, {
+      cwd: mockProjectPath,
+    })
+    const subDir = path.join(worktreePath, 'src')
+    fs.mkdirSync(subDir, { recursive: true })
+    strictEqual(findDetachedWorktreeRoot(subDir), worktreePath)
   })
 })
