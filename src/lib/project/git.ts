@@ -152,25 +152,6 @@ export const detectGitWorktree = (path: string): GitWorktree | null => {
   return readGitInfo(resolve(path))?.worktree ?? null
 }
 
-/**
- * True when `path` is a detached git worktree rather than the primary
- * checkout. Worktrees are a subset of their primary project, so this is used
- * to keep them out of project listings. Non-git paths and primary checkouts
- * return false.
- */
-export const isDetachedWorktree = (path: string): boolean => {
-  const absolutePath = resolve(path)
-  const info = readGitInfo(absolutePath)
-  if (!info) return false
-  let real: string
-  try {
-    real = realpathSync(absolutePath)
-  } catch {
-    real = absolutePath
-  }
-  return info.worktree.primaryPath !== real
-}
-
 export type ProjectWorktree = {
   /** Absolute path of the detached worktree's checkout. */
   path: string
