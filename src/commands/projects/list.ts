@@ -1,5 +1,4 @@
 import { Command } from '../../lib/command.ts'
-import { formatTable } from '../../lib/formatters/table.ts'
 import { prettyPath } from '../../lib/path.ts'
 import { DenvigProject } from '../../lib/project.ts'
 import {
@@ -35,8 +34,6 @@ type ProjectRow = {
   path: string
   /** 0 for a project, 1 for one of its worktrees. */
   depth: number
-  /** Whether a worktree row is the last child of its project. */
-  isLastChild: boolean
 }
 
 /**
@@ -128,42 +125,28 @@ export const projectsListCommand = new Command({
         label: primary.config.name || primary.slug,
         path: primary.path,
         depth: 0,
-        isLastChild: false,
       })
 
-      for (let j = 0; j < worktrees.length; j++) {
-        const worktree = worktrees[j]
+      for (const worktree of worktrees) {
         rows.push({
           status: await worktreeStatus(family, worktree, launchctlList),
           label: worktree.branch,
           path: worktree.path,
           depth: 1,
-          isLastChild: j === worktrees.length - 1,
         })
       }
     }
 
-    const lines = formatTable({
-      columns: [
-        // Service indicator, kept in its own left-aligned column so every
-        // project's status icon lines up regardless of name indentation.
-        { header: '', accessor: (r) => getStatusIcon(r.status) },
-        {
-          header: 'Name',
-          accessor: (r) => {
-            // Worktrees are nested under their project with the same tree
-            // connector `denvig deps` uses.
-            const prefix = r.depth > 0 ? (r.isLastChild ? '└── ' : '├── ') : ''
-            return `${prefix}${r.label}`
-          },
-        },
-        { header: 'Path', accessor: (r) => prettyPath(r.path) },
-      ],
-      data: rows,
-    })
+    // Worktrees are nested under their project with a single `└` connector.
+    const nameCell = (r: ProjectRow) => (r.depth > 0 ? `└ ${r.label}` : r.label)
+    const nameWidth = Math.max(...rows.map((r) => nameCell(r).length))
 
-    for (const line of lines) {
-      console.log(line)
+    for (const r of rows) {
+      // Service icon in a fixed left column, one space, the name (padded), one
+      // space, then the path.
+      const icon = getStatusIcon(r.status) || ' '
+      const name = nameCell(r).padEnd(nameWidth)
+      console.log(`${icon} ${name} ${prettyPath(r.path)}`)
     }
 
     console.log('')
