@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `denvig projects` and the SDK's `projects.list` no longer list detached git worktrees as standalone projects
+
 ## [0.7.0-alpha.2] - 2026-05-28
 
 ### Changed
