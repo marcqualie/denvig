@@ -1,4 +1,5 @@
 import { Command } from '../../lib/command.ts'
+import { shellCompleteCommand } from './__complete__.ts'
 import { shellCompletionsCommand } from './completions.ts'
 
 export const shellCommand = new Command({
@@ -10,6 +11,7 @@ export const shellCommand = new Command({
   flags: [],
   subcommands: {
     completions: shellCompletionsCommand,
+    __complete__: shellCompleteCommand,
   },
   handler: () => {
     console.log('Usage: denvig shell <subcommand>')

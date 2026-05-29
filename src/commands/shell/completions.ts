@@ -15,7 +15,7 @@ _denvig() {
   local line
 
   # Get completions from denvig itself
-  completions=("\${(@f)$(denvig zsh __complete__ -- "\${words[@]}" 2>/dev/null)}")
+  completions=("\${(@f)$(denvig shell __complete__ -- "\${words[@]}" 2>/dev/null)}")
 
   if [[ \${#completions[@]} -gt 0 && -n "\${completions[1]}" ]]; then
     _describe 'denvig' completions

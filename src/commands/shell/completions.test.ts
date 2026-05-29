@@ -10,7 +10,7 @@ describe('commands / shell completions', () => {
     strictEqual(result.code, 0)
     strictEqual(result.stderr, '')
     strictEqual(result.stdout.includes('#compdef denvig'), true)
-    strictEqual(result.stdout.includes('denvig zsh __complete__'), true)
+    strictEqual(result.stdout.includes('denvig shell __complete__'), true)
   })
 
   it('should default to zsh when no shell is provided', async () => {

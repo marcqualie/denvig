@@ -115,9 +115,7 @@ async function main() {
   const { depsCommand } = await import('./commands/deps/index.ts')
   const { projectsCommand } = await import('./commands/projects/index.ts')
   const { shellCommand } = await import('./commands/shell/index.ts')
-  const { zshCompleteCommand } = await import('./commands/zsh/__complete__.ts')
   const { gatewayCommand } = await import('./commands/gateway/index.ts')
-  const { zshCommand } = await import('./commands/zsh/index.ts')
   const { certsCommand } = await import('./commands/certs/index.ts')
   const { systemCommand } = await import('./commands/system/index.ts')
 
@@ -133,9 +131,7 @@ async function main() {
     'internals:resource-id': internalsResourceIdCommand,
     projects: projectsCommand,
     shell: shellCommand,
-    'zsh:__complete__': zshCompleteCommand,
     gateway: gatewayCommand,
-    zsh: zshCommand,
     certs: certsCommand,
     system: systemCommand,
   } as Record<string, GenericCommand>

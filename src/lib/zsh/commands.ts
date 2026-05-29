@@ -15,7 +15,6 @@ export const getCommands = async (): Promise<
   const { servicesCommand } = await import('../../commands/services/index.ts')
   const { depsCommand } = await import('../../commands/deps/index.ts')
   const { projectsCommand } = await import('../../commands/projects/index.ts')
-  const { zshCommand } = await import('../../commands/zsh/index.ts')
   const { certsCommand } = await import('../../commands/certs/index.ts')
   const { shellCommand } = await import('../../commands/shell/index.ts')
 
@@ -29,7 +28,6 @@ export const getCommands = async (): Promise<
     deps: depsCommand,
     projects: projectsCommand,
     shell: shellCommand,
-    zsh: zshCommand,
     certs: certsCommand,
   }
 }
