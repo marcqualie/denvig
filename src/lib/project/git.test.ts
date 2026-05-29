@@ -9,7 +9,6 @@ import { inspect } from 'node:util'
 import {
   detectProjectWorktrees,
   getGitHubSlug,
-  isDetachedWorktree,
   normaliseGitRemote,
   parseGitHubRemoteUrl,
 } from './git.ts'
@@ -501,38 +500,5 @@ describe('detectProjectWorktrees()', () => {
       { path: realWorktree, branch: 'branch-a' },
       { path: realWorktree2, branch: 'branch-b' },
     ])
-  })
-})
-
-describe('isDetachedWorktree()', () => {
-  beforeEach(() => {
-    fs.mkdirSync(mockProjectPath, { recursive: true })
-    execSync('git init -q -b main', { cwd: mockProjectPath })
-    execSync('git config user.email "test@denvig.test"', {
-      cwd: mockProjectPath,
-    })
-    execSync('git config user.name "Denvig Test"', { cwd: mockProjectPath })
-    execSync('git commit --allow-empty -q -m "Initial commit"', {
-      cwd: mockProjectPath,
-    })
-  })
-  afterEach(() => {
-    fs.rmSync(mockProjectPath, { recursive: true, force: true })
-    fs.rmSync(worktreePath, { recursive: true, force: true })
-  })
-
-  it('returns false for a primary checkout', () => {
-    strictEqual(isDetachedWorktree(mockProjectPath), false)
-  })
-
-  it('returns false for a non-git directory', () => {
-    strictEqual(isDetachedWorktree('/path/to/project'), false)
-  })
-
-  it('returns true for a detached worktree', () => {
-    execSync(`git worktree add ${worktreePath} -b test-branch`, {
-      cwd: mockProjectPath,
-    })
-    strictEqual(isDetachedWorktree(worktreePath), true)
   })
 })

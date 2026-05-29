@@ -1,7 +1,6 @@
 import { readdir } from 'node:fs/promises'
 
 import { expandTilde, getGlobalConfig } from './config.ts'
-import { isDetachedWorktree } from './project/git.ts'
 import { projectSlug } from './project/refs.ts'
 import { isDirectory, pathExists } from './safeReadFile.ts'
 
@@ -100,9 +99,6 @@ export const listProjects = async (
   const projects = (
     await Promise.all(
       uniquePaths.map(async (projectPath): Promise<ProjectInfo | null> => {
-        // Worktrees are a subset of their primary checkout, not standalone
-        // projects, so exclude them from the listing.
-        if (isDetachedWorktree(projectPath)) return null
         if (withConfig) {
           const configPath = `${projectPath}/.denvig.yml`
           if (!(await pathExists(configPath))) return null
