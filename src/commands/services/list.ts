@@ -8,7 +8,7 @@ import {
   ServiceManager,
   type ServiceResponse,
 } from '../../lib/services/manager.ts'
-import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveWorktree } from '../../lib/services/worktree.ts'
 
 const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   switch (status) {
@@ -25,13 +25,21 @@ export const servicesListCommand = new Command({
   name: 'services:list',
   description: 'List services for the current project',
   usage:
-    'services list [--all] [--global] [--worktree <branch>] [--status <status>]',
+    'services list [--all] [--worktrees] [--global] [--worktree <branch>] [--status <status>]',
   example: 'services list',
   args: [],
   flags: [
     {
       name: 'all',
       description: 'List services across all projects and global services',
+      required: false,
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'worktrees',
+      description:
+        "Nest each project's worktree services beneath it. Pair with --all to show worktrees for every project.",
       required: false,
       type: 'boolean',
       defaultValue: false,
@@ -61,9 +69,10 @@ export const servicesListCommand = new Command({
   completions: () => {
     return []
   },
-  handler: async ({ project: currentProject, flags }) => {
+  handler: async ({ project, worktree, flags }) => {
     const all = flags.all as boolean
     const globalOnly = flags.global as boolean
+    const showWorktrees = flags.worktrees as boolean
     const worktreeFlag =
       typeof flags.worktree === 'string' ? flags.worktree : null
     const statusFlag = typeof flags.status === 'string' ? flags.status : null
@@ -95,6 +104,17 @@ export const servicesListCommand = new Command({
       return { success: false, message }
     }
 
+    if (showWorktrees && (globalOnly || worktreeFlag !== null)) {
+      const message =
+        '--worktrees cannot be combined with --global or --worktree.'
+      if (flags.json) {
+        console.log(JSON.stringify({ success: false, message }))
+      } else {
+        console.error(message)
+      }
+      return { success: false, message }
+    }
+
     if (all && globalOnly) {
       const message = 'Cannot combine --all and --global. Choose one.'
       if (flags.json) {
@@ -105,10 +125,10 @@ export const servicesListCommand = new Command({
       return { success: false, message }
     }
 
-    let project = currentProject
+    let activeWorktree = worktree
     if (worktreeFlag !== null) {
       try {
-        project = await resolveWorktreeProject(currentProject, worktreeFlag)
+        activeWorktree = resolveWorktree(project, worktreeFlag)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -123,50 +143,147 @@ export const servicesListCommand = new Command({
     // Pre-fetch launchctl list once to avoid N shell calls
     const launchctlList = await launchctl.list('denvig.')
 
+    // A rendered row: a service plus where it sits in the project/worktree tree.
+    type ServiceRow = {
+      service: ServiceResponse
+      /** 0 for a project's own services, 1 for a worktree's. */
+      depth: 0 | 1
+      /** Project column text: project slug at depth 0, branch at depth 1. */
+      label: string
+    }
+
     const collectFromManager = async (
       manager: ServiceManager,
-      out: ServiceResponse[],
+      depth: 0 | 1,
+      label: string,
+      out: ServiceRow[],
     ) => {
       const services = await manager.listServices()
+      services.sort((a, b) => a.name.localeCompare(b.name))
       for (const service of services) {
         const response = await manager.getServiceResponse(service.name, {
           launchctlList,
         })
         if (response) {
-          out.push(response)
+          out.push({ service: response, depth, label })
         }
       }
     }
 
-    const allServices: ServiceResponse[] = []
+    // Resolve a checkout's services into a name -> response map.
+    const servicesByName = async (manager: ServiceManager) => {
+      const map = new Map<string, ServiceResponse>()
+      for (const service of await manager.listServices()) {
+        const response = await manager.getServiceResponse(service.name, {
+          launchctlList,
+        })
+        if (response) map.set(service.name, response)
+      }
+      return map
+    }
+
+    // Collect a project's services. With --worktrees, services are grouped by
+    // name: the primary's instance first, then the same service from each
+    // worktree nested beneath it.
+    const collectFamily = async (family: DenvigProject, out: ServiceRow[]) => {
+      const primary = family.primaryWorktree
+      const primaryServices = await servicesByName(new ServiceManager(primary))
+
+      if (!showWorktrees) {
+        for (const name of [...primaryServices.keys()].sort()) {
+          const service = primaryServices.get(name)
+          if (service) out.push({ service, depth: 0, label: primary.slug })
+        }
+        return
+      }
+
+      const worktrees = []
+      for (const wt of family.worktrees.filter((w) => !w.isPrimary)) {
+        worktrees.push({
+          branch: wt.branch,
+          services: await servicesByName(new ServiceManager(wt)),
+        })
+      }
+
+      const names = new Set<string>(primaryServices.keys())
+      for (const wt of worktrees) {
+        for (const name of wt.services.keys()) names.add(name)
+      }
+
+      for (const name of [...names].sort()) {
+        const service = primaryServices.get(name)
+        if (service) out.push({ service, depth: 0, label: primary.slug })
+        for (const wt of worktrees) {
+          const wtService = wt.services.get(name)
+          if (wtService) {
+            out.push({ service: wtService, depth: 1, label: wt.branch })
+          }
+        }
+      }
+    }
+
+    // Group listed paths into families keyed by primary checkout so each
+    // project appears once regardless of how many checkouts the glob matched.
+    const familiesFromPaths = async (paths: string[]) => {
+      const families = new Map<string, DenvigProject>()
+      for (const path of paths) {
+        const proj = await DenvigProject.retrieve(path)
+        const key = proj.primaryWorktree.path
+        if (!families.has(key)) families.set(key, proj)
+      }
+      return [...families.values()].sort((a, b) =>
+        a.primaryWorktree.slug.localeCompare(b.primaryWorktree.slug),
+      )
+    }
+
+    const allServices: ServiceRow[] = []
     let projectCount = 0
 
     if (globalOnly) {
       const globalProject = await createGlobalProject()
       if (Object.keys(globalProject.config.services || {}).length > 0) {
         projectCount = 1
-        await collectFromManager(new ServiceManager(globalProject), allServices)
+        await collectFromManager(
+          new ServiceManager(globalProject),
+          0,
+          globalProject.slug,
+          allServices,
+        )
       }
     } else if (all) {
-      const projectInfos = await listProjects()
-      for (const projectInfo of projectInfos) {
-        const proj = await DenvigProject.retrieve(projectInfo.path)
-        await collectFromManager(new ServiceManager(proj), allServices)
+      const families = await familiesFromPaths(
+        (await listProjects()).map((p) => p.path),
+      )
+      for (const family of families) {
+        await collectFamily(family, allServices)
       }
-      projectCount = projectInfos.length
+      projectCount = families.length
 
       const globalProject = await createGlobalProject()
       if (Object.keys(globalProject.config.services || {}).length > 0) {
         projectCount += 1
-        await collectFromManager(new ServiceManager(globalProject), allServices)
+        await collectFromManager(
+          new ServiceManager(globalProject),
+          0,
+          globalProject.slug,
+          allServices,
+        )
       }
+    } else if (showWorktrees) {
+      projectCount = 1
+      await collectFamily(project, allServices)
     } else {
       projectCount = 1
-      await collectFromManager(new ServiceManager(project), allServices)
+      await collectFromManager(
+        new ServiceManager(activeWorktree),
+        0,
+        activeWorktree.slug,
+        allServices,
+      )
     }
 
     const filteredServices = statusFilter
-      ? allServices.filter((s) => statusFilter.includes(s.status))
+      ? allServices.filter((r) => statusFilter.includes(r.service.status))
       : allServices
 
     if (filteredServices.length === 0) {
@@ -184,26 +301,12 @@ export const servicesListCommand = new Command({
       return { success: true, message: 'No services configured.' }
     }
 
-    const currentProjectSlug = project.slug
-    const sortedServices = filteredServices.sort((a, b) => {
-      const aIsCurrent = a.project.slug === currentProjectSlug
-      const bIsCurrent = b.project.slug === currentProjectSlug
-
-      if (aIsCurrent && !bIsCurrent) return -1
-      if (!aIsCurrent && bIsCurrent) return 1
-
-      const projectCompare = a.project.slug.localeCompare(b.project.slug)
-      if (projectCompare !== 0) return projectCompare
-
-      return a.name.localeCompare(b.name)
-    })
-
     if (flags.json) {
-      console.log(JSON.stringify(sortedServices))
+      console.log(JSON.stringify(filteredServices.map((r) => r.service)))
       return { success: true, message: 'Services listed successfully.' }
     }
 
-    const showProjectColumn = all || globalOnly
+    const showProjectColumn = all || globalOnly || showWorktrees
     const formatUrlCell = (s: ServiceResponse): string => {
       if (!s.url) return '-'
       const showLocal =
@@ -216,20 +319,26 @@ export const servicesListCommand = new Command({
       columns: [
         {
           header: '',
-          accessor: (s) => getStatusIcon(s.status),
+          accessor: (r) => getStatusIcon(r.service.status),
         },
         ...(showProjectColumn
           ? [
               {
                 header: 'Project',
-                accessor: (s: ServiceResponse) => s.project.slug,
+                // Worktrees are nested under their project with a single `└`
+                // connector, matching `denvig projects`.
+                accessor: (r: ServiceRow) =>
+                  r.depth > 0 ? `└ ${r.label}` : r.label,
               },
             ]
           : []),
-        { header: 'Name', accessor: (s: ServiceResponse) => s.name },
-        { header: 'URL', accessor: formatUrlCell },
+        { header: 'Name', accessor: (r: ServiceRow) => r.service.name },
+        {
+          header: 'URL',
+          accessor: (r: ServiceRow) => formatUrlCell(r.service),
+        },
       ],
-      data: sortedServices,
+      data: filteredServices,
     })
 
     for (const line of lines) {

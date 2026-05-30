@@ -144,14 +144,15 @@ export async function teardownProject(
   project: DenvigProject,
   options?: TeardownOptions,
 ): Promise<ProjectTeardownResult> {
-  const manager = new ServiceManager(project)
+  const worktree = project.activeWorktree
+  const manager = new ServiceManager(worktree)
   const services = await manager.teardownAll({
     removeLogs: options?.removeLogs,
   })
 
   return {
     success: true,
-    project: project.slug,
+    project: worktree.slug,
     services,
     logsRemoved: options?.removeLogs ?? false,
   }

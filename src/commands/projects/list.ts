@@ -1,14 +1,17 @@
 import { Command } from '../../lib/command.ts'
-import { formatTable } from '../../lib/formatters/table.ts'
 import { prettyPath } from '../../lib/path.ts'
-import { DenvigProject, shortProjectId } from '../../lib/project.ts'
+import { DenvigProject } from '../../lib/project.ts'
 import {
   getProjectInfo,
   type ProjectInfo,
   type ServiceStatus,
 } from '../../lib/projectInfo.ts'
 import { listProjects } from '../../lib/projects.ts'
-import launchctl from '../../lib/services/launchctl.ts'
+import launchctl, {
+  type LaunchctlListItem,
+} from '../../lib/services/launchctl.ts'
+
+import type { Worktree } from '../../lib/project/worktree.ts'
 
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
 
@@ -21,6 +24,47 @@ const getStatusIcon = (status: ServiceStatus): string => {
     default:
       return ''
   }
+}
+
+/** A row in the rendered list: a project, or one of its worktrees. */
+type ProjectRow = {
+  status: ServiceStatus
+  /** Project name for the primary row, branch name for worktree rows. */
+  label: string
+  path: string
+  /** 0 for a project, 1 for one of its worktrees. */
+  depth: number
+}
+
+/**
+ * Group listed project paths into families keyed by primary checkout. Sibling
+ * worktrees and the primary all collapse to a single family, so each project
+ * appears once regardless of how many of its checkouts the glob matched.
+ */
+const groupIntoFamilies = async (paths: string[]): Promise<DenvigProject[]> => {
+  const families = new Map<string, DenvigProject>()
+  for (const path of paths) {
+    const project = await DenvigProject.retrieve(path)
+    const key = project.primaryWorktree.path
+    if (!families.has(key)) {
+      project.activeWorktree = project.primaryWorktree
+      families.set(key, project)
+    }
+  }
+  return [...families.values()].sort((a, b) =>
+    a.primaryWorktree.path.localeCompare(b.primaryWorktree.path),
+  )
+}
+
+/** Service status for a single worktree, reusing the shared info builder. */
+const worktreeStatus = async (
+  project: DenvigProject,
+  worktree: Worktree,
+  launchctlList: LaunchctlListItem[],
+): Promise<ServiceStatus> => {
+  project.activeWorktree = worktree
+  const info = await getProjectInfo(project, { launchctlList })
+  return info.serviceStatus
 }
 
 export const projectsListCommand = new Command({
@@ -51,53 +95,63 @@ export const projectsListCommand = new Command({
       return { success: true, message: 'No projects found.' }
     }
 
-    // JSON output: skip launchctl calls for performance
+    const families = await groupIntoFamilies(projectPaths.map((p) => p.path))
+
+    // JSON output: one entry per project family, worktrees nested via the
+    // existing `worktrees` field. Skips launchctl calls for performance.
     if (flags.json) {
       const projects: ProjectInfoJSON[] = []
-      for (const projectPath of projectPaths) {
-        const proj = await DenvigProject.retrieve(projectPath.path)
-        const info = await getProjectInfo(proj, { includeServiceStatus: false })
+      for (const family of families) {
+        const info = await getProjectInfo(family, {
+          includeServiceStatus: false,
+        })
         const { serviceStatus: _, ...infoWithoutStatus } = info
         projects.push(infoWithoutStatus)
       }
-      const sortedProjects = projects.sort((a, b) =>
-        a.path.localeCompare(b.path),
-      )
-      console.log(JSON.stringify(sortedProjects))
+      console.log(JSON.stringify(projects))
       return { success: true, message: 'Projects listed successfully.' }
     }
 
-    // CLI output: pre-fetch launchctl list once to avoid N shell calls
+    // CLI output: pre-fetch launchctl list once to avoid N shell calls.
     const launchctlList = await launchctl.list('denvig.')
 
-    const projects: ProjectInfo[] = []
+    const rows: ProjectRow[] = []
+    for (const family of families) {
+      const worktrees = family.worktrees.filter((wt) => !wt.isPrimary)
 
-    for (const projectPath of projectPaths) {
-      const proj = await DenvigProject.retrieve(projectPath.path)
-      const info = await getProjectInfo(proj, { launchctlList })
-      projects.push(info)
+      const primary = family.primaryWorktree
+      rows.push({
+        status: await worktreeStatus(family, primary, launchctlList),
+        label: primary.config.name || primary.slug,
+        path: primary.path,
+        depth: 0,
+      })
+
+      for (const worktree of worktrees) {
+        rows.push({
+          status: await worktreeStatus(family, worktree, launchctlList),
+          label: worktree.branch,
+          path: worktree.path,
+          depth: 1,
+        })
+      }
     }
 
-    // Sort by absolute path ascending
-    const sortedProjects = projects.sort((a, b) => a.path.localeCompare(b.path))
+    // Worktrees are nested under their project with a single `└` connector.
+    const nameCell = (r: ProjectRow) => (r.depth > 0 ? `└ ${r.label}` : r.label)
+    const nameWidth = Math.max(...rows.map((r) => nameCell(r).length))
 
-    const lines = formatTable({
-      columns: [
-        { header: '', accessor: (p) => getStatusIcon(p.serviceStatus) },
-        { header: 'ID', accessor: (p) => shortProjectId(p.id) },
-        { header: 'Name', accessor: (p) => p.config?.name || p.slug },
-        { header: 'Path', accessor: (p) => prettyPath(p.path) },
-      ],
-      data: sortedProjects,
-    })
-
-    for (const line of lines) {
-      console.log(line)
+    for (const r of rows) {
+      // Service icon in a fixed left column, one space, the name (padded), one
+      // space, then the path.
+      const icon = getStatusIcon(r.status) || ' '
+      const name = nameCell(r).padEnd(nameWidth)
+      console.log(`${icon} ${name} ${prettyPath(r.path)}`)
     }
 
     console.log('')
     console.log(
-      `${projects.length} project${projects.length === 1 ? '' : 's'} found`,
+      `${families.length} project${families.length === 1 ? '' : 's'} found`,
     )
 
     return { success: true, message: 'Projects listed successfully.' }

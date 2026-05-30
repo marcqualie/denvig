@@ -20,11 +20,11 @@ export const runCommand = new Command({
   flags: [],
   acceptsExtraArgs: true,
   completions: async ({ project }) => {
-    const actions = await project.actions
+    const actions = await project.activeWorktree.actions
     return Object.keys(actions)
   },
-  handler: async ({ project, args, flags, extraArgs = [] }) => {
-    const actions = await project.actions
+  handler: async ({ worktree, args, flags, extraArgs = [] }) => {
+    const actions = await worktree.actions
 
     if (!args.action) {
       if (flags.json) {
@@ -59,7 +59,7 @@ export const runCommand = new Command({
     const commands = actions[args.action]
     if (!commands) {
       console.error(
-        `Action "${args.action}" not found in project ${project.name}.`,
+        `Action "${args.action}" not found in project ${worktree.name}.`,
       )
       return { success: false, message: `Action "${args.action}" not found.` }
     }
@@ -72,7 +72,7 @@ export const runCommand = new Command({
       // Prepare environment with color forcing for better terminal output
       const env = {
         ...process.env,
-        DENVIG_PROJECT: project.slug,
+        DENVIG_PROJECT: worktree.slug,
       }
 
       // Check if we're in a TTY environment
@@ -99,7 +99,7 @@ export const runCommand = new Command({
       }
 
       const child = spawn(commandName, commandArgs, {
-        cwd: project.path,
+        cwd: worktree.path,
         env,
         stdio: 'inherit',
       })

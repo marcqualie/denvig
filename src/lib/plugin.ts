@@ -2,7 +2,7 @@ import type {
   OutdatedDependencySchema,
   ProjectDependencySchema,
 } from './dependencies'
-import type { DenvigProject } from './project'
+import type { Worktree } from './project/worktree'
 
 /**
  * Options for outdatedDependencies method
@@ -50,16 +50,16 @@ export type DeduplicateResult = {
 type PluginOptions = {
   name: string
 
-  actions: (project: DenvigProject) => Promise<Record<string, string[]>>
+  actions: (project: Worktree) => Promise<Record<string, string[]>>
 
-  dependencies?: (project: DenvigProject) => Promise<ProjectDependencySchema[]>
+  dependencies?: (project: Worktree) => Promise<ProjectDependencySchema[]>
 
   /**
    * Get outdated dependencies for the project.
    * Returns an array of outdated dependencies with version info.
    */
   outdatedDependencies?: (
-    project: DenvigProject,
+    project: Worktree,
     options?: OutdatedDependenciesOptions,
   ) => Promise<OutdatedDependencySchema[]>
 
@@ -68,7 +68,7 @@ type PluginOptions = {
    * Returns the analysis result, and applies changes if dryRun is false.
    */
   deduplicateDependencies?: (
-    project: DenvigProject,
+    project: Worktree,
     options?: DeduplicateDependenciesOptions,
   ) => Promise<DeduplicateResult | null>
 }

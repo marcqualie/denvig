@@ -99,7 +99,14 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
   await Promise.all(
     projects.map(async (info) => {
       const project = await DenvigProject.retrieve(info.path)
-      projectsById.set(project.id, { slug: project.slug, path: project.path })
+      // Routes are keyed by the checkout's id, so map every worktree (the
+      // primary and each detached worktree) back to its slug and path.
+      for (const worktree of project.worktrees) {
+        projectsById.set(worktree.id, {
+          slug: worktree.slug,
+          path: worktree.path,
+        })
+      }
     }),
   )
   const globalProject = await createGlobalProject()

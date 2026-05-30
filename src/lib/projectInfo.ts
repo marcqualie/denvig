@@ -34,16 +34,17 @@ export const getProjectInfo = async (
   project: DenvigProject,
   options?: GetProjectInfoOptions,
 ): Promise<ProjectInfo> => {
-  const hasConfig = project.config.$sources.length > 0
+  const active = project.activeWorktree
+  const hasConfig = active.config.$sources.length > 0
   const includeServiceStatus = options?.includeServiceStatus ?? true
 
   // Extract config without internal $sources property
-  const { $sources: _, ...configWithoutSources } = project.config
+  const { $sources: _, ...configWithoutSources } = active.config
 
   // Determine service status (only when requested)
   let serviceStatus: ServiceStatus = 'none'
   if (includeServiceStatus) {
-    const services = project.config.services || {}
+    const services = active.config.services || {}
     const serviceNames = Object.keys(services)
 
     if (serviceNames.length > 0) {
@@ -51,7 +52,7 @@ export const getProjectInfo = async (
       const launchctlList =
         options?.launchctlList ?? (await launchctl.list('denvig.'))
 
-      const manager = new ServiceManager(project)
+      const manager = new ServiceManager(active)
       let hasRunningService = false
 
       for (const serviceName of serviceNames) {
@@ -69,12 +70,14 @@ export const getProjectInfo = async (
   }
 
   return {
-    id: project.id,
-    slug: project.slug,
-    name: project.name,
-    path: project.path,
-    refs: project.refs,
-    worktrees: project.worktrees,
+    id: active.id,
+    slug: active.slug,
+    name: active.name,
+    path: active.path,
+    refs: active.refs,
+    worktrees: project.worktrees
+      .filter((wt) => !wt.isPrimary)
+      .map((wt) => ({ path: wt.path, branch: wt.branch })),
     config: hasConfig ? configWithoutSources : null,
     serviceStatus,
   }

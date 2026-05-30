@@ -97,7 +97,7 @@ export const depsOutdatedCommand = new Command({
       defaultValue: 'auto',
     },
   ],
-  handler: async ({ project, flags }) => {
+  handler: async ({ worktree, flags }) => {
     const cache = !(flags['no-cache'] as boolean)
     const semverFilter = flags.semver as 'patch' | 'minor' | 'major' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
@@ -116,7 +116,7 @@ export const depsOutdatedCommand = new Command({
       return { success: false, message: 'Invalid --semver value.' }
     }
 
-    const outdated = await project.outdatedDependencies({ cache })
+    const outdated = await worktree.outdatedDependencies({ cache })
     let entries = outdated
 
     // Helper to get current version from versions array
@@ -153,7 +153,7 @@ export const depsOutdatedCommand = new Command({
       releaseLatencyMs = null
     } else if (latencyValue === 'auto') {
       // Read from pnpm-workspace.yaml if available, otherwise default to 24h
-      const pnpmConfig = await readPnpmReleaseAgeConfig(project.path)
+      const pnpmConfig = await readPnpmReleaseAgeConfig(worktree.path)
       if (pnpmConfig) {
         releaseLatencyMs = pnpmConfig.minimumReleaseAgeMs
         releaseLatencyExclude = pnpmConfig.exclude

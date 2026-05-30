@@ -18,7 +18,7 @@ import {
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
-import type { DenvigProject } from '../lib/project.ts'
+import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
 const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
@@ -74,7 +74,7 @@ const resolveAlias = (
 const plugin = definePlugin({
   name: 'pnpm',
 
-  actions: async (project: DenvigProject) => {
+  actions: async (project: Worktree) => {
     const hasPnpmLock = project.rootFiles.includes('pnpm-lock.yaml')
     const canHandle = hasPnpmLock
 
@@ -103,7 +103,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: DenvigProject,
+    project: Worktree,
   ): Promise<ProjectDependencySchema[]> => {
     if (!(await pathExists(`${project.path}/pnpm-lock.yaml`))) {
       return []
@@ -259,7 +259,7 @@ const plugin = definePlugin({
     return result
   },
 
-  outdatedDependencies: async (project: DenvigProject, options) => {
+  outdatedDependencies: async (project: Worktree, options) => {
     if (!(await pathExists(`${project.path}/pnpm-lock.yaml`))) {
       return []
     }

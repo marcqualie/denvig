@@ -4,7 +4,7 @@ import { parseRubyDependencies } from '../lib/rubygems/parse.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
-import type { DenvigProject } from '../lib/project.ts'
+import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
 const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
@@ -12,7 +12,7 @@ const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
 const plugin = definePlugin({
   name: 'ruby',
 
-  actions: async (project: DenvigProject) => {
+  actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles
     const hasGemfile = rootFiles.includes('Gemfile')
     const hasRakefile = rootFiles.includes('Rakefile')
@@ -48,7 +48,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: DenvigProject,
+    project: Worktree,
   ): Promise<ProjectDependencySchema[]> => {
     const hasGemfile = project.rootFiles.includes('Gemfile')
     if (!hasGemfile) {

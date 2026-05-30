@@ -1,7 +1,7 @@
 import plugins from '../plugins.ts'
 import { mergeActions } from './mergeActions.ts'
 
-import type { DenvigProject } from '../project.ts'
+import type { Worktree } from '../project/worktree.ts'
 import type { Actions } from './types.ts'
 
 /**
@@ -13,9 +13,7 @@ import type { Actions } from './types.ts'
  * - deno.json tasks
  * - package.json scripts
  */
-export const detectActions = async (
-  project: DenvigProject,
-): Promise<Actions> => {
+export const detectActions = async (project: Worktree): Promise<Actions> => {
   let actions: Actions = {}
 
   // Project

@@ -6,6 +6,12 @@
 ### Changed
 
 - Shell completions moved to `denvig shell completions zsh` (pass the shell as an argument); unsupported shells now show a helpful error instead of being silently ignored
+- `denvig projects` now groups each project's worktrees beneath it as a subtree instead of listing them as separate projects
+- `denvig services list --worktrees` nests each project's worktree services beneath it (pair with `--all` to show worktrees for every project)
+
+### Fixed
+
+- Running denvig inside a git worktree (including subdirectories and nested layouts) now resolves the worktree's own config, dependencies, and refs
 
 ## [0.7.0-alpha.2] - 2026-05-28
 

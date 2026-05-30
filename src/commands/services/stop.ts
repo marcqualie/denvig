@@ -6,7 +6,7 @@ import {
   getServiceContext,
 } from '../../lib/services/identifier.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
-import { resolveWorktreeProject } from '../../lib/services/worktree.ts'
+import { resolveWorktree } from '../../lib/services/worktree.ts'
 
 export const servicesStopCommand = new Command({
   name: 'services:stop',
@@ -34,13 +34,13 @@ export const servicesStopCommand = new Command({
   completions: ({ project }) => {
     return getServiceCompletions(project)
   },
-  handler: async ({ project: currentProject, args, flags }) => {
+  handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
 
-    let project = currentProject
+    let activeWorktree = worktree
     if (typeof flags.worktree === 'string') {
       try {
-        project = await resolveWorktreeProject(currentProject, flags.worktree)
+        activeWorktree = resolveWorktree(project, flags.worktree)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -51,6 +51,7 @@ export const servicesStopCommand = new Command({
         return { success: false, message }
       }
     }
+    project.activeWorktree = activeWorktree
 
     const {
       manager,
@@ -59,7 +60,7 @@ export const servicesStopCommand = new Command({
     } = await getServiceContext(serviceArg, project)
 
     const projectPrefix =
-      targetProject.slug !== project.slug ? `${targetProject.slug}/` : ''
+      targetProject.slug !== activeWorktree.slug ? `${targetProject.slug}/` : ''
 
     if (!flags.json) {
       console.log(`Stopping ${projectPrefix}${serviceName}...`)

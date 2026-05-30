@@ -1,4 +1,5 @@
 import type { DenvigProject } from './project'
+import type { Worktree } from './project/worktree'
 
 type CommandOptions<
   ArgDefinitions extends ArgDefinition[],
@@ -66,6 +67,8 @@ type CommandHandler<
   FlagDefinitions extends FlagDefinition[],
 > = (context: {
   project: DenvigProject
+  /** The active checkout for this command (cwd's worktree, or `--worktree`). */
+  worktree: Worktree
   args: ParsedArgs<ArgDefinitions>
   flags: ParsedFlags<FlagDefinitions>
   extraArgs?: string[]
@@ -117,7 +120,13 @@ export class Command<
     extraArgs?: string[],
   ): Promise<CommandResponse> {
     try {
-      return await this.handler({ project, args, flags, extraArgs })
+      return await this.handler({
+        project,
+        worktree: project.activeWorktree,
+        args,
+        flags,
+        extraArgs,
+      })
     } catch (e: unknown) {
       console.error(`Error executing command "${this.name}":`, e)
       return { success: false, message: 'fail' }

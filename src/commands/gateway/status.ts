@@ -43,13 +43,13 @@ export const gatewayStatusCommand = new Command({
   example: 'gateway status',
   args: [],
   flags: [],
-  handler: async ({ project, flags }) => {
+  handler: async ({ worktree, flags }) => {
     const globalConfig = await getGlobalConfig()
     const gateway = globalConfig.experimental?.gateway
 
     if (flags.json) {
       const nginxService = getNginxServiceStatus()
-      const services = project.config.services || {}
+      const services = worktree.config.services || {}
       const serviceStatuses = []
 
       for (const [name, config] of Object.entries(services)) {
@@ -59,7 +59,7 @@ export const gatewayStatusCommand = new Command({
           const certDir = secure ? await findCertForDomain(domain) : null
           const sslPaths = certDir ? await resolveSslPaths(certDir) : null
           const nginxPath = gateway?.enabled
-            ? getNginxConfigPath(project.id, name, gateway.configsPath)
+            ? getNginxConfigPath(worktree.id, name, gateway.configsPath)
             : null
 
           serviceStatuses.push({
@@ -121,7 +121,7 @@ export const gatewayStatusCommand = new Command({
     console.log('')
 
     // Show services with gateway config
-    const services = project.config.services || {}
+    const services = worktree.config.services || {}
     const gatewayServices = Object.entries(services).filter(
       ([, config]) => config.http?.domain,
     )
@@ -154,7 +154,7 @@ export const gatewayStatusCommand = new Command({
       const certDir = secure ? await findCertForDomain(domain) : null
       const sslPaths = certDir ? await resolveSslPaths(certDir) : null
       const nginxPath = getNginxConfigPath(
-        project.id,
+        worktree.id,
         name,
         gateway.configsPath,
       )

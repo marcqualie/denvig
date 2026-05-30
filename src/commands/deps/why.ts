@@ -98,13 +98,13 @@ export const depsWhyCommand = new Command({
     },
   ],
   completions: async ({ project }) => {
-    const dependencies = await project.dependencies()
+    const dependencies = await project.activeWorktree.dependencies()
     return dependencies.map((d) => d.name)
   },
-  handler: async ({ project, args, flags }) => {
+  handler: async ({ worktree, args, flags }) => {
     const dependencyName = args.dependency as string
 
-    const allDependencies = await project.dependencies()
+    const allDependencies = await worktree.dependencies()
     const dep = allDependencies.find((d) => d.name === dependencyName)
 
     if (!dep) {
@@ -177,7 +177,7 @@ export const depsWhyCommand = new Command({
         0,
       )
 
-      const outdated = await project
+      const outdated = await worktree
         .outdatedDependencies({ cache: true, depth: outdatedDepth })
         .catch(() => [])
 
@@ -248,8 +248,8 @@ export const depsWhyCommand = new Command({
           dependency: dependencyName,
           found: true,
           project: {
-            name: project.name,
-            path: project.path,
+            name: worktree.name,
+            path: worktree.path,
           },
           dependencies: depChains,
           devDependencies: devDepChains,

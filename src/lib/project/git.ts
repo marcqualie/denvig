@@ -152,6 +152,35 @@ export const detectGitWorktree = (path: string): GitWorktree | null => {
   return readGitInfo(resolve(path))?.worktree ?? null
 }
 
+/**
+ * Walk up from `path` to find the root of the detached git worktree it lives
+ * in. Returns the worktree checkout directory when the nearest `.git` marker is
+ * a *file* (the hallmark of a detached worktree), or null when the nearest
+ * marker is a directory (a primary checkout) or there is no git checkout at all.
+ *
+ * This lets the CLI resolve a worktree — even from a subdirectory or a nested
+ * layout the project glob doesn't match — to its own checkout, while leaving
+ * primary checkouts and non-worktree project directories to the normal
+ * resolution path.
+ */
+export const findDetachedWorktreeRoot = (path: string): string | null => {
+  let current = resolve(path)
+  while (true) {
+    const marker = resolve(current, '.git')
+    try {
+      const stat = statSync(marker)
+      // First `.git` wins: a file means a detached worktree, a directory means
+      // the primary checkout (so the cwd is not inside a detached worktree).
+      return stat.isFile() ? current : null
+    } catch {
+      // No marker here; keep walking up.
+    }
+    const parent = resolve(current, '..')
+    if (parent === current) return null
+    current = parent
+  }
+}
+
 export type ProjectWorktree = {
   /** Absolute path of the detached worktree's checkout. */
   path: string
