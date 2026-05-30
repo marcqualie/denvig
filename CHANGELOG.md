@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [0.7.0-alpha.3] - 2026-05-30
+
 ### Changed
 
 - Shell completions moved to `denvig shell completions zsh` (pass the shell as an argument); unsupported shells now show a helpful error instead of being silently ignored
