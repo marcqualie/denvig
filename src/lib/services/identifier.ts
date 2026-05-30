@@ -9,6 +9,8 @@ import {
 } from './global.ts'
 import { ServiceManager, type ServiceManagerProject } from './manager.ts'
 
+import type { Worktree } from '../project/worktree.ts'
+
 export type ServiceIdentifier = {
   projectSlug: string
   projectId?: string
@@ -185,7 +187,7 @@ export const getServiceContext = async (
     currentProject.slug,
   )
 
-  let project: ServiceManagerProject
+  let worktree: Worktree
 
   // Handle global slug from parseServiceIdentifier
   if (isGlobalSlug(projectSlug)) {
@@ -200,31 +202,31 @@ export const getServiceContext = async (
       currentProject.id === projectId ||
       currentProject.id.startsWith(projectId)
     ) {
-      project = currentProject.activeWorktree
+      worktree = currentProject.activeWorktree
     } else {
       const projectPath = await resolveProjectIdToPath(projectId)
       if (projectPath) {
-        project = (await DenvigProject.retrieve(projectPath)).activeWorktree
+        worktree = (await DenvigProject.retrieve(projectPath)).activeWorktree
       } else {
         throw new Error(`Project with ID "${projectId}" not found`)
       }
     }
   } else if (projectSlug === currentProject.slug) {
-    project = currentProject.activeWorktree
+    worktree = currentProject.activeWorktree
   } else {
     // Try to resolve the slug to a path
     const projectPath = await resolveProjectSlugToPath(projectSlug)
     if (projectPath) {
-      project = (await DenvigProject.retrieve(projectPath)).activeWorktree
+      worktree = (await DenvigProject.retrieve(projectPath)).activeWorktree
     } else {
       // Fallback: treat as path (original behavior)
-      project = (await DenvigProject.retrieve(projectSlug)).activeWorktree
+      worktree = (await DenvigProject.retrieve(projectSlug)).activeWorktree
     }
   }
 
-  const manager = new ServiceManager(project)
+  const manager = new ServiceManager(worktree)
 
-  return { project, manager, serviceName }
+  return { project: worktree, manager, serviceName }
 }
 
 /**
