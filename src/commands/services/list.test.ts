@@ -12,7 +12,7 @@ describe('servicesListCommand', () => {
   it('should have correct usage', () => {
     ok(
       servicesListCommand.usage ===
-        'services list [--all] [--global] [--worktree <branch>] [--status <status>]',
+        'services list [--all] [--worktrees] [--global] [--worktree <branch>] [--status <status>]',
     )
   })
 })
