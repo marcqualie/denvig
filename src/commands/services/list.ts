@@ -170,19 +170,54 @@ export const servicesListCommand = new Command({
       }
     }
 
-    // Collect a project's services, nesting its worktree services beneath it
-    // when --worktrees is set.
+    // Resolve a checkout's services into a name -> response map.
+    const servicesByName = async (manager: ServiceManager) => {
+      const map = new Map<string, ServiceResponse>()
+      for (const service of await manager.listServices()) {
+        const response = await manager.getServiceResponse(service.name, {
+          launchctlList,
+        })
+        if (response) map.set(service.name, response)
+      }
+      return map
+    }
+
+    // Collect a project's services. With --worktrees, services are grouped by
+    // name: the primary's instance first, then the same service from each
+    // worktree nested beneath it.
     const collectFamily = async (family: DenvigProject, out: ServiceRow[]) => {
       const primary = family.primaryWorktree
-      await collectFromManager(
-        new ServiceManager(primary),
-        0,
-        primary.slug,
-        out,
-      )
-      if (showWorktrees) {
-        for (const wt of family.worktrees.filter((w) => !w.isPrimary)) {
-          await collectFromManager(new ServiceManager(wt), 1, wt.branch, out)
+      const primaryServices = await servicesByName(new ServiceManager(primary))
+
+      if (!showWorktrees) {
+        for (const name of [...primaryServices.keys()].sort()) {
+          const service = primaryServices.get(name)
+          if (service) out.push({ service, depth: 0, label: primary.slug })
+        }
+        return
+      }
+
+      const worktrees = []
+      for (const wt of family.worktrees.filter((w) => !w.isPrimary)) {
+        worktrees.push({
+          branch: wt.branch,
+          services: await servicesByName(new ServiceManager(wt)),
+        })
+      }
+
+      const names = new Set<string>(primaryServices.keys())
+      for (const wt of worktrees) {
+        for (const name of wt.services.keys()) names.add(name)
+      }
+
+      for (const name of [...names].sort()) {
+        const service = primaryServices.get(name)
+        if (service) out.push({ service, depth: 0, label: primary.slug })
+        for (const wt of worktrees) {
+          const wtService = wt.services.get(name)
+          if (wtService) {
+            out.push({ service: wtService, depth: 1, label: wt.branch })
+          }
         }
       }
     }
