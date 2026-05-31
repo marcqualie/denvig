@@ -19,8 +19,6 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - uses: pnpm/action-setup@v4
-        with:
-          version: "10.14"
       - run: pnpm install
       - run: pnpm run build
       - run: pnpm test
@@ -32,4 +30,7 @@ jobs:
             *-rc.*)    echo "NPM_TAG=rc"     >> "$GITHUB_ENV" ;;
             *)         echo "NPM_TAG=latest" >> "$GITHUB_ENV" ;;
           esac
-      - run: pnpm publish --no-git-checks --tag "$NPM_TAG"
+        # Publishes every public workspace package (@denvig/cli, then denvig)
+        # in dependency order, rewriting the workspace: protocol to the
+        # concrete version. The private workspace root is skipped.
+      - run: pnpm -r publish --no-git-checks --access public --tag "$NPM_TAG"

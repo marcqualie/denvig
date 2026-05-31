@@ -1,0 +1,14 @@
+{
+  "name": "@denvig/tsconfig",
+  "version": "0.7.0-alpha.3",
+  "private": true,
+  "license": "MIT",
+  "description": "Shared TypeScript configuration for the denvig workspace",
+  "exports": {
+    ".": "./tsconfig.json",
+    "./tsconfig.json": "./tsconfig.json"
+  },
+  "files": [
+    "tsconfig.json"
+  ]
+}

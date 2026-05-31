@@ -5,6 +5,10 @@ bin/denvig
 bin/denvig-*
 releases
 
+# turbo
+.turbo
+*.tsbuildinfo
+
 # node
 node_modules
 

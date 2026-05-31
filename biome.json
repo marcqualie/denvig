@@ -6,7 +6,7 @@
     "useIgnoreFile": false
   },
   "files": {
-    "includes": ["src/**/*", "*.json"],
+    "includes": ["packages/*/src/**/*", "packages/*/*.json", "*.json"],
     "ignoreUnknown": false
   },
   "formatter": {
