@@ -1,0 +1,77 @@
+{
+  "name": "denvig",
+  "version": "0.7.0-alpha.3",
+  "license": "MIT",
+  "description": "A CLI tool to consistently manage cross-discipline projects",
+  "type": "module",
+  "bin": {
+    "denvig": "./dist/bin.cjs"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./cli": {
+      "import": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
+      },
+      "require": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.cjs"
+      }
+    },
+    "./sdk": {
+      "import": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.js"
+      },
+      "require": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && rolldown -c && chmod +x dist/bin.cjs",
+    "check-types": "tsc --noEmit",
+    "lint": "biome check",
+    "lint:fix": "biome check --fix"
+  },
+  "dependencies": {
+    "@denvig/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "@denvig/tsconfig": "workspace:*"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcqualie/denvig.git",
+    "directory": "packages/denvig"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "developer-tools",
+    "productivity",
+    "typescript"
+  ]
+}

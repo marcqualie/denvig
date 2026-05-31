@@ -4,19 +4,29 @@ Denvig is a CLI tool with a concept of simplifying development environments acro
 
 ## Project structure
 
+This is a Turborepo + pnpm workspace. The published code lives under `packages/`.
+
 ```
-cli.ts                 # Main entry oint for the CLI
-src/
-├── commands/          # Command implementations
-├── lib/               # Core libraries and utilities
-|── schemas/           # zod schemas for validation
+packages/
+├── cli/                   # @denvig/cli — the CLI + SDK implementation (published)
+│   └── src/
+│       ├── cli.ts         # CLI entry point
+│       ├── sdk.ts         # SDK entry point (`.` export)
+│       ├── commands/      # Command implementations
+│       ├── lib/           # Core libraries and utilities
+│       └── schemas/       # zod schemas for validation
+└── denvig/                # denvig — thin wrapper that re-exports @denvig/cli (published)
 ```
+
+The `denvig` package depends on `@denvig/cli` via `workspace:*` during development and
+re-exports it as `denvig/cli`; the existing `.` SDK export is preserved.
 
 ## Tech Stack
 
 - **TypeScript**: For type safety and modern JavaScript features
 - **Zod 4**: For schema validation
 - **pnpm**: For package management
+- **Turborepo**: For orchestrating workspace tasks
 
 ## Development Guidelines
 

@@ -199,7 +199,7 @@ pnpm install
 pnpm build
 ```
 
-After building, the CLI will be available at `packages/cli/dist/cli.cjs`. You can link it globally:
+After building, the CLI will be available at `dist/cli.cjs`. You can link it globally:
 
 ```shell
 npm link
