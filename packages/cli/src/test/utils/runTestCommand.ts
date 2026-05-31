@@ -1,5 +1,27 @@
 import { spawn } from 'node:child_process'
+import { dirname, resolve } from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+
+/**
+ * Absolute path to the `@denvig/cli` package root. This file lives at
+ * `packages/cli/src/test/utils/runTestCommand.ts`, so three levels up is the
+ * package root regardless of the process working directory.
+ */
+const cliPackageRoot = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../..',
+)
+
+/** The from-source CLI entry point that tests execute. */
+const cliEntry = resolve(cliPackageRoot, 'src/cli.ts')
+
+/**
+ * The workspace root, which is the `denvig` project used as the fixture for CLI
+ * integration tests — its `.denvig.yml` defines the actions and services the
+ * tests assert against. Commands run here unless a test overrides `cwd`.
+ */
+const repoRoot = resolve(cliPackageRoot, '../..')
 
 type RunTestCommandOptions = {
   /**
@@ -56,8 +78,10 @@ export const runTestCommand = (
   command: string,
   options: RunTestCommandOptions = {},
 ): Promise<RunTestCommandResult> => {
-  const { cwd = process.cwd(), env = {} } = options
-  const rootDir = process.cwd()
+  const { env = {} } = options
+  // A relative `cwd` override resolves against the CLI package; when omitted,
+  // default to the repo root so the command runs inside the denvig project.
+  const cwd = options.cwd ? resolve(cliPackageRoot, options.cwd) : repoRoot
 
   // Enforce all commands start with 'denvig'
   if (!command.startsWith('denvig')) {
@@ -69,7 +93,7 @@ export const runTestCommand = (
   // Execute the Denvig CLI using Node.js
   const child = spawn(
     'node',
-    ['--experimental-strip-types', `${rootDir}/src/cli.ts`, ...args],
+    ['--experimental-strip-types', cliEntry, ...args],
     {
       cwd,
       env: { ...process.env, DENVIG_CLI_VIA: 'node:test', ...env },
