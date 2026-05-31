@@ -41,8 +41,6 @@
     "build": "rm -rf dist && rolldown -c && chmod +x dist/cli.cjs",
     "check-types": "tsc --noEmit",
     "codegen": "bin/codegen",
-    "lint": "biome check",
-    "lint:fix": "biome check --fix",
     "test": "node --test --test-skip-pattern='node_modules' 'src/**/*.test.ts'",
     "test:ci": "node --test --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default"
   },

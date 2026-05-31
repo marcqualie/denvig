@@ -6,10 +6,6 @@
       "outputs": ["dist/**"]
     },
     "check-types": {},
-    "lint": {},
-    "lint:fix": {
-      "cache": false
-    },
     "test": {},
     "test:ci": {},
     "codegen": {

@@ -49,9 +49,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && rolldown -c && chmod +x dist/bin.cjs",
-    "check-types": "tsc --noEmit",
-    "lint": "biome check",
-    "lint:fix": "biome check --fix"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@denvig/cli": "workspace:*"

@@ -10,8 +10,8 @@
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "codegen": "turbo run codegen",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
+    "lint": "biome check",
+    "lint:fix": "biome check --fix",
     "test": "turbo run test",
     "test:ci": "turbo run test:ci"
   },
