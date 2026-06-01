@@ -4,8 +4,6 @@
     "target": "ES2022",
     "module": "esnext",
     "lib": ["ES2022", "DOM"],
-    "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -13,13 +11,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",
+    "customConditions": ["denvig-source"],
     "declaration": true,
     "sourceMap": false,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "types": ["node"]
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  }
 }

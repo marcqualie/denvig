@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The CLI is now published as `@denvig/cli`; the `denvig` package re-exports it (available as `denvig/cli`) and keeps its existing SDK import
+
 ## [0.7.0-alpha.3] - 2026-05-30
 
 ### Changed
