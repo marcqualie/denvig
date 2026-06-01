@@ -11,6 +11,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",
+    "customConditions": ["denvig-source"],
     "declaration": true,
     "sourceMap": false,
     "resolveJsonModule": true,

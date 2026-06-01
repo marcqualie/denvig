@@ -12,6 +12,7 @@
   "types": "./dist/sdk.d.ts",
   "exports": {
     ".": {
+      "denvig-source": "./src/sdk.ts",
       "import": {
         "types": "./dist/sdk.d.ts",
         "default": "./dist/sdk.js"
@@ -21,7 +22,10 @@
         "default": "./dist/sdk.cjs"
       }
     },
-    "./cli": "./dist/cli.cjs"
+    "./cli": {
+      "denvig-source": "./src/cli.ts",
+      "default": "./dist/cli.cjs"
+    }
   },
   "publishConfig": {
     "access": "public"
