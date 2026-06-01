@@ -7,30 +7,24 @@
   "bin": {
     "denvig": "./dist/cli.cjs"
   },
-  "main": "./src/sdk.ts",
-  "types": "./src/sdk.ts",
+  "main": "./dist/sdk.cjs",
+  "module": "./dist/sdk.js",
+  "types": "./dist/sdk.d.ts",
   "exports": {
-    ".": "./src/sdk.ts",
-    "./cli": "./src/cli.ts"
+    ".": {
+      "import": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.js"
+      },
+      "require": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.cjs"
+      }
+    },
+    "./cli": "./dist/cli.cjs"
   },
   "publishConfig": {
-    "access": "public",
-    "main": "./dist/sdk.cjs",
-    "module": "./dist/sdk.js",
-    "types": "./dist/sdk.d.ts",
-    "exports": {
-      ".": {
-        "import": {
-          "types": "./dist/sdk.d.ts",
-          "default": "./dist/sdk.js"
-        },
-        "require": {
-          "types": "./dist/sdk.d.ts",
-          "default": "./dist/sdk.cjs"
-        }
-      },
-      "./cli": "./dist/cli.cjs"
-    }
+    "access": "public"
   },
   "files": [
     "dist/",
