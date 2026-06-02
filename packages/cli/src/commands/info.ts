@@ -1,6 +1,7 @@
+import { prettyPath } from '@denvig/sdk/lib/path.ts'
+import { getProjectInfo } from '@denvig/sdk/lib/projectInfo.ts'
+
 import { Command } from '../lib/command.ts'
-import { prettyPath } from '../lib/path.ts'
-import { getProjectInfo } from '../lib/projectInfo.ts'
 
 const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
   switch (status) {

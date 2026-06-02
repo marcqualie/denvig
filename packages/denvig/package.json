@@ -52,7 +52,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@denvig/cli": "workspace:*"
+    "@denvig/cli": "workspace:*",
+    "@denvig/sdk": "workspace:*"
   },
   "devDependencies": {
     "@denvig/tsconfig": "workspace:*"

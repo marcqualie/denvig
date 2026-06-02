@@ -1,23 +1,23 @@
-import semver from 'semver'
-
-import { Command } from '../../lib/command.ts'
 import {
   buildReverseChain,
   isDevDependenciesSource,
-} from '../../lib/deps/tree.ts'
+} from '@denvig/sdk/lib/deps/tree.ts'
+import { fetchJsrPackageInfo } from '@denvig/sdk/lib/jsr/info.ts'
+import { fetchNpmPackageInfo } from '@denvig/sdk/lib/npm/info.ts'
+import { fetchRubygemInfo } from '@denvig/sdk/lib/rubygems/info.ts'
+import { getSemverLevel } from '@denvig/sdk/lib/semver.ts'
+import { fetchPyPIPackageInfo } from '@denvig/sdk/lib/uv/info.ts'
+import semver from 'semver'
+
+import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'
 import {
   formatTree,
   mergeTreeNode,
   type TreeNode,
 } from '../../lib/formatters/tree.ts'
-import { fetchJsrPackageInfo } from '../../lib/jsr/info.ts'
-import { fetchNpmPackageInfo } from '../../lib/npm/info.ts'
-import { fetchRubygemInfo } from '../../lib/rubygems/info.ts'
-import { getSemverLevel } from '../../lib/semver.ts'
-import { fetchPyPIPackageInfo } from '../../lib/uv/info.ts'
 
-import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
+import type { ProjectDependencySchema } from '@denvig/sdk/lib/dependencies.ts'
 
 const fetchLatestForPackage = async (
   name: string,

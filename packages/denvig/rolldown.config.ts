@@ -7,7 +7,10 @@ import { dts } from 'rolldown-plugin-dts'
  * `workspace:` dependency; when published it resolves to the released package.
  */
 const isExternal = (id: string) =>
-  id === '@denvig/cli' || id.startsWith('@denvig/cli/')
+  id === '@denvig/cli' ||
+  id.startsWith('@denvig/cli/') ||
+  id === '@denvig/sdk' ||
+  id.startsWith('@denvig/sdk/')
 
 export default defineConfig([
   // Root SDK re-export - ESM bundle + bundled .d.ts

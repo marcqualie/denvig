@@ -1,5 +1,6 @@
+import { getDenvigVersion } from '@denvig/sdk/lib/version.ts'
+
 import { Command } from '../lib/command.ts'
-import { getDenvigVersion } from '../lib/version.ts'
 
 export const versionCommand = new Command({
   name: 'version',

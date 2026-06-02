@@ -1,5 +1,6 @@
+import { buildDependencyTree } from '@denvig/sdk/lib/deps/tree.ts'
+
 import { Command } from '../../lib/command.ts'
-import { buildDependencyTree } from '../../lib/deps/tree.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 export const depsListCommand = new Command({

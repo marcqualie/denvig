@@ -1,13 +1,16 @@
 import { execSync } from 'node:child_process'
-
-import { Command } from '../../lib/command.ts'
-import { getGlobalConfig } from '../../lib/config.ts'
-import { findCertForDomain, resolveSslPaths } from '../../lib/gateway/certs.ts'
+import { getGlobalConfig } from '@denvig/sdk/lib/config.ts'
+import {
+  findCertForDomain,
+  resolveSslPaths,
+} from '@denvig/sdk/lib/gateway/certs.ts'
 import {
   getNginxConfigPath,
   getNginxConfPath,
-} from '../../lib/gateway/nginx.ts'
-import { pathExists } from '../../lib/safeReadFile.ts'
+} from '@denvig/sdk/lib/gateway/nginx.ts'
+import { pathExists } from '@denvig/sdk/lib/safeReadFile.ts'
+
+import { Command } from '../../lib/command.ts'
 
 type NginxServiceStatus = {
   running: boolean

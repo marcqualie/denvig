@@ -1,9 +1,8 @@
 import fs from 'node:fs'
+import { projectId } from '@denvig/sdk/lib/project/refs.ts'
 
-import { projectId } from '../lib/project/refs.ts'
-
-import type { Worktree } from '../lib/project/worktree.ts'
-import type { DenvigProject } from '../lib/project.ts'
+import type { Worktree } from '@denvig/sdk/lib/project/worktree.ts'
+import type { DenvigProject } from '@denvig/sdk/lib/project.ts'
 
 export type MockProjectOptions = {
   slug?: string

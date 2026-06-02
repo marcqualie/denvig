@@ -1,7 +1,7 @@
 import { X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { getCaCertPath, isCaInitialized } from '@denvig/sdk/lib/certs.ts'
 
-import { getCaCertPath, isCaInitialized } from '../../../lib/certs.ts'
 import { Command } from '../../../lib/command.ts'
 
 export const certsCaInfoCommand = new Command({

@@ -6,6 +6,8 @@
 ### Changed
 
 - The CLI is now published as `@denvig/cli`; the `denvig` package re-exports it (available as `denvig/cli`) and keeps its existing SDK import
+- The SDK now runs in-process instead of shelling out to the CLI, so `DenvigSDK` calls (e.g. `denvig.services.list()`) execute directly and return data without spawning a subprocess
+- The SDK is also published standalone as `@denvig/sdk` (re-exported as `denvig/sdk`); the `DenvigSDK` constructor now only takes `client` and `cwd`
 
 ## [0.7.0-alpha.3] - 2026-05-30
 

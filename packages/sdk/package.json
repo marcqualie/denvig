@@ -1,0 +1,68 @@
+{
+  "name": "@denvig/sdk",
+  "version": "0.7.0-alpha.3",
+  "license": "MIT",
+  "description": "Programmatic, in-process API for denvig — the logic layer behind the CLI",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "denvig-source": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./*": {
+      "denvig-source": "./src/*"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && rolldown -c",
+    "check-types": "tsc --noEmit",
+    "codegen": "bin/codegen",
+    "test": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts'",
+    "test:ci": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default"
+  },
+  "dependencies": {
+    "node-forge": "^1.4.0",
+    "semver": "^7.8.1",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@denvig/tsconfig": "workspace:*",
+    "@types/node-forge": "^1.3.14",
+    "@types/semver": "^7.7.1"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcqualie/denvig.git",
+    "directory": "packages/sdk"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "developer-tools",
+    "productivity",
+    "typescript",
+    "sdk"
+  ]
+}

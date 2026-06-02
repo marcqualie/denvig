@@ -38,11 +38,11 @@
   "scripts": {
     "build": "rm -rf dist && rolldown -c && chmod +x dist/cli.cjs",
     "check-types": "tsc --noEmit",
-    "codegen": "bin/codegen",
-    "test": "node --test --test-skip-pattern='node_modules' 'src/**/*.test.ts'",
-    "test:ci": "node --test --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default"
+    "test": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts'",
+    "test:ci": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default"
   },
   "dependencies": {
+    "@denvig/sdk": "workspace:*",
     "node-forge": "^1.4.0",
     "semver": "^7.8.1",
     "yaml": "^2.9.0",

@@ -1,6 +1,7 @@
+import { configureGateway } from '@denvig/sdk/lib/gateway/configure.ts'
+import { reconcileServices } from '@denvig/sdk/lib/services/reconcile.ts'
+
 import { Command } from '../../lib/command.ts'
-import { configureGateway } from '../../lib/gateway/configure.ts'
-import { reconcileServices } from '../../lib/services/reconcile.ts'
 
 export const gatewayConfigureCommand = new Command({
   name: 'gateway:configure',

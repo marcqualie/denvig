@@ -1,13 +1,13 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-
 import {
   generateDomainCert,
   getCertDir,
   isCaInitialized,
   loadCaCert,
   writeDomainCertFiles,
-} from '../../lib/certs.ts'
+} from '@denvig/sdk/lib/certs.ts'
+
 import { Command } from '../../lib/command.ts'
 import { confirm } from '../../lib/input.ts'
 

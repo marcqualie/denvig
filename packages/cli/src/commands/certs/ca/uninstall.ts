@@ -2,7 +2,8 @@ import {
   getCaCertPath,
   isCaInitialized,
   uninstallCaFromKeychain,
-} from '../../../lib/certs.ts'
+} from '@denvig/sdk/lib/certs.ts'
+
 import { Command } from '../../../lib/command.ts'
 
 export const certsCaUninstallCommand = new Command({

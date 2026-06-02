@@ -1,8 +1,9 @@
-import { Command } from '../lib/command.ts'
 import {
   constructDenvigResourceId,
   generateDenvigResourceHash,
-} from '../lib/resources.ts'
+} from '@denvig/sdk/lib/resources.ts'
+
+import { Command } from '../lib/command.ts'
 
 export const internalsResourceHashCommand = new Command({
   name: 'internals:resource-hash',

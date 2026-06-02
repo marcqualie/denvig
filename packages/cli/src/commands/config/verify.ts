@@ -1,9 +1,9 @@
 import { resolve } from 'node:path'
+import { safeReadTextFile } from '@denvig/sdk/lib/safeReadFile.ts'
+import { ProjectConfigSchema } from '@denvig/sdk/schemas/config.ts'
 import { parse } from 'yaml'
 
 import { Command } from '../../lib/command.ts'
-import { safeReadTextFile } from '../../lib/safeReadFile.ts'
-import { ProjectConfigSchema } from '../../schemas/config.ts'
 
 export const configVerifyCommand = new Command({
   name: 'config:verify',

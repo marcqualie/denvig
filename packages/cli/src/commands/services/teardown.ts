@@ -1,7 +1,8 @@
+import { resolveWorktree } from '@denvig/sdk/lib/services/worktree.ts'
+import { teardownGlobal, teardownProject } from '@denvig/sdk/lib/teardown.ts'
+
 import { Command } from '../../lib/command.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
-import { resolveWorktree } from '../../lib/services/worktree.ts'
-import { teardownGlobal, teardownProject } from '../../lib/teardown.ts'
 
 export const servicesTeardownCommand = new Command({
   name: 'services:teardown',

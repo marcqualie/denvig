@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
+import { createCliLogTracker } from '@denvig/sdk/lib/cli-logs.ts'
+import { getGlobalConfig } from '@denvig/sdk/lib/config.ts'
+import { resolveProjectContext } from '@denvig/sdk/lib/context.ts'
+import { getDenvigVersion } from '@denvig/sdk/lib/version.ts'
 
 import {
   formatCommandHelp,
@@ -11,13 +15,6 @@ import {
   showRootHelp,
   showSubcommandHelp,
 } from './lib/cli-help.ts'
-import { createCliLogTracker } from './lib/cli-logs.ts'
-import { expandTilde, getGlobalConfig } from './lib/config.ts'
-import { findDetachedWorktreeRoot, getGitHubSlug } from './lib/project/git.ts'
-import { DenvigProject } from './lib/project.ts'
-import { resolveProjectId } from './lib/project-id.ts'
-import { listProjects } from './lib/projects.ts'
-import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
@@ -50,44 +47,15 @@ async function main() {
 
   // Detect project from current directory or --project flag
   const globalConfig = await getGlobalConfig()
-  const currentDir = process.cwd()
   const projectFlag =
     typeof rootFlags.project === 'string' ? rootFlags.project : undefined
 
-  // Find project path: either from flag, or detect from current directory
-  let projectPath: string | null = null
-
-  if (projectFlag) {
-    // Use the unified project ID resolver
-    const resolved = await resolveProjectId(projectFlag, expandTilde)
-    projectPath = resolved.path
-  } else {
-    // A detached worktree resolves to its own checkout: `retrieve` roots the
-    // project at the primary and makes this worktree the active one. This is
-    // checked first so worktrees resolve even when the project glob doesn't
-    // match their (possibly nested) location.
-    const detachedWorktreeRoot = findDetachedWorktreeRoot(currentDir)
-    if (detachedWorktreeRoot) {
-      projectPath = detachedWorktreeRoot
-    } else {
-      // Check if current directory matches any projectPaths pattern
-      const projects = await listProjects()
-      const match = projects.find(
-        (p) => currentDir === p.path || currentDir.startsWith(`${p.path}/`),
-      )
-      if (match) {
-        projectPath = match.path
-      } else {
-        // Fall back to current directory
-        projectPath = currentDir
-      }
-    }
-  }
-
-  const project = projectPath ? await DenvigProject.retrieve(projectPath) : null
+  const { project, slug } = await resolveProjectContext({
+    cwd: process.cwd(),
+    project: projectFlag,
+  })
 
   // Initialize CLI logging (after project detection for slug)
-  const slug = projectPath ? await getGitHubSlug(projectPath) : null
   const cliLogTracker = createCliLogTracker({
     version: getDenvigVersion(),
     command: `denvig ${process.argv.slice(2).join(' ')}`,

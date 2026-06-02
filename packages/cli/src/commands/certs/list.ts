@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
-
 import {
   findCertFile,
   getCaCertPath,
@@ -12,7 +11,8 @@ import {
   isCertIssuedBy,
   isIssuedByLocalCa,
   parseCertDomains,
-} from '../../lib/certs.ts'
+} from '@denvig/sdk/lib/certs.ts'
+
 import { Command } from '../../lib/command.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'

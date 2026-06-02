@@ -1,8 +1,8 @@
+import { getGlobalConfig } from '@denvig/sdk/lib/config.ts'
+import { prettyPath } from '@denvig/sdk/lib/path.ts'
 import { stringify } from 'yaml'
 
 import { Command } from '../../lib/command.ts'
-import { getGlobalConfig } from '../../lib/config.ts'
-import { prettyPath } from '../../lib/path.ts'
 import { configVerifyCommand } from './verify.ts'
 
 const printConfig = (config: Record<string, unknown>) => {

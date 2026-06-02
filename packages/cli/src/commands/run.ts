@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
+import { getDenvigVersion } from '@denvig/sdk/lib/version.ts'
 
 import { Command } from '../lib/command.ts'
-import { getDenvigVersion } from '../lib/version.ts'
 
 export const runCommand = new Command({
   name: 'run',

@@ -1,17 +1,18 @@
-import { Command } from '../../lib/command.ts'
-import { prettyPath } from '../../lib/path.ts'
-import { DenvigProject } from '../../lib/project.ts'
+import { prettyPath } from '@denvig/sdk/lib/path.ts'
+import { DenvigProject } from '@denvig/sdk/lib/project.ts'
 import {
   getProjectInfo,
   type ProjectInfo,
   type ServiceStatus,
-} from '../../lib/projectInfo.ts'
-import { listProjects } from '../../lib/projects.ts'
+} from '@denvig/sdk/lib/projectInfo.ts'
+import { listProjects } from '@denvig/sdk/lib/projects.ts'
 import launchctl, {
   type LaunchctlListItem,
-} from '../../lib/services/launchctl.ts'
+} from '@denvig/sdk/lib/services/launchctl.ts'
 
-import type { Worktree } from '../../lib/project/worktree.ts'
+import { Command } from '../../lib/command.ts'
+
+import type { Worktree } from '@denvig/sdk/lib/project/worktree.ts'
 
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
 

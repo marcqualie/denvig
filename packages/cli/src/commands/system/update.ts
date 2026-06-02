@@ -1,19 +1,22 @@
 import { homedir } from 'node:os'
 import path from 'node:path'
-
-import { Command } from '../../lib/command.ts'
-import { COLORS } from '../../lib/formatters/table.ts'
-import { confirm } from '../../lib/input.ts'
-import { prettyPath } from '../../lib/path.ts'
-import { gitPull, isWorkingTreeDirty } from '../../lib/project/git.ts'
-import { isDirectory } from '../../lib/safeReadFile.ts'
+import { prettyPath } from '@denvig/sdk/lib/path.ts'
+import { gitPull, isWorkingTreeDirty } from '@denvig/sdk/lib/project/git.ts'
+import { isDirectory } from '@denvig/sdk/lib/safeReadFile.ts'
 import {
   brewUpdate,
   brewUpgrade,
   getBrewOutdated,
-} from '../../lib/system/brew.ts'
-import { runDenvig } from '../../lib/system/denvig.ts'
-import { hasSkillsCli, skillsUpdateGlobal } from '../../lib/system/skills.ts'
+} from '@denvig/sdk/lib/system/brew.ts'
+import { runDenvig } from '@denvig/sdk/lib/system/denvig.ts'
+import {
+  hasSkillsCli,
+  skillsUpdateGlobal,
+} from '@denvig/sdk/lib/system/skills.ts'
+
+import { Command } from '../../lib/command.ts'
+import { COLORS } from '../../lib/formatters/table.ts'
+import { confirm } from '../../lib/input.ts'
 
 type StepResult = {
   name: string

@@ -3,8 +3,8 @@ import {
   getProjectFlagPartial,
 } from './project-completions.ts'
 
+import type { DenvigProject } from '@denvig/sdk/lib/project.ts'
 import type { GenericCommand } from '../command.ts'
-import type { DenvigProject } from '../project.ts'
 
 type CompletionContext = {
   project: DenvigProject

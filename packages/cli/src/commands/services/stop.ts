@@ -1,12 +1,12 @@
-import { z } from 'zod'
-
-import { Command } from '../../lib/command.ts'
 import {
   getServiceCompletions,
   getServiceContext,
-} from '../../lib/services/identifier.ts'
+} from '@denvig/sdk/lib/services/identifier.ts'
+import { resolveWorktree } from '@denvig/sdk/lib/services/worktree.ts'
+import { z } from 'zod'
+
+import { Command } from '../../lib/command.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
-import { resolveWorktree } from '../../lib/services/worktree.ts'
 
 export const servicesStopCommand = new Command({
   name: 'services:stop',
