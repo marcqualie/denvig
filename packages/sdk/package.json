@@ -20,7 +20,8 @@
       }
     },
     "./*": {
-      "denvig-source": "./src/*"
+      "denvig-source": "./src/*",
+      "default": "./src/*"
     }
   },
   "publishConfig": {
