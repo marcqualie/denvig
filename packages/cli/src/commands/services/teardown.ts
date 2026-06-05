@@ -1,5 +1,4 @@
-import { resolveWorktree } from '@denvig/sdk/lib/services/worktree.ts'
-import { teardownGlobal, teardownProject } from '@denvig/sdk/lib/teardown.ts'
+import { resolveWorktree, teardownGlobal, teardownProject } from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'

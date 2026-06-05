@@ -4,7 +4,7 @@ import {
   installCaToKeychain,
   isCaInitialized,
   writeCaFiles,
-} from '@denvig/sdk/lib/certs.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../../../lib/command.ts'
 

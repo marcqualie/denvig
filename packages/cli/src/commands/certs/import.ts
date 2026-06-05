@@ -1,10 +1,6 @@
 import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import {
-  getCertDir,
-  getCertsDir,
-  parseCertDomains,
-} from '@denvig/sdk/lib/certs.ts'
+import { getCertDir, getCertsDir, parseCertDomains } from '@denvig/sdk'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'

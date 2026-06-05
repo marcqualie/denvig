@@ -1,7 +1,7 @@
 import {
   constructDenvigResourceId,
   generateDenvigResourceHash,
-} from '@denvig/sdk/lib/resources.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../lib/command.ts'
 

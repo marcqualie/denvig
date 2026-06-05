@@ -1,4 +1,4 @@
-import { listPlugins } from '@denvig/sdk/operations/plugins.ts'
+import { listPlugins } from '@denvig/sdk'
 
 import { Command } from '../lib/command.ts'
 

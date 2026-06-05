@@ -1,28 +1,18 @@
 import {
   areDotfilesInstalled,
-  dotfilesUrlForUsername,
-  installDotfiles,
-} from '@denvig/sdk/lib/system/dotfiles.ts'
-import {
-  enableFullDiskEncryption,
-  isFullDiskEncryptionEnabled,
-} from '@denvig/sdk/lib/system/fullDiskEncryption.ts'
-import {
   configureGit,
-  getGitIdentity,
-} from '@denvig/sdk/lib/system/gitConfig.ts'
-import {
-  installHomebrew,
-  isHomebrewInstalled,
-} from '@denvig/sdk/lib/system/homebrew.ts'
-import {
+  dotfilesUrlForUsername,
+  enableFullDiskEncryption,
   enableSudoTouchId,
-  isSudoTouchIdEnabled,
-} from '@denvig/sdk/lib/system/sudoTouchId.ts'
-import {
+  getGitIdentity,
+  installDotfiles,
+  installHomebrew,
   installXcodeCli,
+  isFullDiskEncryptionEnabled,
+  isHomebrewInstalled,
+  isSudoTouchIdEnabled,
   isXcodeCliInstalled,
-} from '@denvig/sdk/lib/system/xcodeCli.ts'
+} from '@denvig/sdk'
 
 import { confirm, prompt } from '../input.ts'
 

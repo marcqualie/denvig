@@ -1,5 +1,4 @@
-import type { Worktree } from '@denvig/sdk/lib/project/worktree.ts'
-import type { DenvigProject } from '@denvig/sdk/lib/project.ts'
+import type { DenvigProject, Worktree } from '@denvig/sdk'
 
 type CommandOptions<
   ArgDefinitions extends ArgDefinition[],

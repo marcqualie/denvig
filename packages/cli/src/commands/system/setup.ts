@@ -1,4 +1,4 @@
-import { installDotfiles } from '@denvig/sdk/lib/system/dotfiles.ts'
+import { installDotfiles } from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 

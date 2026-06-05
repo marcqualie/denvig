@@ -1,6 +1,6 @@
 import { COLORS } from './table.ts'
 
-import type { TreeNode } from '@denvig/sdk/lib/formatters/tree-node.ts'
+import type { TreeNode } from '@denvig/sdk'
 
 export type { TreeNode }
 

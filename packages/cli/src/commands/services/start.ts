@@ -1,8 +1,8 @@
 import {
   getServiceCompletions,
   getServiceContext,
-} from '@denvig/sdk/lib/services/identifier.ts'
-import { resolveWorktree } from '@denvig/sdk/lib/services/worktree.ts'
+  resolveWorktree,
+} from '@denvig/sdk'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'

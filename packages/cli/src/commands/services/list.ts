@@ -1,8 +1,8 @@
-import { DenvigValidationError } from '@denvig/sdk/lib/errors.ts'
 import {
   collectServiceRows,
+  DenvigValidationError,
   type ServiceRow,
-} from '@denvig/sdk/operations/services.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'

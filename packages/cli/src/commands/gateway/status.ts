@@ -1,14 +1,12 @@
 import { execSync } from 'node:child_process'
-import { getGlobalConfig } from '@denvig/sdk/lib/config.ts'
 import {
   findCertForDomain,
-  resolveSslPaths,
-} from '@denvig/sdk/lib/gateway/certs.ts'
-import {
+  getGlobalConfig,
   getNginxConfigPath,
   getNginxConfPath,
-} from '@denvig/sdk/lib/gateway/nginx.ts'
-import { pathExists } from '@denvig/sdk/lib/safeReadFile.ts'
+  pathExists,
+  resolveSslPaths,
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 

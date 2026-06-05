@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
-import { createCliLogTracker } from '@denvig/sdk/lib/cli-logs.ts'
-import { getGlobalConfig } from '@denvig/sdk/lib/config.ts'
-import { resolveProjectContext } from '@denvig/sdk/lib/context.ts'
-import { getDenvigVersion } from '@denvig/sdk/lib/version.ts'
+import {
+  createCliLogTracker,
+  getDenvigVersion,
+  getGlobalConfig,
+  resolveProjectContext,
+} from '@denvig/sdk'
 
 import {
   formatCommandHelp,

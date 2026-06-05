@@ -19,9 +19,9 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./*": {
-      "denvig-source": "./src/*",
-      "default": "./src/*"
+    "./testing": {
+      "denvig-source": "./src/test/mock.ts",
+      "default": "./src/test/mock.ts"
     }
   },
   "publishConfig": {

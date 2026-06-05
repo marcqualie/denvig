@@ -1,7 +1,7 @@
 import { ok } from 'node:assert'
 import { hostname } from 'node:os'
 import { describe, it } from 'node:test'
-import { createMockProject } from '@denvig/sdk/test/mock.ts'
+import { createMockProject } from '@denvig/sdk/testing'
 
 import { logsCommand } from './logs.ts'
 

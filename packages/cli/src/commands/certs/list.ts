@@ -11,7 +11,7 @@ import {
   isCertIssuedBy,
   isIssuedByLocalCa,
   parseCertDomains,
-} from '@denvig/sdk/lib/certs.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'

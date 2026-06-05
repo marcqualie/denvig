@@ -1,14 +1,8 @@
-import {
-  type GatewayRoute,
-  getGatewayRoute,
-} from '@denvig/sdk/lib/services/state.ts'
+import { type GatewayRoute, getGatewayRoute } from '@denvig/sdk'
 
 import { confirm } from '../input.ts'
 
-import type {
-  ServiceManager,
-  ServiceManagerProject,
-} from '@denvig/sdk/lib/services/manager.ts'
+import type { ServiceManager, ServiceManagerProject } from '@denvig/sdk'
 
 type Flags = {
   json?: unknown

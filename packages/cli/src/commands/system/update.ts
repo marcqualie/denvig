@@ -1,18 +1,17 @@
 import { homedir } from 'node:os'
 import path from 'node:path'
-import { prettyPath } from '@denvig/sdk/lib/path.ts'
-import { gitPull, isWorkingTreeDirty } from '@denvig/sdk/lib/project/git.ts'
-import { isDirectory } from '@denvig/sdk/lib/safeReadFile.ts'
 import {
   brewUpdate,
   brewUpgrade,
   getBrewOutdated,
-} from '@denvig/sdk/lib/system/brew.ts'
-import { runDenvig } from '@denvig/sdk/lib/system/denvig.ts'
-import {
+  gitPull,
   hasSkillsCli,
+  isDirectory,
+  isWorkingTreeDirty,
+  prettyPath,
+  runDenvig,
   skillsUpdateGlobal,
-} from '@denvig/sdk/lib/system/skills.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'

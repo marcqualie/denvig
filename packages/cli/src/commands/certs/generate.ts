@@ -6,7 +6,7 @@ import {
   isCaInitialized,
   loadCaCert,
   writeDomainCertFiles,
-} from '@denvig/sdk/lib/certs.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 import { confirm } from '../../lib/input.ts'

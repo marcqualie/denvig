@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { getDenvigVersion } from '@denvig/sdk/lib/version.ts'
+import { getDenvigVersion } from '@denvig/sdk'
 
 import { Command } from '../lib/command.ts'
 

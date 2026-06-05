@@ -1,5 +1,4 @@
-import { DenvigProject, shortProjectId } from '@denvig/sdk/lib/project.ts'
-import { listProjects } from '@denvig/sdk/lib/projects.ts'
+import { DenvigProject, listProjects, shortProjectId } from '@denvig/sdk'
 
 /**
  * Get project completions based on the current input prefix.

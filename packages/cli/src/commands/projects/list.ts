@@ -1,22 +1,20 @@
-import { prettyPath } from '@denvig/sdk/lib/path.ts'
-import { DenvigProject } from '@denvig/sdk/lib/project.ts'
 import {
+  DenvigProject,
   getProjectInfo,
-  type ProjectInfo,
-  type ServiceStatus,
-} from '@denvig/sdk/lib/projectInfo.ts'
-import { listProjects } from '@denvig/sdk/lib/projects.ts'
-import launchctl, {
   type LaunchctlListItem,
-} from '@denvig/sdk/lib/services/launchctl.ts'
+  launchctl,
+  listProjects,
+  type ProjectInfo,
+  type ProjectServiceStatus,
+  prettyPath,
+  type Worktree,
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 
-import type { Worktree } from '@denvig/sdk/lib/project/worktree.ts'
-
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
 
-const getStatusIcon = (status: ServiceStatus): string => {
+const getStatusIcon = (status: ProjectServiceStatus): string => {
   switch (status) {
     case 'running':
       return '🟢'
@@ -29,7 +27,7 @@ const getStatusIcon = (status: ServiceStatus): string => {
 
 /** A row in the rendered list: a project, or one of its worktrees. */
 type ProjectRow = {
-  status: ServiceStatus
+  status: ProjectServiceStatus
   /** Project name for the primary row, branch name for worktree rows. */
   label: string
   path: string
@@ -62,7 +60,7 @@ const worktreeStatus = async (
   project: DenvigProject,
   worktree: Worktree,
   launchctlList: LaunchctlListItem[],
-): Promise<ServiceStatus> => {
+): Promise<ProjectServiceStatus> => {
   project.activeWorktree = worktree
   const info = await getProjectInfo(project, { launchctlList })
   return info.serviceStatus

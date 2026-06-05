@@ -1,5 +1,4 @@
-import { configureGateway } from '@denvig/sdk/lib/gateway/configure.ts'
-import { reconcileServices } from '@denvig/sdk/lib/services/reconcile.ts'
+import { configureGateway, reconcileServices } from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 

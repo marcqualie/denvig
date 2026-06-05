@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises'
 import {
   getServiceCompletions,
   getServiceContext,
-} from '@denvig/sdk/lib/services/identifier.ts'
-import { resolveWorktree } from '@denvig/sdk/lib/services/worktree.ts'
+  resolveWorktree,
+} from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
 

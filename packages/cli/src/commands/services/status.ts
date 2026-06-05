@@ -1,12 +1,12 @@
 import { homedir } from 'node:os'
-import { getGlobalConfig } from '@denvig/sdk/lib/config.ts'
-import { getNginxConfigPath } from '@denvig/sdk/lib/gateway/nginx.ts'
-import { pathExists } from '@denvig/sdk/lib/safeReadFile.ts'
 import {
+  getGlobalConfig,
+  getNginxConfigPath,
   getServiceCompletions,
   getServiceContext,
-} from '@denvig/sdk/lib/services/identifier.ts'
-import { resolveWorktree } from '@denvig/sdk/lib/services/worktree.ts'
+  pathExists,
+  resolveWorktree,
+} from '@denvig/sdk'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'

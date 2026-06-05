@@ -1,6 +1,6 @@
 import { strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
-import { getDenvigVersion } from '@denvig/sdk/lib/version.ts'
+import { getDenvigVersion } from '@denvig/sdk'
 
 import { runTestCommand } from '../test/utils/runTestCommand.ts'
 

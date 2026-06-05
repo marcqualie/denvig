@@ -2,7 +2,7 @@ import {
   getCaCertPath,
   isCaInitialized,
   uninstallCaFromKeychain,
-} from '@denvig/sdk/lib/certs.ts'
+} from '@denvig/sdk'
 
 import { Command } from '../../../lib/command.ts'
 
