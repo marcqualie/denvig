@@ -1,4 +1,4 @@
-import { getDenvigVersion } from '@denvig/sdk'
+import { getDenvigVersion } from '@denvig/sdk/unsafe'
 
 import type { GenericCommand } from './command.ts'
 

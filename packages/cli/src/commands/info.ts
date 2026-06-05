@@ -1,4 +1,4 @@
-import { getProjectInfo, prettyPath } from '@denvig/sdk'
+import { getProjectInfo, prettyPath } from '@denvig/sdk/unsafe'
 
 import { Command } from '../lib/command.ts'
 

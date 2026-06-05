@@ -6,7 +6,7 @@ import {
   getDenvigVersion,
   getGlobalConfig,
   resolveProjectContext,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import {
   formatCommandHelp,

@@ -6,7 +6,7 @@ import {
   fetchRubygemInfo,
   getSemverLevel,
   isDevDependenciesSource,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 import semver from 'semver'
 
 import { Command } from '../../lib/command.ts'
@@ -17,7 +17,7 @@ import {
   type TreeNode,
 } from '../../lib/formatters/tree.ts'
 
-import type { ProjectDependencySchema } from '@denvig/sdk'
+import type { ProjectDependencySchema } from '@denvig/sdk/unsafe'
 
 const fetchLatestForPackage = async (
   name: string,

@@ -6,7 +6,7 @@ import {
   getNginxConfPath,
   pathExists,
   resolveSslPaths,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 

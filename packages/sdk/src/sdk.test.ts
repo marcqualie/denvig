@@ -1,7 +1,6 @@
-import { ok, rejects, strictEqual, throws } from 'node:assert'
+import { ok, throws } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { getDenvigVersion } from './lib/version.ts'
 import { DenvigSDK } from './sdk.ts'
 
 describe('DenvigSDK', () => {
@@ -12,16 +11,15 @@ describe('DenvigSDK', () => {
     ok(new DenvigSDK({ client: 'my-app-2' }))
   })
 
-  it('returns the version in-process (no subprocess)', async () => {
+  it('retrieves the global config in-process (no subprocess)', async () => {
     const denvig = new DenvigSDK({ client: 'test' })
-    strictEqual(await denvig.version(), getDenvigVersion())
+    const config = await denvig.config.retrieve()
+    ok(Array.isArray(config.$sources))
   })
 
-  it('rejects services.list when worktree is given without project', async () => {
+  it('lists certificates as an array', async () => {
     const denvig = new DenvigSDK({ client: 'test' })
-    await rejects(
-      () => denvig.services.list({ worktree: 'main' }),
-      /worktree` requires `project`/,
-    )
+    const certs = await denvig.certificates.list()
+    ok(Array.isArray(certs))
   })
 })

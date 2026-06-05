@@ -1,5 +1,5 @@
 import { resolve } from 'node:path'
-import { ProjectConfigSchema, safeReadTextFile } from '@denvig/sdk'
+import { ProjectConfigSchema, safeReadTextFile } from '@denvig/sdk/unsafe'
 import { parse } from 'yaml'
 
 import { Command } from '../../lib/command.ts'

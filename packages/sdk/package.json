@@ -19,6 +19,17 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./unsafe": {
+      "denvig-source": "./src/unsafe.ts",
+      "import": {
+        "types": "./dist/unsafe.d.ts",
+        "default": "./dist/unsafe.js"
+      },
+      "require": {
+        "types": "./dist/unsafe.d.ts",
+        "default": "./dist/unsafe.cjs"
+      }
+    },
     "./testing": {
       "denvig-source": "./src/test/mock.ts",
       "default": "./src/test/mock.ts"

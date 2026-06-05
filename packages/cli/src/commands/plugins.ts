@@ -1,4 +1,4 @@
-import { listPlugins } from '@denvig/sdk'
+import { listPlugins } from '@denvig/sdk/unsafe'
 
 import { Command } from '../lib/command.ts'
 

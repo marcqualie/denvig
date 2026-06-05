@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { getCertsDir } from '@denvig/sdk'
+import { getCertsDir } from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 import { confirm } from '../../lib/input.ts'

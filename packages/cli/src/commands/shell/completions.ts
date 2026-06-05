@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { pathExists } from '@denvig/sdk'
+import { pathExists } from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 

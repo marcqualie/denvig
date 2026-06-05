@@ -12,7 +12,7 @@ import {
   isHomebrewInstalled,
   isSudoTouchIdEnabled,
   isXcodeCliInstalled,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { confirm, prompt } from '../input.ts'
 

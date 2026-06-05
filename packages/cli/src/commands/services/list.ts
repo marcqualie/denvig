@@ -2,12 +2,12 @@ import {
   collectServiceRows,
   DenvigValidationError,
   type ServiceRow,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
 
-import type { ServiceResponse } from '@denvig/sdk'
+import type { ServiceResponse } from '@denvig/sdk/unsafe'
 
 const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
   switch (status) {

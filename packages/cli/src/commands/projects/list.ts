@@ -8,7 +8,7 @@ import {
   type ProjectServiceStatus,
   prettyPath,
   type Worktree,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 

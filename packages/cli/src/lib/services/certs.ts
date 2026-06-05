@@ -6,11 +6,11 @@ import {
   installCaToKeychain,
   isCaInitialized,
   writeCaFiles,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { confirm } from '../input.ts'
 
-import type { ProjectConfigSchema } from '@denvig/sdk'
+import type { ProjectConfigSchema } from '@denvig/sdk/unsafe'
 
 type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
 

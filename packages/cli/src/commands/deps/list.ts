@@ -1,4 +1,4 @@
-import { buildDependencyTree } from '@denvig/sdk'
+import { buildDependencyTree } from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'

@@ -1,4 +1,4 @@
-import type { DenvigProject, Worktree } from '@denvig/sdk'
+import type { DenvigProject, Worktree } from '@denvig/sdk/unsafe'
 
 type CommandOptions<
   ArgDefinitions extends ArgDefinition[],

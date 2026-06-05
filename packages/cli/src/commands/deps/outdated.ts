@@ -2,8 +2,8 @@ import {
   countCertsExpiringWithin,
   DenvigValidationError,
   getSemverLevel,
-  outdatedDependencies,
-} from '@denvig/sdk'
+  wrapProject,
+} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
@@ -97,8 +97,7 @@ export const depsOutdatedCommand = new Command({
       defaultValue: 'auto',
     },
   ],
-  handler: async ({ worktree, flags }) => {
-    const cache = !(flags['no-cache'] as boolean)
+  handler: async ({ project, worktree, flags }) => {
     const semverFilter = flags.semver as 'patch' | 'minor' | 'major' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
     const releaseLatencyFlag = flags['release-latency'] as string | undefined
@@ -107,10 +106,12 @@ export const depsOutdatedCommand = new Command({
     const getCurrent = (dep: { versions: { resolved: string }[] }) =>
       dep.versions[0]?.resolved || ''
 
-    let sortedEntries: Awaited<ReturnType<typeof outdatedDependencies>>
+    const denvig = wrapProject(project, { client: 'cli', cwd: worktree.path })
+
+    let sortedEntries: Awaited<ReturnType<typeof denvig.dependencies.outdated>>
     try {
-      sortedEntries = await outdatedDependencies(worktree, {
-        cache,
+      sortedEntries = await denvig.dependencies.outdated({
+        noCache: flags['no-cache'] as boolean,
         semver: semverFilter,
         ecosystem: ecosystemFilter,
         releaseLatency: releaseLatencyFlag,

@@ -1,4 +1,4 @@
-import { DenvigProject, listProjects, shortProjectId } from '@denvig/sdk'
+import { DenvigProject, listProjects, shortProjectId } from '@denvig/sdk/unsafe'
 
 /**
  * Get project completions based on the current input prefix.

@@ -11,7 +11,7 @@ import {
   prettyPath,
   runDenvig,
   skillsUpdateGlobal,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'

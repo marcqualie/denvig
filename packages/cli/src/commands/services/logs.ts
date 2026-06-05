@@ -4,7 +4,7 @@ import {
   getServiceCompletions,
   getServiceContext,
   resolveWorktree,
-} from '@denvig/sdk'
+} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 
