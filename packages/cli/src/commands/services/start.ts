@@ -1,8 +1,3 @@
-import {
-  getServiceCompletions,
-  getServiceContext,
-  resolveWorktree,
-} from '@denvig/sdk/unsafe'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
@@ -59,7 +54,7 @@ export const servicesStartCommand = new Command({
     },
   ],
   completions: ({ project }) => {
-    return getServiceCompletions(project)
+    return project.services.completions()
   },
   handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
@@ -67,7 +62,7 @@ export const servicesStartCommand = new Command({
     let activeWorktree = worktree
     if (typeof flags.worktree === 'string') {
       try {
-        activeWorktree = resolveWorktree(project, flags.worktree)
+        activeWorktree = project.selectWorktree(flags.worktree)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -78,13 +73,10 @@ export const servicesStartCommand = new Command({
         return { success: false, message }
       }
     }
-    project.activeWorktree = activeWorktree
 
-    const {
-      manager,
-      serviceName,
-      project: targetProject,
-    } = await getServiceContext(serviceArg, project)
+    const { manager, serviceName, target } =
+      await project.services.context(serviceArg)
+    const targetProject = target
 
     const projectPrefix =
       targetProject.slug !== activeWorktree.slug ? `${targetProject.slug}/` : ''

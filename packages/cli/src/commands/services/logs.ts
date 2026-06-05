@@ -1,10 +1,5 @@
 import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
-import {
-  getServiceCompletions,
-  getServiceContext,
-  resolveWorktree,
-} from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 
@@ -46,15 +41,14 @@ export const logsCommand = new Command({
     },
   ],
   completions: ({ project }) => {
-    return getServiceCompletions(project)
+    return project.services.completions()
   },
-  handler: async ({ project, worktree, args, flags }) => {
+  handler: async ({ project, args, flags }) => {
     const nameArg = args.name as string
 
-    let activeWorktree = worktree
     if (typeof flags.worktree === 'string') {
       try {
-        activeWorktree = resolveWorktree(project, flags.worktree)
+        project.selectWorktree(flags.worktree)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -65,12 +59,9 @@ export const logsCommand = new Command({
         return { success: false, message }
       }
     }
-    project.activeWorktree = activeWorktree
 
-    const { manager, serviceName: name } = await getServiceContext(
-      nameArg,
-      project,
-    )
+    const { manager, serviceName: name } =
+      await project.services.context(nameArg)
     const lines = (flags.lines as number) ?? 10
     const follow = !!flags.follow
 

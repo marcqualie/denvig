@@ -1,4 +1,4 @@
-import { getDenvigVersion, wrapProject } from '@denvig/sdk/unsafe'
+import { getDenvigVersion } from '@denvig/sdk/unsafe'
 
 import { Command } from '../lib/command.ts'
 
@@ -55,11 +55,9 @@ export const runCommand = new Command({
       return { success: true, message: 'No action specified.' }
     }
 
-    const denvig = wrapProject(project, { client: 'cli', cwd: worktree.path })
-
-    let action: Awaited<ReturnType<typeof denvig.actions.retrieve>>
+    let action: Awaited<ReturnType<typeof project.actions.retrieve>>
     try {
-      action = await denvig.actions.retrieve(args.action as string)
+      action = await project.actions.retrieve(args.action as string)
     } catch {
       console.error(
         `Action "${args.action}" not found in project ${worktree.name}.`,

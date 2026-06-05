@@ -2,7 +2,6 @@ import {
   countCertsExpiringWithin,
   DenvigValidationError,
   getSemverLevel,
-  wrapProject,
 } from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
@@ -97,7 +96,7 @@ export const depsOutdatedCommand = new Command({
       defaultValue: 'auto',
     },
   ],
-  handler: async ({ project, worktree, flags }) => {
+  handler: async ({ project, flags }) => {
     const semverFilter = flags.semver as 'patch' | 'minor' | 'major' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
     const releaseLatencyFlag = flags['release-latency'] as string | undefined
@@ -106,11 +105,9 @@ export const depsOutdatedCommand = new Command({
     const getCurrent = (dep: { versions: { resolved: string }[] }) =>
       dep.versions[0]?.resolved || ''
 
-    const denvig = wrapProject(project, { client: 'cli', cwd: worktree.path })
-
-    let sortedEntries: Awaited<ReturnType<typeof denvig.dependencies.outdated>>
+    let sortedEntries: Awaited<ReturnType<typeof project.dependencies.outdated>>
     try {
-      sortedEntries = await denvig.dependencies.outdated({
+      sortedEntries = await project.dependencies.outdated({
         noCache: flags['no-cache'] as boolean,
         semver: semverFilter,
         ecosystem: ecosystemFilter,

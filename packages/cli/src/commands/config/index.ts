@@ -1,5 +1,5 @@
 import { DenvigSDK } from '@denvig/sdk'
-import { prettyPath, wrapProject } from '@denvig/sdk/unsafe'
+import { prettyPath } from '@denvig/sdk/unsafe'
 import { stringify } from 'yaml'
 
 import { Command } from '../../lib/command.ts'
@@ -32,10 +32,9 @@ export const configCommand = new Command({
     verify: configVerifyCommand,
   },
   handler: async ({ project, worktree, flags }) => {
-    const ctx = { client: 'cli', cwd: worktree.path }
-    const denvig = new DenvigSDK(ctx)
+    const denvig = new DenvigSDK({ client: 'cli', cwd: worktree.path })
     const globalConfig = await denvig.config.retrieve()
-    const projectConfig = await wrapProject(project, ctx).config.retrieve()
+    const projectConfig = await project.config.retrieve()
 
     if (flags.json) {
       const { $sources: globalSources, ...globalConfigWithoutSources } =

@@ -1,4 +1,4 @@
-import type { DenvigProject, Worktree } from '@denvig/sdk/unsafe'
+import type { DenvigProject, DenvigWorktree } from '@denvig/sdk'
 
 type CommandOptions<
   ArgDefinitions extends ArgDefinition[],
@@ -67,7 +67,7 @@ type CommandHandler<
 > = (context: {
   project: DenvigProject
   /** The active checkout for this command (cwd's worktree, or `--worktree`). */
-  worktree: Worktree
+  worktree: DenvigWorktree
   args: ParsedArgs<ArgDefinitions>
   flags: ParsedFlags<FlagDefinitions>
   extraArgs?: string[]

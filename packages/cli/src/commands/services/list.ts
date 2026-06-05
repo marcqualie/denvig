@@ -1,8 +1,4 @@
-import {
-  collectServiceRows,
-  DenvigValidationError,
-  type ServiceRow,
-} from '@denvig/sdk/unsafe'
+import { DenvigValidationError, type ServiceRow } from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
@@ -68,7 +64,7 @@ export const servicesListCommand = new Command({
   completions: () => {
     return []
   },
-  handler: async ({ project, worktree, flags }) => {
+  handler: async ({ project, flags }) => {
     const all = flags.all as boolean
     const globalOnly = flags.global as boolean
     const showWorktrees = flags.worktrees as boolean
@@ -79,7 +75,7 @@ export const servicesListCommand = new Command({
 
     let filteredServices: ServiceRow[]
     try {
-      filteredServices = await collectServiceRows(project, worktree, {
+      filteredServices = await project.services.list({
         all,
         global: globalOnly,
         worktrees: showWorktrees,

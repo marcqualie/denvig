@@ -1,35 +1,37 @@
 import { ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { createMockProject } from '../test/mock.ts'
+import { createMockInternalProject } from '../test/mock.ts'
 import { getProjectInfo } from './projectInfo.ts'
 
 import type { Worktree } from './project/worktree.ts'
 
 describe('getProjectInfo()', () => {
   it('should return project info with correct slug', async () => {
-    const project = createMockProject({ slug: 'github:marcqualie/denvig' })
+    const project = createMockInternalProject({
+      slug: 'github:marcqualie/denvig',
+    })
     const info = await getProjectInfo(project)
 
     strictEqual(info.slug, 'github:marcqualie/denvig')
   })
 
   it('should return project info with correct name', async () => {
-    const project = createMockProject({ name: 'My Project' })
+    const project = createMockInternalProject({ name: 'My Project' })
     const info = await getProjectInfo(project)
 
     strictEqual(info.name, 'My Project')
   })
 
   it('should return project info with correct path', async () => {
-    const project = createMockProject({ path: '/Users/test/project' })
+    const project = createMockInternalProject({ path: '/Users/test/project' })
     const info = await getProjectInfo(project)
 
     strictEqual(info.path, '/Users/test/project')
   })
 
   it('should return null config when no $sources', async () => {
-    const project = createMockProject({
+    const project = createMockInternalProject({
       config: { name: 'test', $sources: [] } as Worktree['config'],
     })
     const info = await getProjectInfo(project)
@@ -38,7 +40,7 @@ describe('getProjectInfo()', () => {
   })
 
   it('should return config without $sources when config file exists', async () => {
-    const project = createMockProject({
+    const project = createMockInternalProject({
       config: {
         name: 'configured-project',
         $sources: ['/path/to/.denvig.yml'],
@@ -52,14 +54,14 @@ describe('getProjectInfo()', () => {
   })
 
   it('should return serviceStatus "none" when no services configured', async () => {
-    const project = createMockProject()
+    const project = createMockInternalProject()
     const info = await getProjectInfo(project)
 
     strictEqual(info.serviceStatus, 'none')
   })
 
   it('should return all required ProjectInfo fields', async () => {
-    const project = createMockProject()
+    const project = createMockInternalProject()
     const info = await getProjectInfo(project)
 
     ok('slug' in info)

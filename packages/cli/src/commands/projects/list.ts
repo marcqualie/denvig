@@ -1,16 +1,15 @@
+import { DenvigSDK } from '@denvig/sdk'
 import {
-  DenvigProject,
-  getProjectInfo,
   type LaunchctlListItem,
   launchctl,
-  listProjects,
   type ProjectInfo,
   type ProjectServiceStatus,
   prettyPath,
-  type Worktree,
 } from '@denvig/sdk/unsafe'
 
 import { Command } from '../../lib/command.ts'
+
+import type { DenvigProject } from '@denvig/sdk'
 
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
 
@@ -35,34 +34,14 @@ type ProjectRow = {
   depth: number
 }
 
-/**
- * Group listed project paths into families keyed by primary checkout. Sibling
- * worktrees and the primary all collapse to a single family, so each project
- * appears once regardless of how many of its checkouts the glob matched.
- */
-const groupIntoFamilies = async (paths: string[]): Promise<DenvigProject[]> => {
-  const families = new Map<string, DenvigProject>()
-  for (const path of paths) {
-    const project = await DenvigProject.retrieve(path)
-    const key = project.primaryWorktree.path
-    if (!families.has(key)) {
-      project.activeWorktree = project.primaryWorktree
-      families.set(key, project)
-    }
-  }
-  return [...families.values()].sort((a, b) =>
-    a.primaryWorktree.path.localeCompare(b.primaryWorktree.path),
-  )
-}
-
 /** Service status for a single worktree, reusing the shared info builder. */
 const worktreeStatus = async (
   project: DenvigProject,
-  worktree: Worktree,
+  branch: string,
   launchctlList: LaunchctlListItem[],
 ): Promise<ProjectServiceStatus> => {
-  project.activeWorktree = worktree
-  const info = await getProjectInfo(project, { launchctlList })
+  project.selectWorktree(branch)
+  const info = await project.info({ launchctlList })
   return info.serviceStatus
 }
 
@@ -83,9 +62,10 @@ export const projectsListCommand = new Command({
   ],
   handler: async ({ flags }) => {
     const withConfig = flags['with-config'] as boolean
-    const projectPaths = await listProjects({ withConfig })
+    const denvig = new DenvigSDK({ client: 'cli' })
+    const families = await denvig.projects.list({ withConfig })
 
-    if (projectPaths.length === 0) {
+    if (families.length === 0) {
       if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
@@ -94,16 +74,12 @@ export const projectsListCommand = new Command({
       return { success: true, message: 'No projects found.' }
     }
 
-    const families = await groupIntoFamilies(projectPaths.map((p) => p.path))
-
     // JSON output: one entry per project family, worktrees nested via the
     // existing `worktrees` field. Skips launchctl calls for performance.
     if (flags.json) {
       const projects: ProjectInfoJSON[] = []
       for (const family of families) {
-        const info = await getProjectInfo(family, {
-          includeServiceStatus: false,
-        })
+        const info = await family.info({ includeServiceStatus: false })
         const { serviceStatus: _, ...infoWithoutStatus } = info
         projects.push(infoWithoutStatus)
       }
@@ -116,11 +92,11 @@ export const projectsListCommand = new Command({
 
     const rows: ProjectRow[] = []
     for (const family of families) {
-      const worktrees = family.worktrees.filter((wt) => !wt.isPrimary)
+      const worktrees = family.worktrees.list().filter((wt) => !wt.isPrimary)
 
       const primary = family.primaryWorktree
       rows.push({
-        status: await worktreeStatus(family, primary, launchctlList),
+        status: await worktreeStatus(family, primary.branch, launchctlList),
         label: primary.config.name || primary.slug,
         path: primary.path,
         depth: 0,
@@ -128,7 +104,7 @@ export const projectsListCommand = new Command({
 
       for (const worktree of worktrees) {
         rows.push({
-          status: await worktreeStatus(family, worktree, launchctlList),
+          status: await worktreeStatus(family, worktree.branch, launchctlList),
           label: worktree.branch,
           path: worktree.path,
           depth: 1,

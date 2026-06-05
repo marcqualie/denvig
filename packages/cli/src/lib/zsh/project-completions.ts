@@ -1,4 +1,4 @@
-import { DenvigProject, listProjects, shortProjectId } from '@denvig/sdk/unsafe'
+import { DenvigSDK } from '@denvig/sdk'
 
 /**
  * Get project completions based on the current input prefix.
@@ -16,29 +16,19 @@ export const getProjectCompletions = async (
     return []
   }
 
-  const projects = await listProjects()
+  const denvig = new DenvigSDK({ client: 'cli' })
+  const projects = await denvig.projects.list()
 
   // ID completion mode
   if (partial.startsWith('id:')) {
-    const _idPrefix = partial.slice(3)
-    const completions: string[] = []
-    for (const p of projects) {
-      const project = await DenvigProject.retrieve(p.path)
-      const shortId = shortProjectId(project.id)
-      const completion = `id:${shortId}`
-      if (completion.startsWith(partial)) {
-        completions.push(completion)
-      }
-    }
-    return completions
+    return projects
+      .map((project) => `id:${project.id.slice(0, 8)}`)
+      .filter((completion) => completion.startsWith(partial))
   }
 
   // Default: slug completion (without github: prefix)
   return projects
-    .map((p) => {
-      // Remove github: or local: prefix for easier typing
-      return p.slug.replace(/^(github|local):/, '')
-    })
+    .map((project) => project.slug.replace(/^(github|local):/, ''))
     .filter((slug) => slug.startsWith(partial))
 }
 

@@ -11,7 +11,7 @@ describe('logsCommand', () => {
       slug: 'workspace/denvig',
       path: process.cwd(),
     })
-    project.config.services = {
+    project.activeWorktree.config.services = {
       'test-logs': {
         command: 'echo hi',
       },

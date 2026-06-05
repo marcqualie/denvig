@@ -2,7 +2,6 @@ import {
   buildReverseChain,
   getSemverLevel,
   isDevDependenciesSource,
-  wrapProject,
 } from '@denvig/sdk/unsafe'
 import semver from 'semver'
 
@@ -77,7 +76,6 @@ export const depsWhyCommand = new Command({
   },
   handler: async ({ project, worktree, args, flags }) => {
     const dependencyName = args.dependency as string
-    const denvig = wrapProject(project, { client: 'cli', cwd: worktree.path })
 
     const allDependencies = await worktree.dependencies()
     const dep = allDependencies.find((d) => d.name === dependencyName)
@@ -160,7 +158,7 @@ export const depsWhyCommand = new Command({
         outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
       }
     } else {
-      const info = await denvig.dependencies
+      const info = await project.dependencies
         .info(`${dep.ecosystem}:${dep.name}`)
         .catch(() => null)
       if (info?.latest) {

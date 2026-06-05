@@ -1,10 +1,13 @@
 import { getGlobalConfig } from './lib/config.ts'
 import { resolveProjectContext } from './lib/context.ts'
 import { DenvigValidationError } from './lib/errors.ts'
+import { DenvigProject as InternalProject } from './lib/project.ts'
+import { listProjects } from './lib/projects.ts'
 import { listCertificates } from './operations/certs.ts'
 import { track } from './resources/context.ts'
 import { wrapProject } from './resources/internal.ts'
 
+import type { ListProjectsOptions } from './lib/projects.ts'
 import type {
   DenvigCertificate,
   ListCertificatesOptions,
@@ -12,6 +15,13 @@ import type {
 import type { DenvigConfig } from './resources/config.ts'
 import type { ResourceContext } from './resources/context.ts'
 import type { DenvigProject } from './resources/project.ts'
+
+/** A detected project plus its slug, or nulls when none could be resolved. */
+export type DetectProjectResult = {
+  project: DenvigProject | null
+  projectPath: string | null
+  slug: string | null
+}
 
 /**
  * Regex pattern for valid client names. Must start with a letter, contain only
@@ -79,6 +89,46 @@ export class DenvigSDK {
         )
       }
       return wrapProject(context.project, this.ctx)
+    },
+
+    /**
+     * List every project discovered under the configured project paths. Each
+     * project family (its primary checkout plus sibling worktrees) appears once,
+     * rooted at the primary.
+     */
+    list: (options?: ListProjectsOptions): Promise<DenvigProject[]> =>
+      track(this.ctx, 'projects.list', null, async () => {
+        const discovered = await listProjects(options)
+        const families = new Map<string, DenvigProject>()
+        for (const { path } of discovered) {
+          const internal = await InternalProject.retrieve(path)
+          const key = internal.primaryWorktree.path
+          if (families.has(key)) continue
+          internal.activeWorktree = internal.primaryWorktree
+          families.set(key, wrapProject(internal, this.ctx))
+        }
+        return [...families.values()].sort((a, b) =>
+          a.path.localeCompare(b.path),
+        )
+      }),
+
+    /**
+     * Detect the active project from the SDK's `cwd` or an explicit identifier,
+     * returning `null` (rather than throwing) when none can be resolved. Used by
+     * hosts that must keep running without a project (e.g. the CLI entry point).
+     */
+    detect: async (identifier?: string): Promise<DetectProjectResult> => {
+      const context = await resolveProjectContext({
+        cwd: this.ctx.cwd,
+        project: identifier,
+      })
+      return {
+        project: context.project
+          ? wrapProject(context.project, this.ctx)
+          : null,
+        projectPath: context.projectPath,
+        slug: context.slug,
+      }
     },
   }
 

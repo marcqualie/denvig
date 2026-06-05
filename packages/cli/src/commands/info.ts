@@ -1,4 +1,4 @@
-import { getProjectInfo, prettyPath } from '@denvig/sdk/unsafe'
+import { prettyPath } from '@denvig/sdk/unsafe'
 
 import { Command } from '../lib/command.ts'
 
@@ -21,7 +21,7 @@ export const infoCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ project, flags }) => {
-    const info = await getProjectInfo(project)
+    const info = await project.info()
 
     if (flags.json) {
       console.log(JSON.stringify(info))

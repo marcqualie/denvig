@@ -1,8 +1,3 @@
-import {
-  constructDenvigResourceId,
-  generateDenvigResourceHash,
-} from '@denvig/sdk/unsafe'
-
 import { Command } from '../lib/command.ts'
 
 export const internalsResourceHashCommand = new Command({
@@ -81,8 +76,7 @@ export const internalsResourceHashCommand = new Command({
       return { success: false, message: 'Invalid resource format' }
     }
 
-    const result = generateDenvigResourceHash({
-      project,
+    const result = project.resourceHash({
       workspace,
       resource: resource as `action/${string}` | `service/${string}`,
     })
@@ -149,8 +143,7 @@ export const internalsResourceIdCommand = new Command({
       return { success: false, message: 'Invalid resource format' }
     }
 
-    const id = constructDenvigResourceId({
-      project,
+    const id = project.resourceId({
       workspace,
       resource: resource as `action/${string}` | `service/${string}`,
     })

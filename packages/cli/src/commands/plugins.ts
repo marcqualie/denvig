@@ -1,5 +1,3 @@
-import { listPlugins } from '@denvig/sdk/unsafe'
-
 import { Command } from '../lib/command.ts'
 
 export const pluginsCommand = new Command({
@@ -10,7 +8,7 @@ export const pluginsCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ project, flags }) => {
-    const pluginData = await listPlugins(project.activeWorktree)
+    const pluginData = await project.plugins()
 
     if (flags.json) {
       console.log(JSON.stringify(pluginData))

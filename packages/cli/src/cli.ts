@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
+import { DenvigSDK } from '@denvig/sdk'
 import {
   createCliLogTracker,
   getDenvigVersion,
   getGlobalConfig,
-  resolveProjectContext,
 } from '@denvig/sdk/unsafe'
 
 import {
@@ -52,10 +52,8 @@ async function main() {
   const projectFlag =
     typeof rootFlags.project === 'string' ? rootFlags.project : undefined
 
-  const { project, slug } = await resolveProjectContext({
-    cwd: process.cwd(),
-    project: projectFlag,
-  })
+  const denvig = new DenvigSDK({ client: 'cli', cwd: process.cwd() })
+  const { project, slug } = await denvig.projects.detect(projectFlag)
 
   // Initialize CLI logging (after project detection for slug)
   const cliLogTracker = createCliLogTracker({
