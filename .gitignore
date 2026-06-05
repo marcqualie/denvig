@@ -18,6 +18,7 @@ coverage
 # tmp
 *.bun-build
 logs/*
+.worktrees
 
 # sensitive
 certs

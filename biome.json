@@ -6,7 +6,12 @@
     "useIgnoreFile": false
   },
   "files": {
-    "includes": ["packages/*/src/**/*", "packages/*/*.json", "*.json"],
+    "includes": [
+      "packages/*/src/**/*",
+      "packages/*/*.json",
+      "*.json",
+      "!!.worktrees"
+    ],
     "ignoreUnknown": false
   },
   "formatter": {
