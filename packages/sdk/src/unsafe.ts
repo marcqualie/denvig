@@ -28,11 +28,7 @@ export {
 export { createCliLogTracker } from './lib/cli-logs.ts'
 export { getGlobalConfig } from './lib/config.ts'
 export { resolveProjectContext } from './lib/context.ts'
-export {
-  buildDependencyTree,
-  buildReverseChain,
-  isDevDependenciesSource,
-} from './lib/deps/tree.ts'
+export { buildReverseChain, isDevDependenciesSource } from './lib/deps/tree.ts'
 export { DenvigValidationError } from './lib/errors.ts'
 export {
   findCertForDomain,
@@ -41,8 +37,6 @@ export {
 } from './lib/gateway/certs.ts'
 export { configureGateway } from './lib/gateway/configure.ts'
 export { getNginxConfigPath, getNginxConfPath } from './lib/gateway/nginx.ts'
-export { fetchJsrPackageInfo } from './lib/jsr/info.ts'
-export { fetchNpmPackageInfo } from './lib/npm/info.ts'
 export { prettyPath } from './lib/path.ts'
 export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
 export { DenvigProject, shortProjectId } from './lib/project.ts'
@@ -52,7 +46,6 @@ export {
   constructDenvigResourceId,
   generateDenvigResourceHash,
 } from './lib/resources.ts'
-export { fetchRubygemInfo } from './lib/rubygems/info.ts'
 export {
   isDirectory,
   pathExists,
@@ -88,7 +81,6 @@ export {
 } from './lib/system/sudoTouchId.ts'
 export { installXcodeCli, isXcodeCliInstalled } from './lib/system/xcodeCli.ts'
 export { teardownGlobal, teardownProject } from './lib/teardown.ts'
-export { fetchPyPIPackageInfo } from './lib/uv/info.ts'
 export { getDenvigVersion } from './lib/version.ts'
 export { outdatedDependencies } from './operations/deps.ts'
 export { listPlugins } from './operations/plugins.ts'

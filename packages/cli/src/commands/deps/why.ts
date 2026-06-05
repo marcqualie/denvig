@@ -1,11 +1,8 @@
 import {
   buildReverseChain,
-  fetchJsrPackageInfo,
-  fetchNpmPackageInfo,
-  fetchPyPIPackageInfo,
-  fetchRubygemInfo,
   getSemverLevel,
   isDevDependenciesSource,
+  wrapProject,
 } from '@denvig/sdk/unsafe'
 import semver from 'semver'
 
@@ -18,29 +15,6 @@ import {
 } from '../../lib/formatters/tree.ts'
 
 import type { ProjectDependencySchema } from '@denvig/sdk/unsafe'
-
-const fetchLatestForPackage = async (
-  name: string,
-  ecosystem: string,
-): Promise<string | null> => {
-  if (ecosystem === 'npm') {
-    const info = await fetchNpmPackageInfo(name)
-    return info?.latest ?? null
-  }
-  if (ecosystem === 'jsr') {
-    const info = await fetchJsrPackageInfo(name)
-    return info?.latest ?? null
-  }
-  if (ecosystem === 'pypi') {
-    const info = await fetchPyPIPackageInfo(name)
-    return info?.latest ?? null
-  }
-  if (ecosystem === 'rubygems') {
-    const info = await fetchRubygemInfo(name)
-    return info?.latest ?? null
-  }
-  return null
-}
 
 type RootChain = {
   tree: TreeNode
@@ -101,8 +75,9 @@ export const depsWhyCommand = new Command({
     const dependencies = await project.activeWorktree.dependencies()
     return dependencies.map((d) => d.name)
   },
-  handler: async ({ worktree, args, flags }) => {
+  handler: async ({ project, worktree, args, flags }) => {
     const dependencyName = args.dependency as string
+    const denvig = wrapProject(project, { client: 'cli', cwd: worktree.path })
 
     const allDependencies = await worktree.dependencies()
     const dep = allDependencies.find((d) => d.name === dependencyName)
@@ -185,11 +160,11 @@ export const depsWhyCommand = new Command({
         outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
       }
     } else {
-      const latest = await fetchLatestForPackage(dep.name, dep.ecosystem).catch(
-        () => null,
-      )
-      if (latest) {
-        outdatedMap.set(dep.name, { latest, wanted: latest })
+      const info = await denvig.dependencies
+        .info(`${dep.ecosystem}:${dep.name}`)
+        .catch(() => null)
+      if (info?.latest) {
+        outdatedMap.set(dep.name, { latest: info.latest, wanted: info.latest })
       }
     }
 

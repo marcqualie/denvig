@@ -9,6 +9,7 @@
 - The SDK now runs in-process instead of shelling out to the CLI, so `DenvigSDK` calls execute directly and return data without spawning a subprocess
 - The SDK is also published standalone as `@denvig/sdk` (re-exported as `denvig/sdk`); the `DenvigSDK` constructor now only takes `client` and `cwd`
 - The SDK now exposes a resource-oriented API — resolve a project, then chain into its worktrees, actions, services, dependencies, certificates and config (e.g. `(await denvig.projects.retrieve(id)).services.retrieve('api')` then `.start()`)
+- The SDK's `project.dependencies` namespace gained `tree()` for the dependency tree and `info('npm:redis')` for registry lookups across ecosystems
 
 ## [0.7.0-alpha.3] - 2026-05-30
 

@@ -1,7 +1,11 @@
 import { DenvigValidationError } from '../lib/errors.ts'
 import { parseDuration } from '../lib/formatters/duration.ts'
+import { fetchJsrPackageInfo } from '../lib/jsr/info.ts'
+import { fetchNpmPackageInfo } from '../lib/npm/info.ts'
 import { readPnpmReleaseAgeConfig } from '../lib/pnpm-config.ts'
+import { fetchRubygemInfo } from '../lib/rubygems/info.ts'
 import { outdatedMatchesSemverFilter } from '../lib/semver.ts'
+import { fetchPyPIPackageInfo } from '../lib/uv/info.ts'
 
 import type {
   OutdatedDependencySchema,
@@ -10,6 +14,82 @@ import type {
 import type { Worktree } from '../lib/project/worktree.ts'
 
 export type SemverLevel = 'patch' | 'minor' | 'major'
+
+/** Registry information about a single dependency, across ecosystems. */
+export type DependencyInfo = {
+  /** Ecosystem the dependency belongs to (e.g. `npm`, `rubygems`). */
+  ecosystem: string
+  /** Package name within the ecosystem. */
+  name: string
+  /** Latest version published to the registry, or `null` if unknown. */
+  latest: string | null
+  /** All known versions, newest-last where the registry preserves order. */
+  versions: string[]
+  /** ISO publish dates keyed by version, when the registry provides them. */
+  versionDates?: Record<string, string>
+}
+
+export type DependencyInfoOptions = {
+  /** Skip the on-disk cache and fetch fresh data from the registry. */
+  noCache?: boolean
+}
+
+/** Map an ecosystem to its registry fetcher. */
+const REGISTRY_FETCHERS: Record<
+  string,
+  (name: string, noCache?: boolean) => Promise<DependencyInfo | null>
+> = {
+  npm: async (name, noCache) => {
+    const info = await fetchNpmPackageInfo(name, noCache)
+    return info ? { ecosystem: 'npm', name, ...info } : null
+  },
+  jsr: async (name, noCache) => {
+    const info = await fetchJsrPackageInfo(name, noCache)
+    return info ? { ecosystem: 'jsr', name, ...info } : null
+  },
+  pypi: async (name, noCache) => {
+    const info = await fetchPyPIPackageInfo(name, noCache)
+    return info ? { ecosystem: 'pypi', name, ...info } : null
+  },
+  rubygems: async (name, noCache) => {
+    const info = await fetchRubygemInfo(name, noCache)
+    return info ? { ecosystem: 'rubygems', name, ...info } : null
+  },
+}
+
+/**
+ * Resolve registry information for a dependency identified as
+ * `<ecosystem>:<name>` (e.g. `npm:redis`, `rubygems:rails`). Returns `null`
+ * when the package cannot be found. This is the single consistent entry point
+ * behind the per-ecosystem registry fetchers.
+ */
+export const dependencyInfo = async (
+  identifier: string,
+  options: DependencyInfoOptions = {},
+): Promise<DependencyInfo | null> => {
+  const separator = identifier.indexOf(':')
+  if (separator <= 0) {
+    throw new DenvigValidationError(
+      `Invalid dependency identifier "${identifier}". Expected "<ecosystem>:<name>" (e.g. "npm:redis").`,
+    )
+  }
+
+  const ecosystem = identifier.slice(0, separator)
+  const name = identifier.slice(separator + 1)
+  const fetcher = REGISTRY_FETCHERS[ecosystem]
+  if (!fetcher) {
+    throw new DenvigValidationError(
+      `Unsupported ecosystem "${ecosystem}". Supported: ${Object.keys(REGISTRY_FETCHERS).join(', ')}.`,
+    )
+  }
+  if (!name) {
+    throw new DenvigValidationError(
+      `Invalid dependency identifier "${identifier}". Missing package name.`,
+    )
+  }
+
+  return fetcher(name, options.noCache)
+}
 
 export type ListDependenciesOptions = {
   /** Skip cache and fetch fresh data from the registry. */

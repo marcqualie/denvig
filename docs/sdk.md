@@ -7,6 +7,7 @@ Internals exposed for direct integration with tooling. Used natively by the offi
 ### Initialization
 
 ```typescript
+import { DenvigSDK } from '@denvig/sdk'
 const denvig = new DenvigSDK({
   // options
 })
@@ -66,8 +67,14 @@ await service.stop()
 // List all dependencies for a project
 const dependencies = project.dependencies.list()
 
+// Build the dependency tree (direct deps by default; pass depth to expand)
+const tree = project.dependencies.tree({ depth: 1, ecosystem: 'npm' })
+
 // Lookup dependency by name
 const dependency = project.dependencies.retrieve('npm:redis')
+
+// Look up registry info for a dependency by ecosystem and name
+const info = project.dependencies.info('rubygems:rails')
 
 // List outdated dependencies
 const outdated = project.dependencies.outdated({

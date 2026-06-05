@@ -2,9 +2,16 @@ import {
   detectActionsByEcosystem,
   resolveAction,
 } from '../lib/actions/resolve.ts'
+import {
+  buildDependencyTree,
+  type TreeDependencyEntry,
+} from '../lib/deps/tree.ts'
 import { DenvigValidationError } from '../lib/errors.ts'
 import { resolveWorktree } from '../lib/services/worktree.ts'
 import {
+  type DependencyInfo,
+  type DependencyInfoOptions,
+  dependencyInfo,
   listDependencies,
   outdatedDependencies,
   type SemverLevel,
@@ -34,6 +41,13 @@ export type ActionRetrieveOptions = {
 export type ServiceRetrieveOptions = {
   /** Target a sibling git worktree by branch name (`main` = primary). */
   worktree?: string
+}
+
+export type DependenciesTreeOptions = {
+  /** Include transitive dependencies up to this depth (`0` = direct only). */
+  depth?: number
+  /** Restrict the tree to a single ecosystem (e.g. `npm`). */
+  ecosystem?: string
 }
 
 export type DependenciesOutdatedOptions = {
@@ -120,6 +134,26 @@ export class DenvigProject {
     list: (): Promise<ProjectDependencySchema[]> =>
       track(this.ctx, 'dependencies.list', this.internal.slug, () =>
         listDependencies(this.internal.activeWorktree),
+      ),
+    /**
+     * Build the dependency tree for the active worktree. Direct dependencies
+     * are the roots; pass `depth` to walk transitive dependencies.
+     */
+    tree: (options?: DependenciesTreeOptions): Promise<TreeDependencyEntry[]> =>
+      track(this.ctx, 'dependencies.tree', this.internal.slug, async () => {
+        const all = await listDependencies(this.internal.activeWorktree)
+        return buildDependencyTree(all, options?.depth ?? 0, options?.ecosystem)
+      }),
+    /**
+     * Look up registry information for a dependency by `<ecosystem>:<name>`
+     * (e.g. `npm:redis`). Returns `null` when the package cannot be found.
+     */
+    info: (
+      identifier: string,
+      options?: DependencyInfoOptions,
+    ): Promise<DependencyInfo | null> =>
+      track(this.ctx, 'dependencies.info', this.internal.slug, () =>
+        dependencyInfo(identifier, options),
       ),
     retrieve: async (id: string): Promise<ProjectDependencySchema> => {
       const all = await listDependencies(this.internal.activeWorktree)
