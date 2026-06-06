@@ -87,7 +87,12 @@ const plugin = definePlugin({
     const isWorkspace = project.rootFiles.includes('pnpm-workspace.yaml')
     const actions: Record<string, string[]> = {
       ...Object.entries(scripts)
-        .map(([key, _script]) => [key, `pnpm run ${key}`])
+        // `--reporter=silent` (before `run`, so it targets pnpm rather than
+        // the script) suppresses pnpm's own command echo. denvig already
+        // prints its own `$ …` line, and pnpm 11 otherwise echoes the resolved
+        // script command to stderr — double output, and noise the action
+        // runner would surface as a failure.
+        .map(([key, _script]) => [key, `pnpm --reporter=silent run ${key}`])
         .reduce(
           (acc, [key, script]) => {
             acc[key] = [script]

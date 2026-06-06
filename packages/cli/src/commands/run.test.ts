@@ -9,8 +9,9 @@ describe('commands / run', () => {
 
     strictEqual(result.code, 0)
     // Should have some output from the lint process
-    match(result.stdout, /pnpm run lint/)
-    match(result.stdout, /biome check/)
+    match(result.stdout, /pnpm --reporter=silent run lint/)
+    // biome's own output (the `> biome check` echo is silenced by pnpm now)
+    match(result.stdout, /Checked \d+ files/)
     // Stderr may contain lint warnings/errors, but that's okay as long as exit code is 0
   })
 
@@ -48,8 +49,8 @@ describe('commands / run', () => {
     )
 
     // Ensure single-line actions still work normally
-    match(result.stdout, /build: pnpm run build/)
-    match(result.stdout, /test: pnpm run test/)
+    match(result.stdout, /build: pnpm --reporter=silent run build/)
+    match(result.stdout, /test: pnpm --reporter=silent run test/)
 
     strictEqual(result.stderr, '')
   })
