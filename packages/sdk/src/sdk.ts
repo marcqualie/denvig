@@ -3,6 +3,7 @@ import { resolveProjectContext } from './lib/context.ts'
 import { DenvigValidationError } from './lib/errors.ts'
 import { DenvigProject as InternalProject } from './lib/project.ts'
 import { listProjects } from './lib/projects.ts'
+import { getDenvigVersion } from './lib/version.ts'
 import {
   configureCa,
   createCertificate,
@@ -94,6 +95,11 @@ export class DenvigSDK {
       )
     }
     this.ctx = { client: options.client, cwd: options.cwd ?? process.cwd() }
+  }
+
+  /** The version denvig was compiled with. */
+  version(): string {
+    return getDenvigVersion()
   }
 
   projects = {

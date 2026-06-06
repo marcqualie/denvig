@@ -11,6 +11,9 @@ import { DenvigSDK } from '@denvig/sdk'
 const denvig = new DenvigSDK({
   // options
 })
+
+// The version denvig was compiled with
+const version = denvig.version()
 ```
 
 ### Projects / Worktrees

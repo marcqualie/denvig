@@ -51,28 +51,28 @@ describe('cli-help', () => {
     }
 
     it('should include version header', () => {
-      const lines = formatRootHelp(mockCommands)
+      const lines = formatRootHelp(mockCommands, '1.2.3')
       ok(lines[0].startsWith('Denvig v'), 'should start with version')
     })
 
     it('should include Commands section', () => {
-      const lines = formatRootHelp(mockCommands)
+      const lines = formatRootHelp(mockCommands, '1.2.3')
       ok(lines.includes('Commands:'), 'should include Commands header')
     })
 
     it('should include Options section', () => {
-      const lines = formatRootHelp(mockCommands)
+      const lines = formatRootHelp(mockCommands, '1.2.3')
       ok(lines.includes('Options:'), 'should include Options header')
     })
 
     it('should show commands with denvig prefix', () => {
-      const lines = formatRootHelp(mockCommands)
+      const lines = formatRootHelp(mockCommands, '1.2.3')
       const versionLine = lines.find((l) => l.includes('denvig version'))
       ok(versionLine, 'should include denvig version command')
     })
 
     it('should hide internal commands', () => {
-      const lines = formatRootHelp(mockCommands)
+      const lines = formatRootHelp(mockCommands, '1.2.3')
       const internalLine = lines.find((l) => l.includes('internals:'))
       strictEqual(
         internalLine,

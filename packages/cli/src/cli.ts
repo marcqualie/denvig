@@ -2,11 +2,7 @@
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
 import { DenvigSDK } from '@denvig/sdk'
-import {
-  createCliLogTracker,
-  getDenvigVersion,
-  getGlobalConfig,
-} from '@denvig/sdk/unsafe'
+import { createCliLogTracker, getGlobalConfig } from '@denvig/sdk/unsafe'
 
 import {
   formatCommandHelp,
@@ -41,9 +37,11 @@ async function main() {
   })
   const rootFlags = rootResult.values
 
+  const denvig = new DenvigSDK({ client: 'cli', cwd: process.cwd() })
+
   // Handle root-level --version/-v
   if (rootFlags.version) {
-    console.log(`v${getDenvigVersion()}`)
+    console.log(`v${denvig.version()}`)
     process.exit(0)
   }
 
@@ -52,12 +50,11 @@ async function main() {
   const projectFlag =
     typeof rootFlags.project === 'string' ? rootFlags.project : undefined
 
-  const denvig = new DenvigSDK({ client: 'cli', cwd: process.cwd() })
   const { project, slug } = await denvig.projects.detect(projectFlag)
 
   // Initialize CLI logging (after project detection for slug)
   const cliLogTracker = createCliLogTracker({
-    version: getDenvigVersion(),
+    version: denvig.version(),
     command: `denvig ${process.argv.slice(2).join(' ')}`,
     slug: slug ?? undefined,
     path: process.cwd(),
@@ -115,14 +112,14 @@ async function main() {
 
   // Handle root-level help
   if (!commandName) {
-    showRootHelp(commands)
+    showRootHelp(commands, denvig.version())
     await cliLogTracker.finish(1, 'No command provided')
     process.exit(1)
   }
 
   // Handle --help or -h at root level (no valid command provided)
   if (rootFlags.help && !commands[commandName]) {
-    showRootHelp(commands)
+    showRootHelp(commands, denvig.version())
     await cliLogTracker.finish(0, 'Showed help')
     process.exit(0)
   }
@@ -135,7 +132,7 @@ async function main() {
   if (!commands[commandName]) {
     const errorMsg = `Command "${commandName}" not found`
     console.error(`${errorMsg}.`)
-    printLinesToStderr(formatRootHelp(commands))
+    printLinesToStderr(formatRootHelp(commands, denvig.version()))
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }

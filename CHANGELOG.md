@@ -15,6 +15,7 @@
 - The SDK now serves filesystem helpers (`safeReadTextFile`, `pathExists`, `isDirectory`) from `@denvig/sdk/fs`
 - Certificate management now runs through the SDK: `denvig.certs.list()`/`retrieve()`/`create()`/`remove()`/`import()` plus the local CA via `denvig.certs.ca.status()`/`configure()`/`remove()` (the previous `denvig.certificates.list()` is now `denvig.certs.list()`)
 - Gateway management now runs through the SDK: `denvig.gateway.status()` and `denvig.gateway.configure()`
+- The SDK now reports its version via `denvig.version()`
 
 ### Fixed
 

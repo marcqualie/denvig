@@ -1,5 +1,3 @@
-import { getDenvigVersion } from '@denvig/sdk/unsafe'
-
 import { Command } from '../lib/command.ts'
 
 export const runCommand = new Command({
@@ -22,7 +20,7 @@ export const runCommand = new Command({
     const actions = await project.activeWorktree.actions
     return Object.keys(actions)
   },
-  handler: async ({ project, worktree, args, flags, extraArgs = [] }) => {
+  handler: async ({ sdk, project, worktree, args, flags, extraArgs = [] }) => {
     if (!args.action) {
       const actions = await worktree.actions
 
@@ -31,7 +29,7 @@ export const runCommand = new Command({
         return { success: true, message: 'Actions listed.' }
       }
 
-      console.log(`Denvig v${getDenvigVersion()}`)
+      console.log(`Denvig v${sdk.version()}`)
       console.log('')
       console.log('Usage: denvig run [action] [...actionArgs]')
       console.log('')
