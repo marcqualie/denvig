@@ -1,8 +1,8 @@
-import { type DenvigCertificate, DenvigSDK } from '@denvig/sdk'
-
 import { Command } from '../../lib/command.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
+
+import type { DenvigCertificate } from '@denvig/sdk'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const WEEK_MS = 7 * DAY_MS
@@ -47,9 +47,8 @@ export const certsListCommand = new Command({
   example: 'denvig certs list',
   args: [],
   flags: [],
-  handler: async ({ flags }) => {
-    const denvig = new DenvigSDK({ client: 'cli' })
-    const certificates = await denvig.certificates.list()
+  handler: async ({ sdk, flags }) => {
+    const certificates = await sdk.certificates.list()
 
     if (certificates.length === 0) {
       if (flags.json) {

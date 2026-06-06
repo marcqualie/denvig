@@ -3,10 +3,11 @@ import {
   getProjectFlagPartial,
 } from './project-completions.ts'
 
-import type { DenvigProject } from '@denvig/sdk'
+import type { DenvigProject, DenvigSDK } from '@denvig/sdk'
 import type { GenericCommand } from '../command.ts'
 
 type CompletionContext = {
+  sdk: DenvigSDK
   project: DenvigProject
   commands: Record<string, GenericCommand>
 }
@@ -52,7 +53,7 @@ export const zshCompletionsFor = async (
   // Check if we're completing a --project flag value
   const projectPartial = getProjectFlagPartial(words)
   if (projectPartial !== null) {
-    return getProjectCompletions(projectPartial)
+    return getProjectCompletions(projectPartial, context?.sdk)
   }
 
   const commands = context?.commands ?? {}

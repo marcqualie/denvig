@@ -1,4 +1,3 @@
-import { DenvigSDK } from '@denvig/sdk'
 import { prettyPath } from '@denvig/sdk/utils'
 import { stringify } from 'yaml'
 
@@ -31,9 +30,8 @@ export const configCommand = new Command({
   subcommands: {
     verify: configVerifyCommand,
   },
-  handler: async ({ project, worktree, flags }) => {
-    const denvig = new DenvigSDK({ client: 'cli', cwd: worktree.path })
-    const globalConfig = await denvig.config.retrieve()
+  handler: async ({ sdk, project, worktree, flags }) => {
+    const globalConfig = await sdk.config.retrieve()
     const projectConfig = await project.config.retrieve()
 
     if (flags.json) {

@@ -1,4 +1,3 @@
-import { DenvigSDK } from '@denvig/sdk'
 import { type LaunchctlListItem, launchctl } from '@denvig/sdk/unsafe'
 import { prettyPath } from '@denvig/sdk/utils'
 
@@ -59,10 +58,9 @@ export const projectsListCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: async ({ flags }) => {
+  handler: async ({ sdk, flags }) => {
     const withConfig = flags['with-config'] as boolean
-    const denvig = new DenvigSDK({ client: 'cli' })
-    const families = await denvig.projects.list({ withConfig })
+    const families = await sdk.projects.list({ withConfig })
 
     if (families.length === 0) {
       if (flags.json) {

@@ -7,17 +7,20 @@ import { DenvigSDK } from '@denvig/sdk'
  * - No prefix or partial slug: returns slugs without github: prefix (e.g., `marcqualie/denvig`)
  * - `id:` prefix: returns project IDs in `id:[shortId]` format
  * - `/` or `~` prefix: returns empty (path completion not yet supported)
+ *
+ * `sdk` is the configured SDK from the completion context; a default is
+ * constructed only when this helper is called standalone (e.g. in tests).
  */
 export const getProjectCompletions = async (
   partial: string = '',
+  sdk: DenvigSDK = new DenvigSDK({ client: 'cli' }),
 ): Promise<string[]> => {
   // Path completions not yet supported
   if (partial.startsWith('/') || partial.startsWith('~')) {
     return []
   }
 
-  const denvig = new DenvigSDK({ client: 'cli' })
-  const projects = await denvig.projects.list()
+  const projects = await sdk.projects.list()
 
   // ID completion mode
   if (partial.startsWith('id:')) {

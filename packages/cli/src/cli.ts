@@ -309,6 +309,7 @@ async function main() {
     }
 
     const { success, message } = await command.run(
+      denvig,
       project,
       parsedArgs,
       parsedFlags,
