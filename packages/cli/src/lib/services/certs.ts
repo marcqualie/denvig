@@ -1,14 +1,16 @@
 import {
+  findCertForDomain,
   generateCaCert,
+  generateMissingCerts,
   getCaCertPath,
   installCaToKeychain,
   isCaInitialized,
   writeCaFiles,
-} from '../certs.ts'
-import { findCertForDomain, generateMissingCerts } from '../gateway/certs.ts'
+} from '@denvig/sdk/internal'
+
 import { confirm } from '../input.ts'
 
-import type { ProjectConfigSchema } from '../../schemas/config.ts'
+import type { ProjectConfigSchema } from '@denvig/sdk'
 
 type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
 

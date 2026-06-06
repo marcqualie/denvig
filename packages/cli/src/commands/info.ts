@@ -1,6 +1,6 @@
+import { prettyPath } from '@denvig/sdk/utils'
+
 import { Command } from '../lib/command.ts'
-import { prettyPath } from '../lib/path.ts'
-import { getProjectInfo } from '../lib/projectInfo.ts'
 
 const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
   switch (status) {
@@ -21,7 +21,7 @@ export const infoCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ project, flags }) => {
-    const info = await getProjectInfo(project)
+    const info = await project.info()
 
     if (flags.json) {
       console.log(JSON.stringify(info))

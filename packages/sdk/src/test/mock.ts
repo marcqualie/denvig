@@ -1,9 +1,10 @@
 import fs from 'node:fs'
 
 import { projectId } from '../lib/project/refs.ts'
+import { DenvigProject } from '../resources/project.ts'
 
 import type { Worktree } from '../lib/project/worktree.ts'
-import type { DenvigProject } from '../lib/project.ts'
+import type { DenvigProject as InternalProject } from '../lib/project.ts'
 
 export type MockProjectOptions = {
   slug?: string
@@ -13,16 +14,16 @@ export type MockProjectOptions = {
 }
 
 /**
- * Create a mock DenvigProject for testing.
+ * Create a mock internal `DenvigProject` for SDK-level tests.
  *
  * The returned mock is backed by a single primary {@link Worktree} (exposed as
  * `activeWorktree`/`primaryWorktree`) and also carries `config` at the top
  * level so it satisfies `ServiceManagerProject` for service tests.
  */
-export const createMockProject = (
+export const createMockInternalProject = (
   options: MockProjectOptions | string = {},
-): DenvigProject & { config: Worktree['config'] } => {
-  // Support legacy signature: createMockProject(slug, path?)
+): InternalProject & { config: Worktree['config'] } => {
+  // Support legacy signature: createMockInternalProject(slug, path?)
   if (typeof options === 'string') {
     options = { slug: options }
   }
@@ -58,7 +59,18 @@ export const createMockProject = (
     activeWorktree: worktree,
     worktrees: [worktree],
     worktree: (branch: string) => (branch === 'main' ? worktree : null),
-  } as unknown as DenvigProject & { config: Worktree['config'] }
+  } as unknown as InternalProject & { config: Worktree['config'] }
+}
+
+/**
+ * Create a mock public {@link DenvigProject} for command/SDK-consumer tests.
+ * Wraps a mock internal project so the chained resource API is available.
+ */
+export const createMockProject = (
+  options: MockProjectOptions | string = {},
+): DenvigProject => {
+  const internal = createMockInternalProject(options)
+  return new DenvigProject(internal, { client: 'test', cwd: internal.path })
 }
 
 /**

@@ -1,13 +1,10 @@
-import { countCertsExpiringWithin } from '../../lib/certs.ts'
+import { DenvigValidationError } from '@denvig/sdk'
+import { countCertsExpiringWithin } from '@denvig/sdk/internal'
+import { getSemverLevel } from '@denvig/sdk/utils'
+
 import { Command } from '../../lib/command.ts'
-import { parseDuration } from '../../lib/formatters/duration.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable, hyperlink } from '../../lib/formatters/table.ts'
-import { readPnpmReleaseAgeConfig } from '../../lib/pnpm-config.ts'
-import {
-  getSemverLevel,
-  outdatedMatchesSemverFilter,
-} from '../../lib/semver.ts'
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -97,113 +94,31 @@ export const depsOutdatedCommand = new Command({
       defaultValue: 'auto',
     },
   ],
-  handler: async ({ worktree, flags }) => {
-    const cache = !(flags['no-cache'] as boolean)
+  handler: async ({ project, flags }) => {
     const semverFilter = flags.semver as 'patch' | 'minor' | 'major' | undefined
     const ecosystemFilter = flags.ecosystem as string | undefined
     const releaseLatencyFlag = flags['release-latency'] as string | undefined
 
-    // Validate semver flag
-    if (
-      semverFilter &&
-      semverFilter !== 'patch' &&
-      semverFilter !== 'minor' &&
-      semverFilter !== 'major'
-    ) {
-      console.error(
-        `Invalid --semver value: "${semverFilter}". Must be "patch", "minor", or "major".`,
-      )
-      return { success: false, message: 'Invalid --semver value.' }
-    }
-
-    const outdated = await worktree.outdatedDependencies({ cache })
-    let entries = outdated
-
     // Helper to get current version from versions array
-    const getCurrent = (dep: (typeof entries)[0]) =>
+    const getCurrent = (dep: { versions: { resolved: string }[] }) =>
       dep.versions[0]?.resolved || ''
 
-    // Filter by ecosystem if specified
-    if (ecosystemFilter) {
-      entries = entries.filter((dep) => dep.ecosystem === ecosystemFilter)
-    }
-
-    // Filter by semver level if specified. We check both `wanted` and
-    // `latest` so that a patch-level update is still detected even when a
-    // higher minor/major version exists alongside it (see issue #154).
-    if (semverFilter) {
-      entries = entries.filter((dep) =>
-        outdatedMatchesSemverFilter(
-          {
-            currentVersion: getCurrent(dep),
-            wantedVersion: dep.wanted,
-            latestVersion: dep.latest,
-          },
-          semverFilter,
-        ),
-      )
-    }
-
-    // Resolve release latency threshold
-    let releaseLatencyMs: number | null = null
-    let releaseLatencyExclude: string[] = []
-    const latencyValue = releaseLatencyFlag ?? 'auto'
-    if (latencyValue === '0') {
-      // Explicitly disabled
-      releaseLatencyMs = null
-    } else if (latencyValue === 'auto') {
-      // Read from pnpm-workspace.yaml if available, otherwise default to 24h
-      const pnpmConfig = await readPnpmReleaseAgeConfig(worktree.path)
-      if (pnpmConfig) {
-        releaseLatencyMs = pnpmConfig.minimumReleaseAgeMs
-        releaseLatencyExclude = pnpmConfig.exclude
-      } else {
-        releaseLatencyMs = 24 * 60 * 60 * 1000
-      }
-    } else {
-      releaseLatencyMs = parseDuration(latencyValue)
-      if (releaseLatencyMs === null) {
-        console.error(
-          `Invalid --release-latency value: "${latencyValue}". Use a duration like "3h", "7d", "2w", or "auto".`,
-        )
-        return { success: false, message: 'Invalid --release-latency value.' }
-      }
-    }
-
-    // Filter by release latency: hide entries where all update versions
-    // were released more recently than the threshold
-    if (releaseLatencyMs !== null) {
-      const now = Date.now()
-      entries = entries.filter((dep) => {
-        // Skip filtering for excluded packages
-        if (releaseLatencyExclude.includes(dep.name)) return true
-
-        const current = getCurrent(dep)
-        const wantedIsUpdate = dep.wanted !== current
-        const latestIsUpdate = dep.latest !== current
-
-        // Check if wanted version is old enough
-        const wantedOldEnough =
-          wantedIsUpdate && dep.wantedDate
-            ? now - new Date(dep.wantedDate).getTime() >= releaseLatencyMs
-            : false
-
-        // Check if latest version is old enough
-        const latestOldEnough =
-          latestIsUpdate && dep.latestDate
-            ? now - new Date(dep.latestDate).getTime() >= releaseLatencyMs
-            : false
-
-        // Keep if any available update is old enough, or if dates are missing
-        // (we don't filter out entries with unknown release dates)
-        const hasDateInfo =
-          (wantedIsUpdate && dep.wantedDate) ||
-          (latestIsUpdate && dep.latestDate)
-        if (!hasDateInfo) return true
-
-        return wantedOldEnough || latestOldEnough
+    let sortedEntries: Awaited<ReturnType<typeof project.dependencies.outdated>>
+    try {
+      sortedEntries = await project.dependencies.outdated({
+        noCache: flags['no-cache'] as boolean,
+        semver: semverFilter,
+        ecosystem: ecosystemFilter,
+        releaseLatency: releaseLatencyFlag,
       })
+    } catch (e) {
+      if (e instanceof DenvigValidationError) {
+        console.error(e.message)
+        return { success: false, message: e.message }
+      }
+      throw e
     }
+    const entries = sortedEntries
 
     if (entries.length === 0) {
       if (flags.json) {
@@ -231,14 +146,7 @@ export const depsOutdatedCommand = new Command({
       return { success: true, message }
     }
 
-    // Sort entries by ecosystem first, then alphabetically by name
-    const sortedEntries = entries.sort((a, b) => {
-      const ecosystemCompare = a.ecosystem.localeCompare(b.ecosystem)
-      if (ecosystemCompare !== 0) return ecosystemCompare
-      return a.name.localeCompare(b.name)
-    })
-
-    // JSON output
+    // JSON output (entries are already filtered and sorted by the operation)
     if (flags.json) {
       console.log(JSON.stringify(sortedEntries))
       return { success: true, message: 'Outdated dependencies listed.' }

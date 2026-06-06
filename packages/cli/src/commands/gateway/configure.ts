@@ -1,6 +1,4 @@
 import { Command } from '../../lib/command.ts'
-import { configureGateway } from '../../lib/gateway/configure.ts'
-import { reconcileServices } from '../../lib/services/reconcile.ts'
 
 export const gatewayConfigureCommand = new Command({
   name: 'gateway:configure',
@@ -10,9 +8,9 @@ export const gatewayConfigureCommand = new Command({
   example: 'gateway configure',
   args: [],
   flags: [],
-  handler: async ({ flags }) => {
-    const reconcileResult = await reconcileServices()
-    const result = await configureGateway()
+  handler: async ({ sdk, flags }) => {
+    const { reconcile: reconcileResult, gateway: result } =
+      await sdk.gateway.configure()
 
     if (!result) {
       console.error(

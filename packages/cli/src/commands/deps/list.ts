@@ -1,5 +1,4 @@
 import { Command } from '../../lib/command.ts'
-import { buildDependencyTree } from '../../lib/deps/tree.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 export const depsListCommand = new Command({
@@ -24,10 +23,10 @@ export const depsListCommand = new Command({
       defaultValue: undefined,
     },
   ],
-  handler: async ({ worktree, flags }) => {
+  handler: async ({ project, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
     const maxDepth = (flags.depth as number) ?? 0
-    const dependencies = await worktree.dependencies()
+    const dependencies = await project.dependencies.list()
 
     if (dependencies.length === 0) {
       if (flags.json) {
@@ -38,7 +37,10 @@ export const depsListCommand = new Command({
       return { success: true, message: 'No dependencies detected.' }
     }
 
-    const entries = buildDependencyTree(dependencies, maxDepth, ecosystemFilter)
+    const entries = await project.dependencies.tree({
+      depth: maxDepth,
+      ecosystem: ecosystemFilter,
+    })
 
     if (entries.length === 0) {
       if (flags.json) {

@@ -1,8 +1,7 @@
+import { prettyPath } from '@denvig/sdk/utils'
 import { stringify } from 'yaml'
 
 import { Command } from '../../lib/command.ts'
-import { getGlobalConfig } from '../../lib/config.ts'
-import { prettyPath } from '../../lib/path.ts'
 import { configVerifyCommand } from './verify.ts'
 
 const printConfig = (config: Record<string, unknown>) => {
@@ -31,9 +30,9 @@ export const configCommand = new Command({
   subcommands: {
     verify: configVerifyCommand,
   },
-  handler: async ({ worktree, flags }) => {
-    const globalConfig = await getGlobalConfig()
-    const projectConfig = worktree.config
+  handler: async ({ sdk, project, worktree, flags }) => {
+    const globalConfig = await sdk.config.retrieve()
+    const projectConfig = await project.config.retrieve()
 
     if (flags.json) {
       const { $sources: globalSources, ...globalConfigWithoutSources } =

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
+import { DenvigSDK } from '@denvig/sdk'
+import { createCliLogTracker, getGlobalConfig } from '@denvig/sdk/internal'
 
 import {
   formatCommandHelp,
@@ -11,13 +13,6 @@ import {
   showRootHelp,
   showSubcommandHelp,
 } from './lib/cli-help.ts'
-import { createCliLogTracker } from './lib/cli-logs.ts'
-import { expandTilde, getGlobalConfig } from './lib/config.ts'
-import { findDetachedWorktreeRoot, getGitHubSlug } from './lib/project/git.ts'
-import { DenvigProject } from './lib/project.ts'
-import { resolveProjectId } from './lib/project-id.ts'
-import { listProjects } from './lib/projects.ts'
-import { getDenvigVersion } from './lib/version.ts'
 
 import type { GenericCommand } from './lib/command.ts'
 
@@ -42,54 +37,24 @@ async function main() {
   })
   const rootFlags = rootResult.values
 
+  const denvig = new DenvigSDK({ client: 'cli', cwd: process.cwd() })
+
   // Handle root-level --version/-v
   if (rootFlags.version) {
-    console.log(`v${getDenvigVersion()}`)
+    console.log(`v${denvig.version()}`)
     process.exit(0)
   }
 
   // Detect project from current directory or --project flag
   const globalConfig = await getGlobalConfig()
-  const currentDir = process.cwd()
   const projectFlag =
     typeof rootFlags.project === 'string' ? rootFlags.project : undefined
 
-  // Find project path: either from flag, or detect from current directory
-  let projectPath: string | null = null
-
-  if (projectFlag) {
-    // Use the unified project ID resolver
-    const resolved = await resolveProjectId(projectFlag, expandTilde)
-    projectPath = resolved.path
-  } else {
-    // A detached worktree resolves to its own checkout: `retrieve` roots the
-    // project at the primary and makes this worktree the active one. This is
-    // checked first so worktrees resolve even when the project glob doesn't
-    // match their (possibly nested) location.
-    const detachedWorktreeRoot = findDetachedWorktreeRoot(currentDir)
-    if (detachedWorktreeRoot) {
-      projectPath = detachedWorktreeRoot
-    } else {
-      // Check if current directory matches any projectPaths pattern
-      const projects = await listProjects()
-      const match = projects.find(
-        (p) => currentDir === p.path || currentDir.startsWith(`${p.path}/`),
-      )
-      if (match) {
-        projectPath = match.path
-      } else {
-        // Fall back to current directory
-        projectPath = currentDir
-      }
-    }
-  }
-
-  const project = projectPath ? await DenvigProject.retrieve(projectPath) : null
+  const { project, slug } = await denvig.projects.detect(projectFlag)
 
   // Initialize CLI logging (after project detection for slug)
-  const slug = projectPath ? await getGitHubSlug(projectPath) : null
   const cliLogTracker = createCliLogTracker({
-    version: getDenvigVersion(),
+    version: denvig.version(),
     command: `denvig ${process.argv.slice(2).join(' ')}`,
     slug: slug ?? undefined,
     path: process.cwd(),
@@ -147,14 +112,14 @@ async function main() {
 
   // Handle root-level help
   if (!commandName) {
-    showRootHelp(commands)
+    showRootHelp(commands, denvig.version())
     await cliLogTracker.finish(1, 'No command provided')
     process.exit(1)
   }
 
   // Handle --help or -h at root level (no valid command provided)
   if (rootFlags.help && !commands[commandName]) {
-    showRootHelp(commands)
+    showRootHelp(commands, denvig.version())
     await cliLogTracker.finish(0, 'Showed help')
     process.exit(0)
   }
@@ -167,7 +132,7 @@ async function main() {
   if (!commands[commandName]) {
     const errorMsg = `Command "${commandName}" not found`
     console.error(`${errorMsg}.`)
-    printLinesToStderr(formatRootHelp(commands))
+    printLinesToStderr(formatRootHelp(commands, denvig.version()))
     await cliLogTracker.finish(1, errorMsg)
     process.exit(1)
   }
@@ -341,6 +306,7 @@ async function main() {
     }
 
     const { success, message } = await command.run(
+      denvig,
       project,
       parsedArgs,
       parsedFlags,

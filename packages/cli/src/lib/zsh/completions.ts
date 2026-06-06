@@ -3,10 +3,11 @@ import {
   getProjectFlagPartial,
 } from './project-completions.ts'
 
+import type { DenvigProject, DenvigSDK } from '@denvig/sdk'
 import type { GenericCommand } from '../command.ts'
-import type { DenvigProject } from '../project.ts'
 
 type CompletionContext = {
+  sdk: DenvigSDK
   project: DenvigProject
   commands: Record<string, GenericCommand>
 }
@@ -52,7 +53,7 @@ export const zshCompletionsFor = async (
   // Check if we're completing a --project flag value
   const projectPartial = getProjectFlagPartial(words)
   if (projectPartial !== null) {
-    return getProjectCompletions(projectPartial)
+    return getProjectCompletions(projectPartial, context?.sdk)
   }
 
   const commands = context?.commands ?? {}
@@ -80,7 +81,10 @@ export const zshCompletionsFor = async (
     ) {
       const command = context.commands[commandName]
       if (command?.completions) {
-        return await command.completions({ project: context.project }, [])
+        return await command.completions(
+          { project: context.project, sdk: context.sdk },
+          [],
+        )
       }
       return []
     }
@@ -114,7 +118,10 @@ export const zshCompletionsFor = async (
         return visibleSubcommands(child)
       }
       if (child.completions && context?.project) {
-        return await child.completions({ project: context.project }, [])
+        return await child.completions(
+          { project: context.project, sdk: context.sdk },
+          [],
+        )
       }
       return []
     }
@@ -124,7 +131,7 @@ export const zshCompletionsFor = async (
   // Leaf command with remaining args - call its completions handler
   if (resolved.completions && context?.project) {
     const allCompletions = await resolved.completions(
-      { project: context.project },
+      { project: context.project, sdk: context.sdk },
       remaining,
     )
     const partial = remaining[remaining.length - 1] || ''

@@ -1,8 +1,6 @@
-import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { DenvigValidationError } from '@denvig/sdk'
 import { z } from 'zod'
 
-import { getCertDir, getCertsDir, parseCertDomains } from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
 
 const DomainSchema = z
@@ -46,28 +44,8 @@ export const certsImportCommand = new Command({
       type: 'string' as const,
     },
   ],
-  handler: ({ flags }) => {
-    const privkeyPath = resolve(flags.key as string)
-    const certPath = resolve(flags.cert as string)
-
-    let certPem: string
-    try {
-      certPem = readFileSync(certPath, 'utf-8')
-    } catch {
-      console.error(`Could not read certificate file: ${certPath}`)
-      return { success: false, message: 'Could not read certificate file.' }
-    }
-
-    const domains = parseCertDomains(certPem)
-    if (domains.length === 0) {
-      console.error('Could not determine domain from certificate.')
-      return {
-        success: false,
-        message: 'Could not determine domain from certificate.',
-      }
-    }
-
-    let nameOverride: string | undefined
+  handler: async ({ sdk, flags }) => {
+    let name: string | undefined
     if (flags.name) {
       const result = DomainSchema.safeParse(flags.name)
       if (!result.success) {
@@ -75,36 +53,41 @@ export const certsImportCommand = new Command({
         console.error(`Invalid --name value: ${message}`)
         return { success: false, message }
       }
-      nameOverride = result.data.replace(/^\*\./, '_wildcard.')
+      name = result.data
     }
 
-    const domain = nameOverride ?? domains[0]
-    const certDir = nameOverride
-      ? resolve(getCertsDir(), nameOverride)
-      : getCertDir(domain)
-    mkdirSync(certDir, { recursive: true })
-
-    const destPrivkey = resolve(certDir, 'privkey.pem')
-    const destFullchain = resolve(certDir, 'fullchain.pem')
-
-    copyFileSync(privkeyPath, destPrivkey)
-    chmodSync(destPrivkey, 0o600)
-    copyFileSync(certPath, destFullchain)
+    let imported: Awaited<ReturnType<typeof sdk.certs.import>>
+    try {
+      imported = await sdk.certs.import({
+        keyPath: flags.key as string,
+        certPath: flags.cert as string,
+        name,
+      })
+    } catch (e) {
+      if (e instanceof DenvigValidationError) {
+        console.error(e.message)
+        return { success: false, message: e.message }
+      }
+      throw e
+    }
 
     if (flags.json) {
       console.log(
         JSON.stringify({
-          domain,
-          privkey: destPrivkey,
-          fullchain: destFullchain,
+          domain: imported.domain,
+          privkey: imported.privkey,
+          fullchain: imported.fullchain,
         }),
       )
     } else {
-      console.log(`Certificate imported for ${domain}`)
-      console.log(`  privkey:   ${destPrivkey}`)
-      console.log(`  fullchain: ${destFullchain}`)
+      console.log(`Certificate imported for ${imported.domain}`)
+      console.log(`  privkey:   ${imported.privkey}`)
+      console.log(`  fullchain: ${imported.fullchain}`)
     }
 
-    return { success: true, message: `Certificate imported for ${domain}.` }
+    return {
+      success: true,
+      message: `Certificate imported for ${imported.domain}.`,
+    }
   },
 })

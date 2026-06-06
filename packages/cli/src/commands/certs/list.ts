@@ -1,21 +1,8 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-import {
-  findCertFile,
-  getCaCertPath,
-  getCertExpiry,
-  getCertIssuerCN,
-  getCertsDir,
-  isCaInitialized,
-  isCaTrustedInKeychain,
-  isCertIssuedBy,
-  isIssuedByLocalCa,
-  parseCertDomains,
-} from '../../lib/certs.ts'
 import { Command } from '../../lib/command.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
+
+import type { DenvigCertificate } from '@denvig/sdk'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const WEEK_MS = 7 * DAY_MS
@@ -32,6 +19,15 @@ type CertEntry = {
   domains: string[]
   expires: Date
   status: string
+}
+
+/** Render the SDK certificate status into the CLI's display string. */
+const displayStatus = (cert: DenvigCertificate): string => {
+  if (cert.status === 'expired') return 'expired'
+  if (cert.signedByLocalCa) {
+    return cert.caTrusted ? 'valid (local-ca)' : 'untrusted'
+  }
+  return `valid (${cert.issuer ? cert.issuer.toLowerCase() : 'unknown'})`
 }
 
 type CertRow = {
@@ -51,23 +47,10 @@ export const certsListCommand = new Command({
   example: 'denvig certs list',
   args: [],
   flags: [],
-  handler: async ({ flags }) => {
-    const certsDir = getCertsDir()
+  handler: async ({ sdk, flags }) => {
+    const certificates = await sdk.certs.list()
 
-    let dirs: string[]
-    try {
-      dirs = readdirSync(certsDir).filter((name) => {
-        try {
-          return statSync(resolve(certsDir, name)).isDirectory()
-        } catch {
-          return false
-        }
-      })
-    } catch {
-      dirs = []
-    }
-
-    if (dirs.length === 0) {
+    if (certificates.length === 0) {
       if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
@@ -76,49 +59,12 @@ export const certsListCommand = new Command({
       return { success: true, message: 'No certificates found.' }
     }
 
-    // Load CA state once before iterating certs
-    const caInitialized = await isCaInitialized()
-    const caCertPem = caInitialized
-      ? readFileSync(getCaCertPath(), 'utf-8')
-      : null
-    const caTrusted = caInitialized ? await isCaTrustedInKeychain() : false
-
-    const entries: CertEntry[] = []
-
-    for (const dir of dirs) {
-      const certFile = findCertFile(resolve(certsDir, dir))
-      if (!certFile) continue
-
-      try {
-        const pem = readFileSync(certFile, 'utf-8')
-        const domains = parseCertDomains(pem)
-        const expires = getCertExpiry(pem)
-
-        const signedByLocalCa = caCertPem
-          ? isCertIssuedBy(pem, caCertPem)
-          : isIssuedByLocalCa(pem)
-        const issuerCN = getCertIssuerCN(pem)
-
-        let status: string
-        if (expires <= new Date()) {
-          status = 'expired'
-        } else if (signedByLocalCa) {
-          status = caTrusted ? 'valid (local-ca)' : 'untrusted'
-        } else {
-          const label = issuerCN ? issuerCN.toLowerCase() : 'unknown'
-          status = `valid (${label})`
-        }
-
-        entries.push({
-          dir,
-          domains: domains.length > 0 ? domains : [dir],
-          expires,
-          status,
-        })
-      } catch {
-        // Skip certs that can't be parsed
-      }
-    }
+    const entries: CertEntry[] = certificates.map((cert) => ({
+      dir: cert.name,
+      domains: cert.domains,
+      expires: new Date(cert.expires),
+      status: displayStatus(cert),
+    }))
 
     if (flags.json) {
       console.log(

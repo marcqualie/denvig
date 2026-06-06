@@ -1,17 +1,19 @@
 import { ok } from 'node:assert'
 import { hostname } from 'node:os'
 import { describe, it } from 'node:test'
+import { DenvigSDK } from '@denvig/sdk'
+import { createMockProject } from '@denvig/sdk/testing'
 
-import { createMockProject } from '../../test/mock.ts'
 import { logsCommand } from './logs.ts'
 
 describe('logsCommand', () => {
   it('should show last N lines using --lines flag', async () => {
+    const sdk = new DenvigSDK({ client: 'test' })
     const project = createMockProject({
       slug: 'workspace/denvig',
       path: process.cwd(),
     })
-    project.config.services = {
+    project.activeWorktree.config.services = {
       'test-logs': {
         command: 'echo hi',
       },
@@ -39,6 +41,7 @@ describe('logsCommand', () => {
 
     // Run using --lines
     const result1 = await logsCommand.run(
+      sdk,
       project,
       { name: 'test-logs' },
       {
@@ -51,6 +54,7 @@ describe('logsCommand', () => {
 
     // Run using -n alias
     const result2 = await logsCommand.run(
+      sdk,
       project,
       { name: 'test-logs' },
       {

@@ -1,17 +1,20 @@
-import { confirm, prompt } from '../input.ts'
 import {
   areDotfilesInstalled,
+  configureGit,
   dotfilesUrlForUsername,
-  installDotfiles,
-} from './dotfiles.ts'
-import {
   enableFullDiskEncryption,
+  enableSudoTouchId,
+  getGitIdentity,
+  installDotfiles,
+  installHomebrew,
+  installXcodeCli,
   isFullDiskEncryptionEnabled,
-} from './fullDiskEncryption.ts'
-import { configureGit, getGitIdentity } from './gitConfig.ts'
-import { installHomebrew, isHomebrewInstalled } from './homebrew.ts'
-import { enableSudoTouchId, isSudoTouchIdEnabled } from './sudoTouchId.ts'
-import { installXcodeCli, isXcodeCliInstalled } from './xcodeCli.ts'
+  isHomebrewInstalled,
+  isSudoTouchIdEnabled,
+  isXcodeCliInstalled,
+} from '@denvig/sdk/internal'
+
+import { confirm, prompt } from '../input.ts'
 
 type Step = {
   name: string

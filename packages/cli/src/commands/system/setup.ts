@@ -1,5 +1,6 @@
+import { installDotfiles } from '@denvig/sdk/internal'
+
 import { Command } from '../../lib/command.ts'
-import { installDotfiles } from '../../lib/system/dotfiles.ts'
 
 export const systemSetupCommand = new Command({
   name: 'system:setup',

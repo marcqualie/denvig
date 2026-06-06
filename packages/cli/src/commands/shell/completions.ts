@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { pathExists } from '@denvig/sdk/fs'
 
 import { Command } from '../../lib/command.ts'
-import { pathExists } from '../../lib/safeReadFile.ts'
 
 const SUPPORTED_SHELLS = ['zsh'] as const
 type SupportedShell = (typeof SUPPORTED_SHELLS)[number]

@@ -1,17 +1,8 @@
 import { COLORS } from './table.ts'
 
-/**
- * A node in a tree structure for rendering.
- */
-export type TreeNode = {
-  name: string
-  version: string
-  children: TreeNode[]
-  /** Optional ANSI color applied to the entire `name version` body. */
-  color?: string
-  /** Optional preformatted suffix appended after the version. */
-  suffix?: string
-}
+import type { TreeNode } from '@denvig/sdk'
+
+export type { TreeNode }
 
 const formatNodeBody = (node: TreeNode): string => {
   const body = node.color

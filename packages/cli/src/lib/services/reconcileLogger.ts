@@ -1,4 +1,4 @@
-import { reconcileServices } from '../../lib/services/reconcile.ts'
+import { reconcileServices } from '@denvig/sdk/internal'
 
 /**
  * Run the state.json → launchctl reconciler after a `services` command

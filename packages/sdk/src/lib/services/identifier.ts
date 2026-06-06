@@ -1,5 +1,5 @@
 import { expandTilde } from '../config.ts'
-import { DenvigProject, shortProjectId } from '../project.ts'
+import { DenvigProject } from '../project.ts'
 import { parseProjectId, resolveProjectPath } from '../project-id.ts'
 import { listProjects } from '../projects.ts'
 import {
@@ -227,49 +227,4 @@ export const getServiceContext = async (
   const manager = new ServiceManager(worktree)
 
   return { project: worktree, manager, serviceName }
-}
-
-/**
- * Get completions for service names, including services from other projects.
- * Current project services are returned without a prefix.
- * Other project services are returned with both slug and id formats for tab completion.
- */
-export const getServiceCompletions = async (
-  currentProject: DenvigProject,
-): Promise<string[]> => {
-  const completions: string[] = []
-
-  // Add current project services without prefix for convenience
-  for (const serviceName of Object.keys(
-    currentProject.activeWorktree.services,
-  )) {
-    completions.push(serviceName)
-  }
-
-  // Add global services with global: prefix
-  const globalProject = await createGlobalProject()
-  const globalServices = globalProject.config.services || {}
-  for (const serviceName of Object.keys(globalServices)) {
-    completions.push(`global:${serviceName}`)
-  }
-
-  // Add services from all projects with full paths
-  const projects = await listProjects({ withConfig: true })
-  for (const projectInfo of projects) {
-    try {
-      const project = await DenvigProject.retrieve(projectInfo.path)
-      const slugWithoutPrefix = projectInfo.slug.replace(/^(github|local):/, '')
-
-      for (const serviceName of Object.keys(project.activeWorktree.services)) {
-        // Add slug-based completion
-        completions.push(`${slugWithoutPrefix}/${serviceName}`)
-        // Add id-based completion for exact matching (useful for worktrees)
-        completions.push(`id:${shortProjectId(project.id)}/${serviceName}`)
-      }
-    } catch {
-      // Skip projects that can't be loaded
-    }
-  }
-
-  return completions
 }

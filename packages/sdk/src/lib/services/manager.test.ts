@@ -3,14 +3,14 @@ import { ok, strictEqual } from 'node:assert'
 import { hostname } from 'node:os'
 import { describe, it } from 'node:test'
 
-import { createMockProject } from '../../test/mock.ts'
+import { createMockInternalProject } from '../../test/mock.ts'
 import launchctl from './launchctl.ts'
 import { ServiceManager } from './manager.ts'
 
 describe('ServiceManager', () => {
   describe('listServices()', () => {
     it('should return empty array when no services configured', async () => {
-      const project = createMockProject('test-project')
+      const project = createMockInternalProject('test-project')
       const manager = new ServiceManager(project)
       const services = await manager.listServices()
 
@@ -20,7 +20,7 @@ describe('ServiceManager', () => {
 
   describe('getServiceLabel()', () => {
     it('should generate correct service label format using project ID', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const label = manager.getServiceLabel('api')
@@ -30,7 +30,7 @@ describe('ServiceManager', () => {
     })
 
     it('should sanitize service name with special characters', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const label = manager.getServiceLabel('dev:watch')
@@ -39,8 +39,8 @@ describe('ServiceManager', () => {
     })
 
     it('should generate same label format regardless of slug format', () => {
-      const project1 = createMockProject('github:marcqualie/denvig')
-      const project2 = createMockProject('local:/Users/marc/dotfiles')
+      const project1 = createMockInternalProject('github:marcqualie/denvig')
+      const project2 = createMockInternalProject('local:/Users/marc/dotfiles')
       const manager1 = new ServiceManager(project1)
       const manager2 = new ServiceManager(project2)
 
@@ -52,7 +52,7 @@ describe('ServiceManager', () => {
 
   describe('getPlistPath()', () => {
     it('should generate correct plist path using project ID', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getPlistPath('api')
@@ -62,7 +62,7 @@ describe('ServiceManager', () => {
     })
 
     it('should sanitize special characters in plist filename', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getPlistPath('dev:watch')
@@ -75,7 +75,7 @@ describe('ServiceManager', () => {
 
   describe('getServiceDir()', () => {
     it('should generate correct service directory path', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const dir = manager.getServiceDir('api')
@@ -87,7 +87,7 @@ describe('ServiceManager', () => {
 
   describe('getServiceScriptPath()', () => {
     it('should include github slug in script filename', () => {
-      const project = createMockProject({
+      const project = createMockInternalProject({
         slug: 'github:marcqualie/denvig',
       })
       const manager = new ServiceManager(project)
@@ -103,7 +103,7 @@ describe('ServiceManager', () => {
     })
 
     it('should omit slug prefix for non-github projects', () => {
-      const project = createMockProject({
+      const project = createMockInternalProject({
         slug: 'local:/Users/marc/my-app',
       })
       const manager = new ServiceManager(project)
@@ -115,7 +115,7 @@ describe('ServiceManager', () => {
     })
 
     it('should sanitize special characters in script filename', () => {
-      const project = createMockProject({
+      const project = createMockInternalProject({
         slug: 'local:/tmp/test',
       })
       const manager = new ServiceManager(project)
@@ -129,7 +129,7 @@ describe('ServiceManager', () => {
 
   describe('getServiceLogDir()', () => {
     it('should generate correct service log directory path', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const dir = manager.getServiceLogDir('api')
@@ -140,7 +140,7 @@ describe('ServiceManager', () => {
 
   describe('getStableLogPath()', () => {
     it('should return latest.log under service log dir', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getStableLogPath('api')
@@ -152,7 +152,7 @@ describe('ServiceManager', () => {
 
   describe('getLogPath()', () => {
     it('should generate symlink path with hostname under service log dir', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api')
@@ -162,7 +162,7 @@ describe('ServiceManager', () => {
     })
 
     it('should accept optional type parameter for backward compatibility', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('api', 'stdout')
@@ -171,7 +171,7 @@ describe('ServiceManager', () => {
     })
 
     it('should sanitize special characters in log path', () => {
-      const project = createMockProject('workspace/my-app')
+      const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
       const path = manager.getLogPath('dev:watch')
@@ -184,7 +184,7 @@ describe('ServiceManager', () => {
 
   describe('buildServiceEnvironment()', () => {
     it('should skip missing env files when explicitly specified', async () => {
-      const project = createMockProject({
+      const project = createMockInternalProject({
         slug: 'github:marcqualie/denvig',
         path: process.cwd(),
       })
@@ -213,7 +213,7 @@ describe('ServiceManager', () => {
 
   describe('stopService() launchctl behavior', () => {
     it('should call bootout and disable for regular services', async (t) => {
-      const project = createMockProject({
+      const project = createMockInternalProject({
         slug: 'github:owner/repo',
         path: '/tmp/test-stop',
       })
@@ -252,7 +252,7 @@ describe('ServiceManager', () => {
     })
 
     it('should call stop but not bootout or disable for startOnBoot services', async (t) => {
-      const project = createMockProject({
+      const project = createMockInternalProject({
         slug: 'github:owner/repo',
         path: '/tmp/test-stop-boot',
       })

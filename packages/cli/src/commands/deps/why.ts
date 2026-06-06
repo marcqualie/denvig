@@ -1,46 +1,19 @@
-import semver from 'semver'
-
-import { Command } from '../../lib/command.ts'
 import {
   buildReverseChain,
   isDevDependenciesSource,
-} from '../../lib/deps/tree.ts'
+} from '@denvig/sdk/internal'
+import { getSemverLevel } from '@denvig/sdk/utils'
+import semver from 'semver'
+
+import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'
 import {
   formatTree,
   mergeTreeNode,
   type TreeNode,
 } from '../../lib/formatters/tree.ts'
-import { fetchJsrPackageInfo } from '../../lib/jsr/info.ts'
-import { fetchNpmPackageInfo } from '../../lib/npm/info.ts'
-import { fetchRubygemInfo } from '../../lib/rubygems/info.ts'
-import { getSemverLevel } from '../../lib/semver.ts'
-import { fetchPyPIPackageInfo } from '../../lib/uv/info.ts'
 
-import type { ProjectDependencySchema } from '../../lib/dependencies.ts'
-
-const fetchLatestForPackage = async (
-  name: string,
-  ecosystem: string,
-): Promise<string | null> => {
-  if (ecosystem === 'npm') {
-    const info = await fetchNpmPackageInfo(name)
-    return info?.latest ?? null
-  }
-  if (ecosystem === 'jsr') {
-    const info = await fetchJsrPackageInfo(name)
-    return info?.latest ?? null
-  }
-  if (ecosystem === 'pypi') {
-    const info = await fetchPyPIPackageInfo(name)
-    return info?.latest ?? null
-  }
-  if (ecosystem === 'rubygems') {
-    const info = await fetchRubygemInfo(name)
-    return info?.latest ?? null
-  }
-  return null
-}
+import type { DenvigDependency as ProjectDependencySchema } from '@denvig/sdk'
 
 type RootChain = {
   tree: TreeNode
@@ -101,7 +74,7 @@ export const depsWhyCommand = new Command({
     const dependencies = await project.activeWorktree.dependencies()
     return dependencies.map((d) => d.name)
   },
-  handler: async ({ worktree, args, flags }) => {
+  handler: async ({ project, worktree, args, flags }) => {
     const dependencyName = args.dependency as string
 
     const allDependencies = await worktree.dependencies()
@@ -185,11 +158,11 @@ export const depsWhyCommand = new Command({
         outdatedMap.set(o.name, { latest: o.latest, wanted: o.wanted })
       }
     } else {
-      const latest = await fetchLatestForPackage(dep.name, dep.ecosystem).catch(
-        () => null,
-      )
-      if (latest) {
-        outdatedMap.set(dep.name, { latest, wanted: latest })
+      const info = await project.dependencies
+        .info(`${dep.ecosystem}:${dep.name}`)
+        .catch(() => null)
+      if (info?.latest) {
+        outdatedMap.set(dep.name, { latest: info.latest, wanted: info.latest })
       }
     }
 

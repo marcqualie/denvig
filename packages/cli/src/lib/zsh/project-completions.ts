@@ -1,5 +1,4 @@
-import { DenvigProject, shortProjectId } from '../project.ts'
-import { listProjects } from '../projects.ts'
+import { DenvigSDK } from '@denvig/sdk'
 
 /**
  * Get project completions based on the current input prefix.
@@ -8,38 +7,31 @@ import { listProjects } from '../projects.ts'
  * - No prefix or partial slug: returns slugs without github: prefix (e.g., `marcqualie/denvig`)
  * - `id:` prefix: returns project IDs in `id:[shortId]` format
  * - `/` or `~` prefix: returns empty (path completion not yet supported)
+ *
+ * `sdk` is the configured SDK from the completion context; a default is
+ * constructed only when this helper is called standalone (e.g. in tests).
  */
 export const getProjectCompletions = async (
   partial: string = '',
+  sdk: DenvigSDK = new DenvigSDK({ client: 'cli' }),
 ): Promise<string[]> => {
   // Path completions not yet supported
   if (partial.startsWith('/') || partial.startsWith('~')) {
     return []
   }
 
-  const projects = await listProjects()
+  const projects = await sdk.projects.list()
 
   // ID completion mode
   if (partial.startsWith('id:')) {
-    const _idPrefix = partial.slice(3)
-    const completions: string[] = []
-    for (const p of projects) {
-      const project = await DenvigProject.retrieve(p.path)
-      const shortId = shortProjectId(project.id)
-      const completion = `id:${shortId}`
-      if (completion.startsWith(partial)) {
-        completions.push(completion)
-      }
-    }
-    return completions
+    return projects
+      .map((project) => `id:${project.id.slice(0, 8)}`)
+      .filter((completion) => completion.startsWith(partial))
   }
 
   // Default: slug completion (without github: prefix)
   return projects
-    .map((p) => {
-      // Remove github: or local: prefix for easier typing
-      return p.slug.replace(/^(github|local):/, '')
-    })
+    .map((project) => project.slug.replace(/^(github|local):/, ''))
     .filter((slug) => slug.startsWith(partial))
 }
 

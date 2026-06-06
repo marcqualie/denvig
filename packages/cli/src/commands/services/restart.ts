@@ -2,13 +2,9 @@ import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
 import { ensureServiceCerts } from '../../lib/services/certs.ts'
-import {
-  getServiceCompletions,
-  getServiceContext,
-} from '../../lib/services/identifier.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
 import { resolveServicePortForCli } from '../../lib/services/resolvePort.ts'
-import { resolveWorktree } from '../../lib/services/worktree.ts'
+import { serviceCompletions } from '../../lib/zsh/service-completions.ts'
 
 export const servicesRestartCommand = new Command({
   name: 'services:restart',
@@ -58,8 +54,8 @@ export const servicesRestartCommand = new Command({
       defaultValue: false,
     },
   ],
-  completions: ({ project }) => {
-    return getServiceCompletions(project)
+  completions: ({ project, sdk }) => {
+    return serviceCompletions(project, sdk)
   },
   handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
@@ -67,7 +63,7 @@ export const servicesRestartCommand = new Command({
     let activeWorktree = worktree
     if (typeof flags.worktree === 'string') {
       try {
-        activeWorktree = resolveWorktree(project, flags.worktree)
+        activeWorktree = project.selectWorktree(flags.worktree)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         if (flags.json) {
@@ -78,13 +74,10 @@ export const servicesRestartCommand = new Command({
         return { success: false, message }
       }
     }
-    project.activeWorktree = activeWorktree
 
-    const {
-      manager,
-      serviceName,
-      project: targetProject,
-    } = await getServiceContext(serviceArg, project)
+    const { manager, serviceName, target } =
+      await project.services.context(serviceArg)
+    const targetProject = target
 
     const projectPrefix =
       targetProject.slug !== activeWorktree.slug ? `${targetProject.slug}/` : ''

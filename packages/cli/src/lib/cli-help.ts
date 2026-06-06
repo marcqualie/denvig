@@ -1,5 +1,3 @@
-import { getDenvigVersion } from './version.ts'
-
 import type { GenericCommand } from './command.ts'
 
 /** Global flags that are available for all commands */
@@ -36,10 +34,13 @@ const hiddenCommands = new Set([
  * Generate the root help text for the CLI.
  * Returns an array of lines to output.
  */
-export function formatRootHelp(commands: CommandsMap): string[] {
+export function formatRootHelp(
+  commands: CommandsMap,
+  version: string,
+): string[] {
   const lines: string[] = []
 
-  lines.push(`Denvig v${getDenvigVersion()}`)
+  lines.push(`Denvig v${version}`)
   lines.push('')
   lines.push('Commands:')
 
@@ -67,8 +68,8 @@ export function formatRootHelp(commands: CommandsMap): string[] {
 /**
  * Print root help to stdout.
  */
-export function showRootHelp(commands: CommandsMap): void {
-  for (const line of formatRootHelp(commands)) {
+export function showRootHelp(commands: CommandsMap, version: string): void {
+  for (const line of formatRootHelp(commands, version)) {
     console.log(line)
   }
 }

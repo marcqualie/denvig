@@ -6,4 +6,4 @@ case "$DEBUG" in
 esac
 
 # shellcheck disable=SC2068,SC2086
-node $CPU_PROF --experimental-strip-types packages/cli/src/cli.ts $@
+node $CPU_PROF --conditions=denvig-source --experimental-strip-types packages/cli/src/cli.ts $@

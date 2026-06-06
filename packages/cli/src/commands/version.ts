@@ -1,5 +1,4 @@
 import { Command } from '../lib/command.ts'
-import { getDenvigVersion } from '../lib/version.ts'
 
 export const versionCommand = new Command({
   name: 'version',
@@ -8,8 +7,8 @@ export const versionCommand = new Command({
   example: 'denvig version',
   args: [],
   flags: [],
-  handler: ({ flags }) => {
-    const version = getDenvigVersion()
+  handler: ({ sdk, flags }) => {
+    const version = sdk.version()
     if (flags.json) {
       console.log(JSON.stringify({ version }))
     } else {

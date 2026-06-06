@@ -1,5 +1,5 @@
 import type { ProjectDependencySchema } from '../dependencies.ts'
-import type { TreeNode } from '../formatters/tree.ts'
+import type { TreeNode } from '../formatters/tree-node.ts'
 
 /**
  * Lockfile source prefixes for different package managers.

@@ -93,7 +93,12 @@ export const runTestCommand = (
   // Execute the Denvig CLI using Node.js
   const child = spawn(
     'node',
-    ['--experimental-strip-types', cliEntry, ...args],
+    [
+      '--conditions=denvig-source',
+      '--experimental-strip-types',
+      cliEntry,
+      ...args,
+    ],
     {
       cwd,
       env: { ...process.env, DENVIG_CLI_VIA: 'node:test', ...env },

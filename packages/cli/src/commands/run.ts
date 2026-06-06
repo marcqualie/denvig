@@ -1,7 +1,4 @@
-import { spawn } from 'node:child_process'
-
 import { Command } from '../lib/command.ts'
-import { getDenvigVersion } from '../lib/version.ts'
 
 export const runCommand = new Command({
   name: 'run',
@@ -23,16 +20,16 @@ export const runCommand = new Command({
     const actions = await project.activeWorktree.actions
     return Object.keys(actions)
   },
-  handler: async ({ worktree, args, flags, extraArgs = [] }) => {
-    const actions = await worktree.actions
-
+  handler: async ({ sdk, project, worktree, args, flags, extraArgs = [] }) => {
     if (!args.action) {
+      const actions = await worktree.actions
+
       if (flags.json) {
         console.log(JSON.stringify({ actions }))
         return { success: true, message: 'Actions listed.' }
       }
 
-      console.log(`Denvig v${getDenvigVersion()}`)
+      console.log(`Denvig v${sdk.version()}`)
       console.log('')
       console.log('Usage: denvig run [action] [...actionArgs]')
       console.log('')
@@ -56,66 +53,17 @@ export const runCommand = new Command({
       return { success: true, message: 'No action specified.' }
     }
 
-    const commands = actions[args.action]
-    if (!commands) {
+    let action: Awaited<ReturnType<typeof project.actions.retrieve>>
+    try {
+      action = await project.actions.retrieve(args.action as string)
+    } catch {
       console.error(
         `Action "${args.action}" not found in project ${worktree.name}.`,
       )
       return { success: false, message: `Action "${args.action}" not found.` }
     }
 
-    let status = { success: true }
-    for (const command of commands) {
-      const commandToProxy = `${command} ${extraArgs.join(' ')}`.trim()
-      console.log(`$ ${commandToProxy}`)
-
-      // Prepare environment with color forcing for better terminal output
-      const env = {
-        ...process.env,
-        DENVIG_PROJECT: worktree.slug,
-      }
-
-      // Check if we're in a TTY environment
-      const isInteractive = process.stdout.isTTY && process.stdin.isTTY
-      let commandName: string
-      let commandArgs: string[]
-
-      if (isInteractive) {
-        // Use script command to preserve TTY behavior in interactive environments
-        const os = process.platform
-        if (os === 'darwin') {
-          // macOS (BSD script): script [options] [file [command]]
-          commandName = 'script'
-          commandArgs = ['-q', '/dev/null', 'sh', '-c', commandToProxy]
-        } else {
-          // Linux (util-linux script): script [options] [file]
-          commandName = 'script'
-          commandArgs = ['-q', '-c', commandToProxy, '/dev/null']
-        }
-      } else {
-        // Use direct execution in non-TTY environments (tests, CI, pipes)
-        commandName = 'sh'
-        commandArgs = ['-c', commandToProxy]
-      }
-
-      const child = spawn(commandName, commandArgs, {
-        cwd: worktree.path,
-        env,
-        stdio: 'inherit',
-      })
-
-      const commandStatus = await new Promise<{ success: boolean }>(
-        (resolve) => {
-          child.on('close', (code: number | null) => {
-            resolve({ success: code === 0 })
-          })
-        },
-      )
-      if (!commandStatus.success) {
-        status = commandStatus
-      }
-    }
-
-    return status
+    const result = await action.run({ args: extraArgs })
+    return { success: result.success }
   },
 })

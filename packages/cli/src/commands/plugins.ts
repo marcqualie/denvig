@@ -1,5 +1,4 @@
 import { Command } from '../lib/command.ts'
-import plugins from '../lib/plugins.ts'
 
 export const pluginsCommand = new Command({
   name: 'plugins',
@@ -9,18 +8,7 @@ export const pluginsCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ project, flags }) => {
-    const pluginData: Record<
-      string,
-      { name: string; actions: Record<string, string[]> }
-    > = {}
-
-    for (const [key, plugin] of Object.entries(plugins)) {
-      const actions = await plugin.actions(project.activeWorktree)
-      pluginData[key] = {
-        name: plugin.name,
-        actions,
-      }
-    }
+    const pluginData = await project.plugins()
 
     if (flags.json) {
       console.log(JSON.stringify(pluginData))

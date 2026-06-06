@@ -10,7 +10,7 @@ export const shellCompleteCommand = new Command({
   args: [],
   flags: [],
   acceptsExtraArgs: true,
-  handler: async ({ project, extraArgs = [] }) => {
+  handler: async ({ sdk, project, extraArgs = [] }) => {
     // Get the words passed after --
     const words = extraArgs
 
@@ -18,7 +18,11 @@ export const shellCompleteCommand = new Command({
     const commands = await getCommands()
 
     // Get completions
-    const completions = await zshCompletionsFor(words, { project, commands })
+    const completions = await zshCompletionsFor(words, {
+      sdk,
+      project,
+      commands,
+    })
 
     // Output completions for zsh (one per line)
     // Escape colons as they are used as delimiters in zsh completions

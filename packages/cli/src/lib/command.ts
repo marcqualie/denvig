@@ -1,5 +1,4 @@
-import type { DenvigProject } from './project'
-import type { Worktree } from './project/worktree'
+import type { DenvigProject, DenvigSDK, DenvigWorktree } from '@denvig/sdk'
 
 type CommandOptions<
   ArgDefinitions extends ArgDefinition[],
@@ -13,7 +12,7 @@ type CommandOptions<
   flags: FlagDefinitions
   handler: CommandHandler<ArgDefinitions, FlagDefinitions>
   completions?: (
-    context: { project: DenvigProject },
+    context: { project: DenvigProject; sdk: DenvigSDK },
     inputs: string[],
   ) => string[] | Promise<string[]>
   subcommands?: Record<string, GenericCommand>
@@ -66,9 +65,11 @@ type CommandHandler<
   ArgDefinitions extends ArgDefinition[],
   FlagDefinitions extends FlagDefinition[],
 > = (context: {
+  /** The SDK instance, pre-configured with the CLI client and cwd. */
+  sdk: DenvigSDK
   project: DenvigProject
   /** The active checkout for this command (cwd's worktree, or `--worktree`). */
-  worktree: Worktree
+  worktree: DenvigWorktree
   args: ParsedArgs<ArgDefinitions>
   flags: ParsedFlags<FlagDefinitions>
   extraArgs?: string[]
@@ -88,7 +89,7 @@ export class Command<
   flags: FlagDefinitions
   handler: CommandHandler<ArgDefinitions, FlagDefinition[]>
   completions?: (
-    context: { project: DenvigProject },
+    context: { project: DenvigProject; sdk: DenvigSDK },
     inputs: string[],
   ) => string[] | Promise<string[]>
   subcommands: Record<string, GenericCommand>
@@ -114,6 +115,7 @@ export class Command<
   }
 
   async run(
+    sdk: DenvigSDK,
     project: DenvigProject,
     args: ParsedArgs<ArgDefinitions>,
     flags: ParsedFlags<FlagDefinitions>,
@@ -121,6 +123,7 @@ export class Command<
   ): Promise<CommandResponse> {
     try {
       return await this.handler({
+        sdk,
         project,
         worktree: project.activeWorktree,
         args,

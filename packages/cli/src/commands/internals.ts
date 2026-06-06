@@ -1,8 +1,4 @@
 import { Command } from '../lib/command.ts'
-import {
-  constructDenvigResourceId,
-  generateDenvigResourceHash,
-} from '../lib/resources.ts'
 
 export const internalsResourceHashCommand = new Command({
   name: 'internals:resource-hash',
@@ -80,8 +76,7 @@ export const internalsResourceHashCommand = new Command({
       return { success: false, message: 'Invalid resource format' }
     }
 
-    const result = generateDenvigResourceHash({
-      project,
+    const result = project.resourceHash({
       workspace,
       resource: resource as `action/${string}` | `service/${string}`,
     })
@@ -148,8 +143,7 @@ export const internalsResourceIdCommand = new Command({
       return { success: false, message: 'Invalid resource format' }
     }
 
-    const id = constructDenvigResourceId({
-      project,
+    const id = project.resourceId({
       workspace,
       resource: resource as `action/${string}` | `service/${string}`,
     })
