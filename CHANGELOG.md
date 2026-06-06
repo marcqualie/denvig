@@ -15,6 +15,10 @@
 - Certificate management now runs through the SDK: `denvig.certs.list()`/`retrieve()`/`create()`/`remove()`/`import()` plus the local CA via `denvig.certs.ca.status()`/`configure()`/`remove()` (the previous `denvig.certificates.list()` is now `denvig.certs.list()`)
 - Gateway management now runs through the SDK: `denvig.gateway.status()` and `denvig.gateway.configure()`
 
+### Fixed
+
+- `denvig run` again resolves actions whose names contain a colon (e.g. `compile:darwin-x64`) instead of mistaking the colon for an `ecosystem:action` prefix
+
 ## [0.7.0-alpha.3] - 2026-05-30
 
 ### Changed

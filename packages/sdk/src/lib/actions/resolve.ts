@@ -49,6 +49,10 @@ export const detectActionsByEcosystem = async (
  * the `ecosystem:name` shorthand (e.g. `npm:build`), which takes precedence over
  * the `ecosystem` argument.
  *
+ * A literal action name always wins over the shorthand, so an action defined
+ * with a colon in its name (e.g. `compile:darwin-x64`) resolves as-is rather
+ * than being read as `ecosystem:name`.
+ *
  * Without an ecosystem the commands from every source that defines the action
  * are concatenated (project first), matching the merged behaviour of
  * {@link detectActions}. Throws {@link DenvigValidationError} when nothing
@@ -62,8 +66,10 @@ export const resolveAction = (
   let targetName = name
   let targetEcosystem = ecosystem
 
+  // Only interpret `ecosystem:name` shorthand when no action is literally named
+  // `name` — action names may themselves contain colons (e.g. `compile:linux-x64`).
   const colon = name.indexOf(':')
-  if (colon !== -1) {
+  if (colon !== -1 && !resolved.some((action) => action.name === name)) {
     targetEcosystem = name.slice(0, colon)
     targetName = name.slice(colon + 1)
   }
