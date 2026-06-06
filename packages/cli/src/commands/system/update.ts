@@ -6,12 +6,11 @@ import {
   getBrewOutdated,
   gitPull,
   hasSkillsCli,
-  isDirectory,
   isWorkingTreeDirty,
-  prettyPath,
   runDenvig,
   skillsUpdateGlobal,
 } from '@denvig/sdk/unsafe'
+import { isDirectory, prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'

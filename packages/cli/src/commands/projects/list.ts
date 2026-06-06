@@ -1,15 +1,14 @@
 import { DenvigSDK } from '@denvig/sdk'
-import {
-  type LaunchctlListItem,
-  launchctl,
-  type ProjectInfo,
-  type ProjectServiceStatus,
-  prettyPath,
-} from '@denvig/sdk/unsafe'
+import { type LaunchctlListItem, launchctl } from '@denvig/sdk/unsafe'
+import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
 
-import type { DenvigProject } from '@denvig/sdk'
+import type {
+  DenvigProject,
+  ProjectInfo,
+  ProjectServiceStatus,
+} from '@denvig/sdk'
 
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
 

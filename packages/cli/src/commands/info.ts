@@ -1,4 +1,4 @@
-import { prettyPath } from '@denvig/sdk/unsafe'
+import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../lib/command.ts'
 

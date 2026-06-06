@@ -1,8 +1,5 @@
-import {
-  buildReverseChain,
-  getSemverLevel,
-  isDevDependenciesSource,
-} from '@denvig/sdk/unsafe'
+import { buildReverseChain, isDevDependenciesSource } from '@denvig/sdk/unsafe'
+import { getSemverLevel } from '@denvig/sdk/utils'
 import semver from 'semver'
 
 import { Command } from '../../lib/command.ts'
@@ -13,7 +10,7 @@ import {
   type TreeNode,
 } from '../../lib/formatters/tree.ts'
 
-import type { ProjectDependencySchema } from '@denvig/sdk/unsafe'
+import type { DenvigDependency as ProjectDependencySchema } from '@denvig/sdk'
 
 type RootChain = {
   tree: TreeNode

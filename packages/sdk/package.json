@@ -30,6 +30,17 @@
         "default": "./dist/unsafe.cjs"
       }
     },
+    "./utils": {
+      "denvig-source": "./src/utils.ts",
+      "import": {
+        "types": "./dist/utils.d.ts",
+        "default": "./dist/utils.js"
+      },
+      "require": {
+        "types": "./dist/utils.d.ts",
+        "default": "./dist/utils.cjs"
+      }
+    },
     "./testing": {
       "denvig-source": "./src/test/mock.ts",
       "default": "./src/test/mock.ts"

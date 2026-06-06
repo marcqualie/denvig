@@ -5,7 +5,11 @@ const externalDeps = ['node-forge', 'semver', 'yaml', 'zod']
 const isExternal = (id: string) =>
   externalDeps.some((dep) => id === dep || id.startsWith(`${dep}/`))
 
-const input = { index: 'src/index.ts', unsafe: 'src/unsafe.ts' }
+const input = {
+  index: 'src/index.ts',
+  unsafe: 'src/unsafe.ts',
+  utils: 'src/utils.ts',
+}
 
 export default defineConfig([
   // SDK - ESM bundle + bundled .d.ts

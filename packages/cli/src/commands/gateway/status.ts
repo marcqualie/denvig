@@ -4,9 +4,9 @@ import {
   getGlobalConfig,
   getNginxConfigPath,
   getNginxConfPath,
-  pathExists,
   resolveSslPaths,
 } from '@denvig/sdk/unsafe'
+import { pathExists } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
 

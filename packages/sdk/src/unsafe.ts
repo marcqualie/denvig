@@ -28,7 +28,6 @@ export {
 export { createCliLogTracker } from './lib/cli-logs.ts'
 export { getGlobalConfig } from './lib/config.ts'
 export { buildReverseChain, isDevDependenciesSource } from './lib/deps/tree.ts'
-export { DenvigValidationError } from './lib/errors.ts'
 export {
   findCertForDomain,
   generateMissingCerts,
@@ -36,14 +35,7 @@ export {
 } from './lib/gateway/certs.ts'
 export { configureGateway } from './lib/gateway/configure.ts'
 export { getNginxConfigPath, getNginxConfPath } from './lib/gateway/nginx.ts'
-export { prettyPath } from './lib/path.ts'
 export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
-export {
-  isDirectory,
-  pathExists,
-  safeReadTextFile,
-} from './lib/safeReadFile.ts'
-export { getSemverLevel } from './lib/semver.ts'
 export { default as launchctl } from './lib/services/launchctl.ts'
 export { ServiceManager } from './lib/services/manager.ts'
 export { reconcileServices } from './lib/services/reconcile.ts'
@@ -71,14 +63,6 @@ export { teardownGlobal } from './lib/teardown.ts'
 export { getDenvigVersion } from './lib/version.ts'
 export { ProjectConfigSchema } from './schemas/config.ts'
 
-export type { ProjectDependencySchema } from './lib/dependencies.ts'
-export type { TreeNode } from './lib/formatters/tree-node.ts'
-export type {
-  ProjectInfo,
-  ServiceStatus as ProjectServiceStatus,
-} from './lib/projectInfo.ts'
 export type { LaunchctlListItem } from './lib/services/launchctl.ts'
 export type { ServiceManagerProject } from './lib/services/manager.ts'
 export type { GatewayRoute } from './lib/services/state.ts'
-export type { ServiceRow } from './operations/services.ts'
-export type { Dependency, ServiceResponse } from './types/responses.ts'

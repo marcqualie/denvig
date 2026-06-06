@@ -1,5 +1,5 @@
 import { DenvigSDK } from '@denvig/sdk'
-import { prettyPath } from '@denvig/sdk/unsafe'
+import { prettyPath } from '@denvig/sdk/utils'
 import { stringify } from 'yaml'
 
 import { Command } from '../../lib/command.ts'

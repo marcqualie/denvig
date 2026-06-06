@@ -1,8 +1,6 @@
-import {
-  countCertsExpiringWithin,
-  DenvigValidationError,
-  getSemverLevel,
-} from '@denvig/sdk/unsafe'
+import { DenvigValidationError } from '@denvig/sdk'
+import { countCertsExpiringWithin } from '@denvig/sdk/unsafe'
+import { getSemverLevel } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
 import { relativeFormattedTime } from '../../lib/formatters/relative-time.ts'
