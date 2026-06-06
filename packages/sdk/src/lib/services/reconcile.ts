@@ -197,6 +197,9 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
       const start = await manager.startService(entry.serviceName, {
         port: entry.port,
         portResolved: true,
+        // Liveness is launchd's job — only re-bootstrap on a real plist
+        // change, never just because the process is momentarily down.
+        reviveIfNotRunning: false,
       })
       if (!start.success) {
         result.errors.push({
