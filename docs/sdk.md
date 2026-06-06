@@ -148,6 +148,22 @@ const config = project.config.retrieve()
 const config = denvig.config.retrieve({ project: 'id:project-123' })
 ```
 
+### Filesystem
+
+Thin, dependency-free filesystem helpers, exposed so consumers don't need a
+separate import for common file checks.
+
+```typescript
+// Read a UTF-8 file, returning null if missing or empty
+const contents = await denvig.fs.safeReadTextFile('/path/to/file')
+
+// Check whether a path exists
+const exists = await denvig.fs.pathExists('/path/to/file')
+
+// Check whether a path is a directory
+const isDir = await denvig.fs.isDirectory('/path/to/dir')
+```
+
 
 ## Types
 

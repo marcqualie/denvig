@@ -4,6 +4,11 @@ import { DenvigValidationError } from './lib/errors.ts'
 import { DenvigProject as InternalProject } from './lib/project.ts'
 import { listProjects } from './lib/projects.ts'
 import {
+  isDirectory,
+  pathExists,
+  safeReadTextFile,
+} from './lib/safeReadFile.ts'
+import {
   configureCa,
   createCertificate,
   getCaStatus,
@@ -208,6 +213,21 @@ export class DenvigSDK {
     /** Reconcile services and rebuild every nginx config from runtime state. */
     configure: (): Promise<ConfigureGatewayOutput> =>
       track(this.ctx, 'gateway.configure', null, () => configureGatewayAll()),
+  }
+
+  fs = {
+    /**
+     * Read a UTF-8 text file, returning its trimmed contents or `null` when the
+     * file is missing or empty.
+     */
+    safeReadTextFile: (path: string): Promise<string | null> =>
+      safeReadTextFile(path),
+
+    /** Check whether a path exists on the filesystem. */
+    pathExists: (path: string): Promise<boolean> => pathExists(path),
+
+    /** Check whether a path exists and is a directory. */
+    isDirectory: (path: string): Promise<boolean> => isDirectory(path),
   }
 
   config = {

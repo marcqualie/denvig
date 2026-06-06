@@ -10,7 +10,7 @@ import {
   runDenvig,
   skillsUpdateGlobal,
 } from '@denvig/sdk/unsafe'
-import { isDirectory, prettyPath } from '@denvig/sdk/utils'
+import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
 import { COLORS } from '../../lib/formatters/table.ts'
@@ -29,10 +29,10 @@ export const systemUpdateCommand = new Command({
   example: 'denvig system update',
   args: [],
   flags: [],
-  handler: async () => {
+  handler: async ({ sdk }) => {
     const dotfilesPath = path.join(homedir(), '.dotfiles')
 
-    if (!(await isDirectory(dotfilesPath))) {
+    if (!(await sdk.fs.isDirectory(dotfilesPath))) {
       console.error(
         `Error: ${prettyPath(dotfilesPath)} does not exist. Run 'denvig system bootstrap <url>' first.`,
       )
