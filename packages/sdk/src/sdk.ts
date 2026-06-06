@@ -15,7 +15,7 @@ import {
 } from './operations/certs.ts'
 import { configureGatewayAll, getGatewayStatus } from './operations/gateway.ts'
 import { track } from './resources/context.ts'
-import { wrapProject } from './resources/internal.ts'
+import { DenvigProject } from './resources/project.ts'
 
 import type { ListProjectsOptions } from './lib/projects.ts'
 import type {
@@ -37,7 +37,6 @@ import type {
 } from './operations/gateway.ts'
 import type { DenvigConfig } from './resources/config.ts'
 import type { ResourceContext } from './resources/context.ts'
-import type { DenvigProject } from './resources/project.ts'
 
 /** A detected project plus its slug, or nulls when none could be resolved. */
 export type DetectProjectResult = {
@@ -111,7 +110,7 @@ export class DenvigSDK {
           `Project "${identifier}" could not be resolved.`,
         )
       }
-      return wrapProject(context.project, this.ctx)
+      return new DenvigProject(context.project, this.ctx)
     },
 
     /**
@@ -128,7 +127,7 @@ export class DenvigSDK {
           const key = internal.primaryWorktree.path
           if (families.has(key)) continue
           internal.activeWorktree = internal.primaryWorktree
-          families.set(key, wrapProject(internal, this.ctx))
+          families.set(key, new DenvigProject(internal, this.ctx))
         }
         return [...families.values()].sort((a, b) =>
           a.path.localeCompare(b.path),
@@ -147,7 +146,7 @@ export class DenvigSDK {
       })
       return {
         project: context.project
-          ? wrapProject(context.project, this.ctx)
+          ? new DenvigProject(context.project, this.ctx)
           : null,
         projectPath: context.projectPath,
         slug: context.slug,

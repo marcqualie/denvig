@@ -1,11 +1,10 @@
 import fs from 'node:fs'
 
 import { projectId } from '../lib/project/refs.ts'
-import { wrapProject } from '../resources/internal.ts'
+import { DenvigProject } from '../resources/project.ts'
 
 import type { Worktree } from '../lib/project/worktree.ts'
 import type { DenvigProject as InternalProject } from '../lib/project.ts'
-import type { DenvigProject } from '../resources/project.ts'
 
 export type MockProjectOptions = {
   slug?: string
@@ -71,7 +70,7 @@ export const createMockProject = (
   options: MockProjectOptions | string = {},
 ): DenvigProject => {
   const internal = createMockInternalProject(options)
-  return wrapProject(internal, { client: 'test', cwd: internal.path })
+  return new DenvigProject(internal, { client: 'test', cwd: internal.path })
 }
 
 /**
