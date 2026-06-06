@@ -2,7 +2,7 @@
   "name": "@denvig/workspace",
   "version": "0.7.0-alpha.3",
   "private": true,
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@11.5.2",
   "license": "MIT",
   "description": "Workspace root for the denvig CLI and its packages",
   "type": "module",
