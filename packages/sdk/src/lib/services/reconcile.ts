@@ -1,6 +1,16 @@
+import { unlink } from 'node:fs/promises'
+
+import { configureGateway } from '../gateway/configure.ts'
+import { resolveProjectCheckouts } from '../projects.ts'
+import { createGlobalProject } from './global.ts'
 import launchctl from './launchctl.ts'
 import { ServiceManager, type ServiceManagerProject } from './manager.ts'
-import { readState, type ServiceStateEntry } from './state.ts'
+import {
+  readState,
+  removeGatewayRoutesForService,
+  removeServiceState,
+  type ServiceStateEntry,
+} from './state.ts'
 
 export type ReconcileAction =
   | { type: 'started'; project: string; service: string; reason: string }
@@ -73,7 +83,11 @@ const projectFromStateEntry = (
  * Reconcile actual launchctl state with the desired state recorded in
  * `~/.denvig/state.json`.
  *
- * Three categories of action:
+ * Categories of action:
+ * 0. A service whose recorded checkout no longer resolves to a real
+ *    project (a deleted worktree) is orphaned → bootout it, drop its plist
+ *    and remove its state and gateway routes so the project that
+ *    legitimately owns its domain can reclaim it.
  * 1. State says running, launchctl agrees, plist matches → no-op.
  * 2. State says running, but launchctl is missing the service or the
  *    plist on disk differs from what the snapshot would produce → call
@@ -113,6 +127,56 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
     return `${LABEL_PREFIX}${rest.slice(0, colon)}.${rest.slice(colon + 1)}`
   }
 
+  // Pass 0: prune orphaned services and routes. A service whose recorded
+  // checkout no longer resolves to its captured project id (the worktree was
+  // deleted) would otherwise be resurrected by pass 1 on every run —
+  // recreating the checkout directory, re-bootstrapping a launchd agent and
+  // holding the service's gateway domain hostage from the project that
+  // legitimately owns it. Tearing it down here lets the real service reclaim
+  // its domain in pass 1.
+  const checkouts = await resolveProjectCheckouts()
+  const knownProjectIds = new Set(checkouts.keys())
+  knownProjectIds.add((await createGlobalProject()).id)
+
+  let prunedOrphan = false
+  for (const [key, entry] of Object.entries(state.services)) {
+    if (!entry.project || !entry.serviceName) continue
+    if (knownProjectIds.has(entry.project.id)) continue
+
+    prunedOrphan = true
+    const project = projectFromStateEntry(entry)
+    let label: string | null
+    if (project) {
+      const manager = new ServiceManager(project)
+      label = manager.getServiceLabel(entry.serviceName)
+      await unlink(manager.getPlistPath(entry.serviceName)).catch(() => {})
+    } else {
+      label = labelFromKey(key)
+    }
+    if (label) {
+      await launchctl.bootout(label)
+      // Already handled — keep pass 2 from booting the stale label again.
+      protectedLabels.add(label)
+    }
+    await removeServiceState(entry.project.id, entry.serviceName)
+    await removeGatewayRoutesForService(entry.project.id, entry.serviceName)
+    delete state.services[key]
+    result.actions.push({
+      type: 'stopped',
+      project: entry.project.slug,
+      service: entry.serviceName,
+      reason: 'checkout no longer exists; removed orphaned service',
+    })
+  }
+
+  // Sweep any remaining gateway routes whose owner no longer resolves —
+  // covers routes left behind without a matching service entry.
+  for (const [, route] of Object.entries(state.gatewayRoutes)) {
+    if (knownProjectIds.has(route.project)) continue
+    prunedOrphan = true
+    await removeGatewayRoutesForService(route.project, route.service)
+  }
+
   // Pass 1: drive state entries with desiredStatus 'running' towards being
   // bootstrapped with up-to-date plists.
   for (const [key, entry] of Object.entries(state.services)) {
@@ -133,6 +197,9 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
       const start = await manager.startService(entry.serviceName, {
         port: entry.port,
         portResolved: true,
+        // Liveness is launchd's job — only re-bootstrap on a real plist
+        // change, never just because the process is momentarily down.
+        reviveIfNotRunning: false,
       })
       if (!start.success) {
         result.errors.push({
@@ -194,6 +261,12 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
         message: `Failed to bootout: ${bootoutResult.output}`,
       })
     }
+  }
+
+  // Regenerate nginx after pruning orphans so the domain the real service
+  // reclaimed in pass 1 is rendered (and the orphan's stale config dropped).
+  if (prunedOrphan) {
+    await configureGateway()
   }
 
   return result

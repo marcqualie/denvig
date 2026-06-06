@@ -270,6 +270,13 @@ export class ServiceManager {
    *   leave the existing route alone (`false`). When undefined and the
    *   domain has no existing owner, the route is registered as the
    *   natural owner (`defaultService: true`).
+   * @param options.reviveIfNotRunning - When the service is already
+   *   bootstrapped with an unchanged plist but isn't currently running,
+   *   bootout and bootstrap again to kick it (`true`, the default — what an
+   *   explicit `start` wants). The reconciler passes `false`: a bootstrapped
+   *   service's liveness is launchd's job (`KeepAlive` respawns it, one-shot
+   *   services are meant to stay exited), so re-bootstrapping an unchanged
+   *   plist is needless churn that fights launchd.
    */
   async startService(
     name: string,
@@ -277,6 +284,7 @@ export class ServiceManager {
       port?: number
       portResolved?: boolean
       claimDomain?: boolean
+      reviveIfNotRunning?: boolean
     },
   ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
@@ -491,10 +499,15 @@ export class ServiceManager {
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
       }
-    } else if (plistChanged || !isLive) {
-      // Plist changed, or the service is bootstrapped but no longer running
-      // (e.g. it crashed and isn't being restarted). Bootout and bootstrap
-      // again to give launchd a fresh start.
+    } else if (
+      plistChanged ||
+      (options?.reviveIfNotRunning !== false && !isLive)
+    ) {
+      // Plist changed, or (for an explicit start) the service is bootstrapped
+      // but no longer running and the caller asked to revive it. Bootout and
+      // bootstrap again to give launchd a fresh start. The reconciler opts out
+      // (`reviveIfNotRunning: false`): a bootstrapped service's liveness is
+      // launchd's to manage, so it leaves an unchanged plist alone.
       const bootoutResult = await launchctl.bootout(label)
       if (!bootoutResult.success) {
         return {

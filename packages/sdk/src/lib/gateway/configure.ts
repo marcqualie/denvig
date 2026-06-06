@@ -1,6 +1,5 @@
 import { getGlobalConfig } from '../config.ts'
-import { DenvigProject } from '../project.ts'
-import { listProjects } from '../projects.ts'
+import { resolveProjectCheckouts } from '../projects.ts'
 import { createGlobalProject } from '../services/global.ts'
 import { readState } from '../services/state.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
@@ -93,22 +92,9 @@ export async function configureGateway(): Promise<ConfigureGatewayResult | null>
 
   // Resolve project metadata (slug + path) by ID. The route only stores
   // the project ID, but the nginx template wants the slug and absolute
-  // path for comments and the document root.
-  const projects = await listProjects({ withConfig: true })
-  const projectsById = new Map<string, { slug: string; path: string }>()
-  await Promise.all(
-    projects.map(async (info) => {
-      const project = await DenvigProject.retrieve(info.path)
-      // Routes are keyed by the checkout's id, so map every worktree (the
-      // primary and each detached worktree) back to its slug and path.
-      for (const worktree of project.worktrees) {
-        projectsById.set(worktree.id, {
-          slug: worktree.slug,
-          path: worktree.path,
-        })
-      }
-    }),
-  )
+  // path for comments and the document root. Routes are keyed by the
+  // checkout's id, so this maps every worktree back to its slug and path.
+  const projectsById = await resolveProjectCheckouts()
   const globalProject = await createGlobalProject()
   projectsById.set(globalProject.id, {
     slug: globalProject.slug,
