@@ -15,6 +15,3 @@ await denvig.services.start('api')
 const outdated = await denvig.deps.outdated()
 const projects = await denvig.projects.list()
 ```
-
-Most consumers should depend on the `denvig` package and import from
-`denvig/sdk`, which re-exports this package.
