@@ -5,6 +5,7 @@
 
 ### Changed
 
+- `denvig run` no longer duplicates the command echo when running a pnpm `package.json` script (pnpm's own echo is suppressed, leaving denvig's single `$ …` line)
 - The CLI is now published as `@denvig/cli`; the `denvig` package re-exports it (available as `denvig/cli`) and keeps its existing SDK import
 - The SDK now runs in-process instead of shelling out to the CLI, so `DenvigSDK` calls execute directly and return data without spawning a subprocess
 - The SDK is also published standalone as `@denvig/sdk` (re-exported as `denvig/sdk`); the `DenvigSDK` constructor now only takes `client` and `cwd`

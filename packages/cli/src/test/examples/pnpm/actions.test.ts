@@ -26,7 +26,7 @@ describe('examples / pnpm / actions', () => {
       },
     })
 
-    match(result.stdout, /\$ pnpm run hello/)
+    match(result.stdout, /\$ pnpm --reporter=silent run hello/)
     doesNotMatch(result.stdout, /\$ npm run hello/)
     match(result.stdout, /Hello from pnpm example!/)
     strictEqual(result.stderr, '')
