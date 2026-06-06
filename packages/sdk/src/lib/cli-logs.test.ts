@@ -160,8 +160,10 @@ describe('cli-logs', () => {
         path: '/test/path',
       })
 
-      // Simulate some work
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      // Simulate some work. Sleep comfortably longer than the asserted
+      // threshold: `duration` is integer-ms (`Date.now()` deltas), so a 10ms
+      // sleep can measure as 9ms at a millisecond boundary and flake.
+      await new Promise((resolve) => setTimeout(resolve, 50))
 
       await tracker.finish(0)
 
