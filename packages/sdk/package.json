@@ -41,6 +41,17 @@
         "default": "./dist/utils.cjs"
       }
     },
+    "./fs": {
+      "denvig-source": "./src/fs.ts",
+      "import": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
+      },
+      "require": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.cjs"
+      }
+    },
     "./testing": {
       "denvig-source": "./src/test/mock.ts",
       "default": "./src/test/mock.ts"

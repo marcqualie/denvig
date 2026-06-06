@@ -1,5 +1,6 @@
 import { homedir } from 'node:os'
 import path from 'node:path'
+import { isDirectory } from '@denvig/sdk/fs'
 import {
   brewUpdate,
   brewUpgrade,
@@ -29,10 +30,10 @@ export const systemUpdateCommand = new Command({
   example: 'denvig system update',
   args: [],
   flags: [],
-  handler: async ({ sdk }) => {
+  handler: async () => {
     const dotfilesPath = path.join(homedir(), '.dotfiles')
 
-    if (!(await sdk.fs.isDirectory(dotfilesPath))) {
+    if (!(await isDirectory(dotfilesPath))) {
       console.error(
         `Error: ${prettyPath(dotfilesPath)} does not exist. Run 'denvig system bootstrap <url>' first.`,
       )

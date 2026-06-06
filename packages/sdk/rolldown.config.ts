@@ -9,6 +9,7 @@ const input = {
   index: 'src/index.ts',
   unsafe: 'src/unsafe.ts',
   utils: 'src/utils.ts',
+  fs: 'src/fs.ts',
 }
 
 export default defineConfig([

@@ -1,10 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { pathExists } from '@denvig/sdk/fs'
 
 import { Command } from '../../lib/command.ts'
-
-import type { DenvigSDK } from '@denvig/sdk'
 
 const SUPPORTED_SHELLS = ['zsh'] as const
 type SupportedShell = (typeof SUPPORTED_SHELLS)[number]
@@ -28,11 +27,11 @@ _denvig() {
 _denvig "$@"
 `
 
-const installZshCompletions = async (sdk: DenvigSDK): Promise<string> => {
+const installZshCompletions = async (): Promise<string> => {
   const completionsDir = path.join(os.homedir(), '.zsh', 'completions')
   const completionsFile = path.join(completionsDir, '_denvig')
 
-  if (!(await sdk.fs.pathExists(completionsDir))) {
+  if (!(await pathExists(completionsDir))) {
     await mkdir(completionsDir, { recursive: true })
   }
 
@@ -62,7 +61,7 @@ export const shellCompletionsCommand = new Command({
       defaultValue: false,
     },
   ],
-  handler: async ({ sdk, args, flags }) => {
+  handler: async ({ args, flags }) => {
     const shell = String(args.shell)
 
     if (!SUPPORTED_SHELLS.includes(shell as SupportedShell)) {
@@ -72,7 +71,7 @@ export const shellCompletionsCommand = new Command({
     }
 
     if (flags.install) {
-      const completionsFile = await installZshCompletions(sdk)
+      const completionsFile = await installZshCompletions()
       console.log(`Installed completions to ${completionsFile}`)
       return { success: true }
     }

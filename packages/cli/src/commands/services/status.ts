@@ -1,4 +1,5 @@
 import { homedir } from 'node:os'
+import { pathExists } from '@denvig/sdk/fs'
 import { getGlobalConfig, getNginxConfigPath } from '@denvig/sdk/unsafe'
 import { z } from 'zod'
 
@@ -31,7 +32,7 @@ export const servicesStatusCommand = new Command({
   completions: ({ project, sdk }) => {
     return serviceCompletions(project, sdk)
   },
-  handler: async ({ sdk, project, worktree, args, flags }) => {
+  handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
 
     let activeWorktree = worktree
@@ -120,7 +121,7 @@ export const servicesStatusCommand = new Command({
     console.log(`Logs:    ${response.logPath.replace(homedir(), '~')}`)
 
     const plistPath = manager.getPlistPath(serviceName)
-    if (await sdk.fs.pathExists(plistPath)) {
+    if (await pathExists(plistPath)) {
       console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
     }
 
@@ -134,7 +135,7 @@ export const servicesStatusCommand = new Command({
         serviceName,
         gateway.configsPath,
       )
-      if (await sdk.fs.pathExists(nginxPath)) {
+      if (await pathExists(nginxPath)) {
         console.log(`Nginx:   ${nginxPath}`)
       }
     }

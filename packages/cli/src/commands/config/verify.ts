@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { ProjectConfigSchema } from '@denvig/sdk'
+import { safeReadTextFile } from '@denvig/sdk/fs'
 import { parse } from 'yaml'
 
 import { Command } from '../../lib/command.ts'
@@ -19,12 +20,12 @@ export const configVerifyCommand = new Command({
     },
   ],
   flags: [],
-  handler: async ({ sdk, worktree, args, flags }) => {
+  handler: async ({ worktree, args, flags }) => {
     const configPath = resolve(
       worktree.path,
       args.path?.toString() || '.denvig.yml',
     )
-    const configRaw = await sdk.fs.safeReadTextFile(configPath)
+    const configRaw = await safeReadTextFile(configPath)
 
     if (!configRaw) {
       if (flags.json) {

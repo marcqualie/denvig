@@ -12,7 +12,7 @@
 - The SDK's `project.dependencies` namespace gained `tree()` for the dependency tree and `info('npm:redis')` for registry lookups across ecosystems
 - The SDK gained `denvig.projects.list()` to enumerate every project, and the project resource now exposes its worktrees, info, plugins and service management directly
 - The SDK now serves generic helpers (`prettyPath`, `getSemverLevel`) from `@denvig/sdk/utils`, and its error classes (`DenvigValidationError`, …) and shared types are available from the package root
-- The SDK now exposes filesystem helpers directly as `denvig.fs.safeReadTextFile()`, `denvig.fs.pathExists()` and `denvig.fs.isDirectory()`
+- The SDK now serves filesystem helpers (`safeReadTextFile`, `pathExists`, `isDirectory`) from `@denvig/sdk/fs`
 - Certificate management now runs through the SDK: `denvig.certs.list()`/`retrieve()`/`create()`/`remove()`/`import()` plus the local CA via `denvig.certs.ca.status()`/`configure()`/`remove()` (the previous `denvig.certificates.list()` is now `denvig.certs.list()`)
 - Gateway management now runs through the SDK: `denvig.gateway.status()` and `denvig.gateway.configure()`
 

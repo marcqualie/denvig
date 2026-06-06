@@ -150,18 +150,20 @@ const config = denvig.config.retrieve({ project: 'id:project-123' })
 
 ### Filesystem
 
-Thin, dependency-free filesystem helpers, exposed so consumers don't need a
-separate import for common file checks.
+Thin, dependency-free filesystem helpers, exported from `@denvig/sdk/fs` so
+they can be used without instantiating the SDK.
 
 ```typescript
+import { isDirectory, pathExists, safeReadTextFile } from '@denvig/sdk/fs'
+
 // Read a UTF-8 file, returning null if missing or empty
-const contents = await denvig.fs.safeReadTextFile('/path/to/file')
+const contents = await safeReadTextFile('/path/to/file')
 
 // Check whether a path exists
-const exists = await denvig.fs.pathExists('/path/to/file')
+const exists = await pathExists('/path/to/file')
 
 // Check whether a path is a directory
-const isDir = await denvig.fs.isDirectory('/path/to/dir')
+const isDir = await isDirectory('/path/to/dir')
 ```
 
 
