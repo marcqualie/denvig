@@ -3,14 +3,32 @@ import { resolveProjectContext } from './lib/context.ts'
 import { DenvigValidationError } from './lib/errors.ts'
 import { DenvigProject as InternalProject } from './lib/project.ts'
 import { listProjects } from './lib/projects.ts'
-import { listCertificates } from './operations/certs.ts'
+import {
+  configureCa,
+  createCertificate,
+  getCaStatus,
+  importCertificate,
+  listCertificates,
+  removeCa,
+  removeCertificate,
+  retrieveCertificate,
+} from './operations/certs.ts'
 import { track } from './resources/context.ts'
 import { wrapProject } from './resources/internal.ts'
 
 import type { ListProjectsOptions } from './lib/projects.ts'
 import type {
+  CaStatus,
+  CertificateLocation,
+  CertificateRef,
+  ConfigureCaResult,
+  CreateCertificateOptions,
+  CreateCertificateResult,
   DenvigCertificate,
+  ImportCertificateOptions,
+  ImportCertificateResult,
   ListCertificatesOptions,
+  RemoveCertificateResult,
 } from './operations/certs.ts'
 import type { DenvigConfig } from './resources/config.ts'
 import type { ResourceContext } from './resources/context.ts'
@@ -132,12 +150,45 @@ export class DenvigSDK {
     },
   }
 
-  certificates = {
+  certs = {
     /** List managed TLS certificates, optionally filtered by domain. */
     list: (options?: ListCertificatesOptions): Promise<DenvigCertificate[]> =>
-      track(this.ctx, 'certificates.list', null, () =>
-        listCertificates(options),
-      ),
+      track(this.ctx, 'certs.list', null, () => listCertificates(options)),
+
+    /** Look up a managed certificate by `domain` or directory `name`. */
+    retrieve: (ref: CertificateRef): Promise<CertificateLocation | null> =>
+      track(this.ctx, 'certs.retrieve', null, () => retrieveCertificate(ref)),
+
+    /** Issue a certificate for a domain, signed by the local CA. */
+    create: (
+      options: CreateCertificateOptions,
+    ): Promise<CreateCertificateResult> =>
+      track(this.ctx, 'certs.create', null, () => createCertificate(options)),
+
+    /** Remove a managed certificate by `domain` or directory `name`. */
+    remove: (ref: CertificateRef): Promise<RemoveCertificateResult> =>
+      track(this.ctx, 'certs.remove', null, () => removeCertificate(ref)),
+
+    /** Import an existing key/certificate pair into the managed certs. */
+    import: (
+      options: ImportCertificateOptions,
+    ): Promise<ImportCertificateResult> =>
+      track(this.ctx, 'certs.import', null, () => importCertificate(options)),
+
+    /** The local Certificate Authority that signs locally-issued certs. */
+    ca: {
+      /** Report whether the local CA is configured and its details. */
+      status: (): Promise<CaStatus> =>
+        track(this.ctx, 'certs.ca.status', null, () => getCaStatus()),
+
+      /** Generate the local CA if missing and install it to the keychain. */
+      configure: (): Promise<ConfigureCaResult> =>
+        track(this.ctx, 'certs.ca.configure', null, () => configureCa()),
+
+      /** Remove the local CA from the system keychain. */
+      remove: (): Promise<{ path: string }> =>
+        track(this.ctx, 'certs.ca.remove', null, () => removeCa()),
+    },
   }
 
   config = {

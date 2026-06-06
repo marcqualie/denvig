@@ -29,7 +29,7 @@ export type {
   ProjectInfo,
   ServiceStatus as ProjectServiceStatus,
 } from './lib/projectInfo.ts'
-export type { DenvigCertificate } from './operations/certs.ts'
+export type { CaStatus, DenvigCertificate } from './operations/certs.ts'
 export type { ServiceRow } from './operations/services.ts'
 export type { DenvigConfig } from './resources/config.ts'
 export type { DenvigDependency } from './resources/dependency.ts'

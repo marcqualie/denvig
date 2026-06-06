@@ -1,11 +1,3 @@
-import {
-  generateCaCert,
-  getCaCertPath,
-  installCaToKeychain,
-  isCaInitialized,
-  writeCaFiles,
-} from '@denvig/sdk/unsafe'
-
 import { Command } from '../../../lib/command.ts'
 
 export const certsCaInstallCommand = new Command({
@@ -16,11 +8,11 @@ export const certsCaInstallCommand = new Command({
   example: 'denvig certs ca install',
   args: [],
   flags: [],
-  handler: async () => {
-    if (await isCaInitialized()) {
-      console.log('CA already exists at', getCaCertPath())
+  handler: async ({ sdk }) => {
+    if ((await sdk.certs.ca.status()).initialized) {
+      const { path } = await sdk.certs.ca.configure()
+      console.log('CA already exists at', path)
       console.log('Reinstalling CA to system keychain...')
-      installCaToKeychain(getCaCertPath())
       console.log('CA reinstalled to system keychain.')
       return {
         success: true,
@@ -29,12 +21,9 @@ export const certsCaInstallCommand = new Command({
     }
 
     console.log('Generating new Certificate Authority...')
-    const { certPem, keyPem } = await generateCaCert()
-    writeCaFiles(certPem, keyPem)
-    console.log('CA certificate written to', getCaCertPath())
-
+    const { path } = await sdk.certs.ca.configure()
+    console.log('CA certificate written to', path)
     console.log('Installing CA to system keychain...')
-    installCaToKeychain(getCaCertPath())
     console.log('CA installed to system keychain.')
 
     return { success: true, message: 'CA initialized and installed.' }

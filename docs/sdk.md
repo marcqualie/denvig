@@ -87,11 +87,43 @@ const outdated = project.dependencies.outdated({
 ### Certificates (Global Scope)
 
 ```typescript
-// List all certficiates
-const certs = denvig.certificates.list()
+// List all certificates
+const certs = denvig.certs.list()
 
 // Lookup certificates by domain
-const certs = denvig.certificates.list({ domain: 'example.com' })
+const certs = denvig.certs.list({ domain: 'example.com' })
+
+// Look up a single certificate by domain or directory name
+const cert = denvig.certs.retrieve({ domain: 'hello.denvig.me' })
+
+// Issue a certificate for a domain (signed by the local CA)
+const created = denvig.certs.create({ domain: 'hello.denvig.me' })
+
+// Remove a certificate by domain or directory name
+await denvig.certs.remove({ domain: 'hello.denvig.me' })
+
+// Import an existing key/certificate pair
+const imported = denvig.certs.import({
+  keyPath: './privkey.pem',
+  certPath: './fullchain.pem',
+})
+```
+
+#### Certificate Authority
+
+The local CA signs certificates issued by `certs.create`. Check it is configured
+before issuing certificates.
+
+```typescript
+// Check whether the local CA is configured and trusted
+const ca = await denvig.certs.ca.status()
+if (!ca.initialized) {
+  // Generate the CA and install it into the system keychain
+  await denvig.certs.ca.configure()
+}
+
+// Remove the local CA from the system keychain
+await denvig.certs.ca.remove()
 ```
 
 ### Configuration

@@ -13,17 +13,10 @@
 export {
   countCertsExpiringWithin,
   generateCaCert,
-  generateDomainCert,
   getCaCertPath,
-  getCertDir,
-  getCertsDir,
   installCaToKeychain,
   isCaInitialized,
-  loadCaCert,
-  parseCertDomains,
-  uninstallCaFromKeychain,
   writeCaFiles,
-  writeDomainCertFiles,
 } from './lib/certs.ts'
 export { createCliLogTracker } from './lib/cli-logs.ts'
 export { getGlobalConfig } from './lib/config.ts'

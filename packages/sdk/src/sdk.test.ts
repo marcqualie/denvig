@@ -19,7 +19,7 @@ describe('DenvigSDK', () => {
 
   it('lists certificates as an array', async () => {
     const denvig = new DenvigSDK({ client: 'test' })
-    const certs = await denvig.certificates.list()
+    const certs = await denvig.certs.list()
     ok(Array.isArray(certs))
   })
 })

@@ -1,13 +1,3 @@
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
-import {
-  generateDomainCert,
-  getCertDir,
-  isCaInitialized,
-  loadCaCert,
-  writeDomainCertFiles,
-} from '@denvig/sdk/unsafe'
-
 import { Command } from '../../lib/command.ts'
 import { confirm } from '../../lib/input.ts'
 
@@ -26,45 +16,42 @@ export const certsGenerateCommand = new Command({
     },
   ],
   flags: [],
-  handler: async ({ args, flags }) => {
+  handler: async ({ sdk, args, flags }) => {
     const domain = args.domain as string
 
-    if (!isCaInitialized()) {
+    const ca = await sdk.certs.ca.status()
+    if (!ca.initialized) {
       console.error('CA not initialized. Run `denvig certs init` first.')
       return { success: false, message: 'CA not initialized.' }
     }
 
-    const certDir = getCertDir(domain)
-    if (existsSync(certDir) && !flags.json) {
-      const confirmed = await confirm(
-        `Certificate already exists for ${domain}. Overwrite?`,
-      )
-      if (!confirmed) {
-        console.log('Cancelled.')
-        return { success: true, message: 'Cancelled.' }
+    if (!flags.json) {
+      const existing = await sdk.certs.retrieve({ domain })
+      if (existing) {
+        const confirmed = await confirm(
+          `Certificate already exists for ${domain}. Overwrite?`,
+        )
+        if (!confirmed) {
+          console.log('Cancelled.')
+          return { success: true, message: 'Cancelled.' }
+        }
       }
     }
 
-    const { cert: caCert, key: caKey } = await loadCaCert()
-    const { privkey, fullchain } = await generateDomainCert(
-      domain,
-      caCert,
-      caKey,
-    )
-    writeDomainCertFiles(domain, privkey, fullchain)
+    const result = await sdk.certs.create({ domain, force: true })
 
     if (flags.json) {
       console.log(
         JSON.stringify({
-          domain,
-          privkey: resolve(certDir, 'privkey.pem'),
-          fullchain: resolve(certDir, 'fullchain.pem'),
+          domain: result.domain,
+          privkey: result.privkey,
+          fullchain: result.fullchain,
         }),
       )
     } else {
       console.log(`Certificate generated for ${domain}`)
-      console.log(`  privkey:   ${resolve(certDir, 'privkey.pem')}`)
-      console.log(`  fullchain: ${resolve(certDir, 'fullchain.pem')}`)
+      console.log(`  privkey:   ${result.privkey}`)
+      console.log(`  fullchain: ${result.fullchain}`)
     }
 
     return { success: true, message: `Certificate generated for ${domain}.` }

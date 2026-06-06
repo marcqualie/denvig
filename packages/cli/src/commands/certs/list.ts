@@ -48,7 +48,7 @@ export const certsListCommand = new Command({
   args: [],
   flags: [],
   handler: async ({ sdk, flags }) => {
-    const certificates = await sdk.certificates.list()
+    const certificates = await sdk.certs.list()
 
     if (certificates.length === 0) {
       if (flags.json) {

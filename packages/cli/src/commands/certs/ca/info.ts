@@ -1,7 +1,3 @@
-import { X509Certificate } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-import { getCaCertPath, isCaInitialized } from '@denvig/sdk/unsafe'
-
 import { Command } from '../../../lib/command.ts'
 
 export const certsCaInfoCommand = new Command({
@@ -11,8 +7,10 @@ export const certsCaInfoCommand = new Command({
   example: 'denvig certs ca info',
   args: [],
   flags: [],
-  handler: ({ flags }) => {
-    if (!isCaInitialized()) {
+  handler: async ({ sdk, flags }) => {
+    const ca = await sdk.certs.ca.status()
+
+    if (!ca.initialized) {
       const message =
         'CA has not been initialized. Run `denvig certs ca install` first.'
       if (flags.json) {
@@ -23,18 +21,14 @@ export const certsCaInfoCommand = new Command({
       return { success: false, message }
     }
 
-    const caCertPath = getCaCertPath()
-    const certPem = readFileSync(caCertPath, 'utf-8')
-    const cert = new X509Certificate(certPem)
-
     const info = {
-      subject: cert.subject,
-      issuer: cert.issuer,
-      validFrom: cert.validFrom,
-      validTo: cert.validTo,
-      serialNumber: cert.serialNumber,
-      fingerprint256: cert.fingerprint256,
-      path: caCertPath,
+      subject: ca.subject,
+      issuer: ca.issuer,
+      validFrom: ca.validFrom,
+      validTo: ca.validTo,
+      serialNumber: ca.serialNumber,
+      fingerprint256: ca.fingerprint256,
+      path: ca.path,
     }
 
     if (flags.json) {

@@ -1,9 +1,3 @@
-import {
-  getCaCertPath,
-  isCaInitialized,
-  uninstallCaFromKeychain,
-} from '@denvig/sdk/unsafe'
-
 import { Command } from '../../../lib/command.ts'
 
 export const certsCaUninstallCommand = new Command({
@@ -14,8 +8,9 @@ export const certsCaUninstallCommand = new Command({
   example: 'denvig certs ca uninstall',
   args: [],
   flags: [],
-  handler: ({ flags }) => {
-    if (!isCaInitialized()) {
+  handler: async ({ sdk, flags }) => {
+    const ca = await sdk.certs.ca.status()
+    if (!ca.initialized) {
       const message =
         'CA has not been initialized. Run `denvig certs ca install` first.'
       if (flags.json) {
@@ -26,14 +21,12 @@ export const certsCaUninstallCommand = new Command({
       return { success: false, message }
     }
 
-    const caCertPath = getCaCertPath()
-
     if (flags.json) {
-      uninstallCaFromKeychain(caCertPath)
-      console.log(JSON.stringify({ success: true, path: caCertPath }))
+      const { path } = await sdk.certs.ca.remove()
+      console.log(JSON.stringify({ success: true, path }))
     } else {
       console.log('Removing CA from system keychain...')
-      uninstallCaFromKeychain(caCertPath)
+      await sdk.certs.ca.remove()
       console.log('CA removed from system keychain.')
     }
 

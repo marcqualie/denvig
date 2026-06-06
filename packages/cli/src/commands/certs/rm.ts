@@ -1,7 +1,3 @@
-import { existsSync, readdirSync, rmSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { getCertsDir } from '@denvig/sdk/unsafe'
-
 import { Command } from '../../lib/command.ts'
 import { confirm } from '../../lib/input.ts'
 
@@ -19,11 +15,11 @@ export const certsRmCommand = new Command({
     },
   ],
   flags: [],
-  handler: async ({ args, flags }) => {
+  handler: async ({ sdk, args, flags }) => {
     const name = args.name as string
-    const certDir = resolve(getCertsDir(), name)
+    const cert = await sdk.certs.retrieve({ name })
 
-    if (!existsSync(certDir) || !statSync(certDir).isDirectory()) {
+    if (!cert) {
       const message = `Certificate "${name}" not found.`
       if (flags.json) {
         console.log(JSON.stringify({ success: false, name, message }))
@@ -33,11 +29,9 @@ export const certsRmCommand = new Command({
       return { success: false, message }
     }
 
-    const files = readdirSync(certDir)
-
     if (!flags.json) {
       console.log(`Certificate: ${name}`)
-      for (const file of files) {
+      for (const file of cert.files) {
         console.log(`  ${file}`)
       }
       const confirmed = await confirm('Remove this certificate?')
@@ -47,7 +41,7 @@ export const certsRmCommand = new Command({
       }
     }
 
-    rmSync(certDir, { recursive: true })
+    await sdk.certs.remove({ name })
 
     if (flags.json) {
       console.log(JSON.stringify({ success: true, name }))

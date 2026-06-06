@@ -12,6 +12,7 @@
 - The SDK's `project.dependencies` namespace gained `tree()` for the dependency tree and `info('npm:redis')` for registry lookups across ecosystems
 - The SDK gained `denvig.projects.list()` to enumerate every project, and the project resource now exposes its worktrees, info, plugins and service management directly
 - The SDK now serves generic helpers (`prettyPath`, `safeReadTextFile`, `pathExists`, `isDirectory`, `getSemverLevel`) from `@denvig/sdk/utils`, and its error classes (`DenvigValidationError`, …) and shared types are available from the package root
+- Certificate management now runs through the SDK: `denvig.certs.list()`/`retrieve()`/`create()`/`remove()`/`import()` plus the local CA via `denvig.certs.ca.status()`/`configure()`/`remove()` (the previous `denvig.certificates.list()` is now `denvig.certs.list()`)
 
 ## [0.7.0-alpha.3] - 2026-05-30
 
