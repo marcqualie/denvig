@@ -60,9 +60,9 @@ export const projectsListCommand = new Command({
   ],
   handler: async ({ sdk, flags }) => {
     const withConfig = flags['with-config'] as boolean
-    const families = await sdk.projects.list({ withConfig })
+    const projects = await sdk.projects.list({ withConfig })
 
-    if (families.length === 0) {
+    if (projects.length === 0) {
       if (flags.json) {
         console.log(JSON.stringify([]))
       } else {
@@ -71,16 +71,16 @@ export const projectsListCommand = new Command({
       return { success: true, message: 'No projects found.' }
     }
 
-    // JSON output: one entry per project family, worktrees nested via the
-    // existing `worktrees` field. Skips launchctl calls for performance.
+    // JSON output: one entry per project, worktrees nested via the existing
+    // `worktrees` field. Skips launchctl calls for performance.
     if (flags.json) {
-      const projects: ProjectInfoJSON[] = []
-      for (const family of families) {
-        const info = await family.info({ includeServiceStatus: false })
+      const entries: ProjectInfoJSON[] = []
+      for (const project of projects) {
+        const info = await project.info({ includeServiceStatus: false })
         const { serviceStatus: _, ...infoWithoutStatus } = info
-        projects.push(infoWithoutStatus)
+        entries.push(infoWithoutStatus)
       }
-      console.log(JSON.stringify(projects))
+      console.log(JSON.stringify(entries))
       return { success: true, message: 'Projects listed successfully.' }
     }
 
@@ -88,12 +88,12 @@ export const projectsListCommand = new Command({
     const launchctlList = await launchctl.list('denvig.')
 
     const rows: ProjectRow[] = []
-    for (const family of families) {
-      const worktrees = family.worktrees.list().filter((wt) => !wt.isPrimary)
+    for (const project of projects) {
+      const worktrees = project.worktrees.list().filter((wt) => !wt.isPrimary)
 
-      const primary = family.primaryWorktree
+      const primary = project.primaryWorktree
       rows.push({
-        status: await worktreeStatus(family, primary.branch, launchctlList),
+        status: await worktreeStatus(project, primary.branch, launchctlList),
         label: primary.config.name || primary.slug,
         path: primary.path,
         depth: 0,
@@ -101,7 +101,7 @@ export const projectsListCommand = new Command({
 
       for (const worktree of worktrees) {
         rows.push({
-          status: await worktreeStatus(family, worktree.branch, launchctlList),
+          status: await worktreeStatus(project, worktree.branch, launchctlList),
           label: worktree.branch,
           path: worktree.path,
           depth: 1,
@@ -123,7 +123,7 @@ export const projectsListCommand = new Command({
 
     console.log('')
     console.log(
-      `${families.length} project${families.length === 1 ? '' : 's'} found`,
+      `${projects.length} project${projects.length === 1 ? '' : 's'} found`,
     )
 
     return { success: true, message: 'Projects listed successfully.' }
