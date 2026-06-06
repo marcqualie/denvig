@@ -30,7 +30,10 @@ jobs:
             *-rc.*)    echo "NPM_TAG=rc"     >> "$GITHUB_ENV" ;;
             *)         echo "NPM_TAG=latest" >> "$GITHUB_ENV" ;;
           esac
-        # Publishes every public workspace package (@denvig/cli, then denvig)
-        # in dependency order, rewriting the workspace: protocol to the
-        # concrete version. The private workspace root is skipped.
-      - run: pnpm -r publish --no-git-checks --access public --tag "$NPM_TAG"
+        # Stages every public workspace package for review instead of
+        # publishing it live: the OIDC token can stage but not approve, so a
+        # maintainer runs `pnpm stage approve` (with 2FA) — or `stage reject` —
+        # to promote the staged versions. The workspace: protocol is rewritten
+        # to concrete versions just as `pnpm publish` does; the private root is
+        # skipped.
+      - run: pnpm -r stage publish --no-git-checks --access public --tag "$NPM_TAG"
