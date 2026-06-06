@@ -10,6 +10,7 @@ const input = {
   internal: 'src/internal.ts',
   utils: 'src/utils.ts',
   fs: 'src/fs.ts',
+  testing: 'src/test/mock.ts',
 }
 
 export default defineConfig([

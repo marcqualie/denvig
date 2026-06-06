@@ -54,7 +54,14 @@
     },
     "./testing": {
       "denvig-source": "./src/test/mock.ts",
-      "default": "./src/test/mock.ts"
+      "import": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      },
+      "require": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.cjs"
+      }
     }
   },
   "publishConfig": {
