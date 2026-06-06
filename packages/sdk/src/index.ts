@@ -7,7 +7,7 @@
  *
  * Internals are intentionally not exported here so they can be refactored
  * without breaking consumers. CLI-only building blocks that are not yet part of
- * this contract live under `@denvig/sdk/unsafe`.
+ * this contract live under `@denvig/sdk/internal`.
  *
  * @module
  */

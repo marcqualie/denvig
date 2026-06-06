@@ -1,4 +1,7 @@
-import { buildReverseChain, isDevDependenciesSource } from '@denvig/sdk/unsafe'
+import {
+  buildReverseChain,
+  isDevDependenciesSource,
+} from '@denvig/sdk/internal'
 import { getSemverLevel } from '@denvig/sdk/utils'
 import semver from 'semver'
 

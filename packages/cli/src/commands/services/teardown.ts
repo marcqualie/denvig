@@ -1,4 +1,4 @@
-import { teardownGlobal } from '@denvig/sdk/unsafe'
+import { teardownGlobal } from '@denvig/sdk/internal'
 
 import { Command } from '../../lib/command.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'

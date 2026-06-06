@@ -10,7 +10,7 @@ import {
   isWorkingTreeDirty,
   runDenvig,
   skillsUpdateGlobal,
-} from '@denvig/sdk/unsafe'
+} from '@denvig/sdk/internal'
 import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'

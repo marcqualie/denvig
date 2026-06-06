@@ -2,7 +2,7 @@
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
 import { DenvigSDK } from '@denvig/sdk'
-import { createCliLogTracker, getGlobalConfig } from '@denvig/sdk/unsafe'
+import { createCliLogTracker, getGlobalConfig } from '@denvig/sdk/internal'
 
 import {
   formatCommandHelp,

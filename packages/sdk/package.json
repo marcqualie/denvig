@@ -19,15 +19,15 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./unsafe": {
-      "denvig-source": "./src/unsafe.ts",
+    "./internal": {
+      "denvig-source": "./src/internal.ts",
       "import": {
-        "types": "./dist/unsafe.d.ts",
-        "default": "./dist/unsafe.js"
+        "types": "./dist/internal.d.ts",
+        "default": "./dist/internal.js"
       },
       "require": {
-        "types": "./dist/unsafe.d.ts",
-        "default": "./dist/unsafe.cjs"
+        "types": "./dist/internal.d.ts",
+        "default": "./dist/internal.cjs"
       }
     },
     "./utils": {

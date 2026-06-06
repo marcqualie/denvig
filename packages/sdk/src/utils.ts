@@ -1,6 +1,6 @@
 /**
  * `@denvig/sdk/utils` — small, dependency-free helper functions that are safe
- * for any consumer to use. Unlike `@denvig/sdk/unsafe`, nothing here reaches
+ * for any consumer to use. Unlike `@denvig/sdk/internal`, nothing here reaches
  * into denvig's internal object graph; these are generic, stable utilities.
  *
  * Filesystem actions (reading files, checking paths) live on the SDK's `fs`

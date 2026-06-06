@@ -7,7 +7,7 @@ const isExternal = (id: string) =>
 
 const input = {
   index: 'src/index.ts',
-  unsafe: 'src/unsafe.ts',
+  internal: 'src/internal.ts',
   utils: 'src/utils.ts',
   fs: 'src/fs.ts',
 }

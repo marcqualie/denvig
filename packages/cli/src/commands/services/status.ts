@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 import { pathExists } from '@denvig/sdk/fs'
-import { getGlobalConfig, getNginxConfigPath } from '@denvig/sdk/unsafe'
+import { getGlobalConfig, getNginxConfigPath } from '@denvig/sdk/internal'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'

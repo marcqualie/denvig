@@ -6,7 +6,7 @@ import {
   installCaToKeychain,
   isCaInitialized,
   writeCaFiles,
-} from '@denvig/sdk/unsafe'
+} from '@denvig/sdk/internal'
 
 import { confirm } from '../input.ts'
 

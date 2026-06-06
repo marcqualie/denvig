@@ -1,11 +1,10 @@
 /**
- * `@denvig/sdk/unsafe` — internal building blocks not yet part of the public SDK.
+ * `@denvig/sdk/internal` — building blocks not yet part of the stable public SDK.
  *
- * These are raw internals the CLI still depends on but which are NOT part of the
- * documented `@denvig/sdk` interface (see `docs/sdk.md`). They live here as a
- * holding pen so the CLI keeps working while we design proper resource-oriented
- * wrappers for each domain in a later pass. Nothing here is a stable contract —
- * anything exported from this path may change or move without notice.
+ * These are functional and safe to use, but they are NOT yet part of the
+ * documented `@denvig/sdk` interface (see `docs/sdk.md`), so they may change or
+ * move at any time before v1. This is a temporary namespace: almost everything
+ * here will graduate to a proper resource-oriented public API in a later pass.
  *
  * @module
  */

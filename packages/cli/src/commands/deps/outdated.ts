@@ -1,5 +1,5 @@
 import { DenvigValidationError } from '@denvig/sdk'
-import { countCertsExpiringWithin } from '@denvig/sdk/unsafe'
+import { countCertsExpiringWithin } from '@denvig/sdk/internal'
 import { getSemverLevel } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'

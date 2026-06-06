@@ -1,4 +1,4 @@
-import { type LaunchctlListItem, launchctl } from '@denvig/sdk/unsafe'
+import { type LaunchctlListItem, launchctl } from '@denvig/sdk/internal'
 import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
