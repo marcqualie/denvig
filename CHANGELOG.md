@@ -20,6 +20,7 @@
 ### Fixed
 
 - `denvig run` again resolves actions whose names contain a colon (e.g. `compile:darwin-x64`) instead of mistaking the colon for an `ecosystem:action` prefix
+- Services left behind by a deleted worktree are now cleaned up automatically, so a service can reclaim its domain instead of being stuck routing to `http://localhost:<port>` with no gateway config
 
 ## [0.7.0-alpha.3] - 2026-05-30
 

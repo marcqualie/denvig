@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 
 import { expandTilde, getGlobalConfig } from './config.ts'
 import { projectSlug } from './project/refs.ts'
+import { DenvigProject } from './project.ts'
 import { isDirectory, pathExists } from './safeReadFile.ts'
 
 export type ProjectInfo = {
@@ -109,4 +110,39 @@ export const listProjects = async (
   ).filter((project): project is ProjectInfo => project !== null)
 
   return projects.sort((a, b) => a.slug.localeCompare(b.slug))
+}
+
+/** Slug and path of a single resolvable checkout. */
+export type CheckoutMeta = {
+  slug: string
+  path: string
+}
+
+/**
+ * Map every resolvable checkout id to its slug and path. This covers the
+ * primary checkout and each detached worktree of every configured project.
+ *
+ * Service state and gateway routes only record a project id, so the gateway
+ * and the reconciler use this map to resolve that id back to a real checkout.
+ * An id that is absent from the map belongs to a worktree that has since been
+ * deleted — its services and routes are orphaned. The global project is not
+ * included here; callers that need it add it themselves.
+ */
+export const resolveProjectCheckouts = async (): Promise<
+  Map<string, CheckoutMeta>
+> => {
+  const projects = await listProjects({ withConfig: true })
+  const byId = new Map<string, CheckoutMeta>()
+  await Promise.all(
+    projects.map(async (info) => {
+      const project = await DenvigProject.retrieve(info.path)
+      for (const worktree of project.worktrees) {
+        byId.set(worktree.id, {
+          slug: worktree.slug,
+          path: worktree.path,
+        })
+      }
+    }),
+  )
+  return byId
 }
