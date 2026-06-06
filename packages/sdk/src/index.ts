@@ -22,6 +22,7 @@ export { DenvigAction } from './resources/action.ts'
 export { DenvigProject } from './resources/project.ts'
 export { DenvigService } from './resources/service.ts'
 export { DenvigWorktree } from './resources/worktree.ts'
+export { ProjectConfigSchema } from './schemas/config.ts'
 export { DenvigSDK } from './sdk.ts'
 
 export type { TreeNode } from './lib/formatters/tree-node.ts'

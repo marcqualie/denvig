@@ -10,7 +10,7 @@ import {
 
 import { confirm } from '../input.ts'
 
-import type { ProjectConfigSchema } from '@denvig/sdk/unsafe'
+import type { ProjectConfigSchema } from '@denvig/sdk'
 
 type ServiceConfig = NonNullable<ProjectConfigSchema['services']>[string]
 

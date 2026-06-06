@@ -49,7 +49,6 @@ export {
 export { installXcodeCli, isXcodeCliInstalled } from './lib/system/xcodeCli.ts'
 export { teardownGlobal } from './lib/teardown.ts'
 export { getDenvigVersion } from './lib/version.ts'
-export { ProjectConfigSchema } from './schemas/config.ts'
 
 export type { LaunchctlListItem } from './lib/services/launchctl.ts'
 export type { ServiceManagerProject } from './lib/services/manager.ts'
