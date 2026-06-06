@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
+import { serviceCompletions } from '../../lib/zsh/service-completions.ts'
 
 export const servicesStopCommand = new Command({
   name: 'services:stop',
@@ -26,8 +27,8 @@ export const servicesStopCommand = new Command({
       type: 'string',
     },
   ],
-  completions: ({ project }) => {
-    return project.services.completions()
+  completions: ({ project, sdk }) => {
+    return serviceCompletions(project, sdk)
   },
   handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)

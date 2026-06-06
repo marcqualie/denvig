@@ -3,6 +3,7 @@ import { getGlobalConfig, getNginxConfigPath } from '@denvig/sdk/unsafe'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
+import { serviceCompletions } from '../../lib/zsh/service-completions.ts'
 
 export const servicesStatusCommand = new Command({
   name: 'services:status',
@@ -27,8 +28,8 @@ export const servicesStatusCommand = new Command({
       type: 'string',
     },
   ],
-  completions: ({ project }) => {
-    return project.services.completions()
+  completions: ({ project, sdk }) => {
+    return serviceCompletions(project, sdk)
   },
   handler: async ({ sdk, project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)

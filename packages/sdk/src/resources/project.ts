@@ -12,10 +12,7 @@ import {
   constructDenvigResourceId,
   generateDenvigResourceHash,
 } from '../lib/resources.ts'
-import {
-  getServiceCompletions,
-  getServiceContext,
-} from '../lib/services/identifier.ts'
+import { getServiceContext } from '../lib/services/identifier.ts'
 import { resolveWorktree } from '../lib/services/worktree.ts'
 import { teardownProject } from '../lib/teardown.ts'
 import {
@@ -224,8 +221,6 @@ export class DenvigProject {
           options,
         ),
       ),
-    /** Tab-completion candidates, including services from other projects. */
-    completions: (): Promise<string[]> => getServiceCompletions(this.internal),
     /**
      * Resolve a service identifier to its manager, name and target checkout.
      * Honours cross-project identifiers (e.g. `slug/service`, `id:abcd/svc`).

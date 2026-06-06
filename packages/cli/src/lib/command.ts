@@ -12,7 +12,7 @@ type CommandOptions<
   flags: FlagDefinitions
   handler: CommandHandler<ArgDefinitions, FlagDefinitions>
   completions?: (
-    context: { project: DenvigProject },
+    context: { project: DenvigProject; sdk: DenvigSDK },
     inputs: string[],
   ) => string[] | Promise<string[]>
   subcommands?: Record<string, GenericCommand>
@@ -89,7 +89,7 @@ export class Command<
   flags: FlagDefinitions
   handler: CommandHandler<ArgDefinitions, FlagDefinition[]>
   completions?: (
-    context: { project: DenvigProject },
+    context: { project: DenvigProject; sdk: DenvigSDK },
     inputs: string[],
   ) => string[] | Promise<string[]>
   subcommands: Record<string, GenericCommand>

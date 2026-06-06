@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
 import { Command } from '../../lib/command.ts'
+import { serviceCompletions } from '../../lib/zsh/service-completions.ts'
 
 export const logsCommand = new Command({
   name: 'services:logs',
@@ -40,8 +41,8 @@ export const logsCommand = new Command({
       type: 'string',
     },
   ],
-  completions: ({ project }) => {
-    return project.services.completions()
+  completions: ({ project, sdk }) => {
+    return serviceCompletions(project, sdk)
   },
   handler: async ({ project, args, flags }) => {
     const nameArg = args.name as string

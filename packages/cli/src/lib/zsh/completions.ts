@@ -81,7 +81,10 @@ export const zshCompletionsFor = async (
     ) {
       const command = context.commands[commandName]
       if (command?.completions) {
-        return await command.completions({ project: context.project }, [])
+        return await command.completions(
+          { project: context.project, sdk: context.sdk },
+          [],
+        )
       }
       return []
     }
@@ -115,7 +118,10 @@ export const zshCompletionsFor = async (
         return visibleSubcommands(child)
       }
       if (child.completions && context?.project) {
-        return await child.completions({ project: context.project }, [])
+        return await child.completions(
+          { project: context.project, sdk: context.sdk },
+          [],
+        )
       }
       return []
     }
@@ -125,7 +131,7 @@ export const zshCompletionsFor = async (
   // Leaf command with remaining args - call its completions handler
   if (resolved.completions && context?.project) {
     const allCompletions = await resolved.completions(
-      { project: context.project },
+      { project: context.project, sdk: context.sdk },
       remaining,
     )
     const partial = remaining[remaining.length - 1] || ''

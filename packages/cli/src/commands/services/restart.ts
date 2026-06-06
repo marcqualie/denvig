@@ -4,6 +4,7 @@ import { Command } from '../../lib/command.ts'
 import { ensureServiceCerts } from '../../lib/services/certs.ts'
 import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
 import { resolveServicePortForCli } from '../../lib/services/resolvePort.ts'
+import { serviceCompletions } from '../../lib/zsh/service-completions.ts'
 
 export const servicesRestartCommand = new Command({
   name: 'services:restart',
@@ -53,8 +54,8 @@ export const servicesRestartCommand = new Command({
       defaultValue: false,
     },
   ],
-  completions: ({ project }) => {
-    return project.services.completions()
+  completions: ({ project, sdk }) => {
+    return serviceCompletions(project, sdk)
   },
   handler: async ({ project, worktree, args, flags }) => {
     const serviceArg = z.string().parse(args.name)
