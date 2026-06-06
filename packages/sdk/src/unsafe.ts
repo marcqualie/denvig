@@ -21,13 +21,8 @@ export {
 export { createCliLogTracker } from './lib/cli-logs.ts'
 export { getGlobalConfig } from './lib/config.ts'
 export { buildReverseChain, isDevDependenciesSource } from './lib/deps/tree.ts'
-export {
-  findCertForDomain,
-  generateMissingCerts,
-  resolveSslPaths,
-} from './lib/gateway/certs.ts'
-export { configureGateway } from './lib/gateway/configure.ts'
-export { getNginxConfigPath, getNginxConfPath } from './lib/gateway/nginx.ts'
+export { findCertForDomain, generateMissingCerts } from './lib/gateway/certs.ts'
+export { getNginxConfigPath } from './lib/gateway/nginx.ts'
 export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
 export { default as launchctl } from './lib/services/launchctl.ts'
 export { ServiceManager } from './lib/services/manager.ts'

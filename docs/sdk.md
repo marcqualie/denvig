@@ -126,6 +126,17 @@ if (!ca.initialized) {
 await denvig.certs.ca.remove()
 ```
 
+### Gateway (Global Scope)
+
+```typescript
+// Inspect the nginx gateway: whether it's enabled, the nginx process state,
+// and the gateway-configured services of the current project
+const status = await denvig.gateway.status()
+
+// Reconcile running services and rebuild every nginx config from state
+const result = await denvig.gateway.configure()
+```
+
 ### Configuration
 
 ```typescript

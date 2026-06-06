@@ -13,6 +13,7 @@ import {
   removeCertificate,
   retrieveCertificate,
 } from './operations/certs.ts'
+import { configureGatewayAll, getGatewayStatus } from './operations/gateway.ts'
 import { track } from './resources/context.ts'
 import { wrapProject } from './resources/internal.ts'
 
@@ -30,6 +31,10 @@ import type {
   ListCertificatesOptions,
   RemoveCertificateResult,
 } from './operations/certs.ts'
+import type {
+  ConfigureGatewayOutput,
+  GatewayStatus,
+} from './operations/gateway.ts'
 import type { DenvigConfig } from './resources/config.ts'
 import type { ResourceContext } from './resources/context.ts'
 import type { DenvigProject } from './resources/project.ts'
@@ -189,6 +194,21 @@ export class DenvigSDK {
       remove: (): Promise<{ path: string }> =>
         track(this.ctx, 'certs.ca.remove', null, () => removeCa()),
     },
+  }
+
+  gateway = {
+    /**
+     * Report the gateway's global state plus the gateway-configured services of
+     * the project resolved from the SDK's `cwd`.
+     */
+    status: (): Promise<GatewayStatus> =>
+      track(this.ctx, 'gateway.status', null, () =>
+        getGatewayStatus({ cwd: this.ctx.cwd }),
+      ),
+
+    /** Reconcile services and rebuild every nginx config from runtime state. */
+    configure: (): Promise<ConfigureGatewayOutput> =>
+      track(this.ctx, 'gateway.configure', null, () => configureGatewayAll()),
   }
 
   config = {
