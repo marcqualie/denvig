@@ -6,6 +6,7 @@
   "license": "MIT",
   "description": "Workspace root for the denvig CLI and its packages",
   "type": "module",
+  "files": [],
   "scripts": {
     "build": "turbo run build",
     "check-types": "turbo run check-types",
