@@ -1,7 +1,7 @@
 # Denvig Changelog
 
 
-## [Unreleased]
+## [0.7.0-alpha.4] - 2026-06-06
 
 ### Changed
 

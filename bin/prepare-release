@@ -37,8 +37,9 @@ for (const file of files) {
 }
 "
 
-# Update CHANGELOG.md - replace [Unreleased] with [tag] - date
-sed -i.bak "s/## \[Unreleased\]/## [$TAG] - $DATE/" CHANGELOG.md && rm CHANGELOG.md.bak
-echo "Updated CHANGELOG.md [Unreleased] to [$TAG] - $DATE"
+# Update CHANGELOG.md - replace [Unreleased] with [version] - date. Use the
+# bare version (no leading `v`) to match the existing changelog headings.
+sed -i.bak "s/## \[Unreleased\]/## [$VERSION] - $DATE/" CHANGELOG.md && rm CHANGELOG.md.bak
+echo "Updated CHANGELOG.md [Unreleased] to [$VERSION] - $DATE"
 
 echo "Done! Review changes and commit when ready."
