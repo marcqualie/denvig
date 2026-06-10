@@ -60,6 +60,38 @@ describe('service state', () => {
     })
   })
 
+  it('clears the port when explicitly set to undefined', async () => {
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      port: 8080,
+      domains: [],
+      desiredStatus: 'running',
+    })
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      port: undefined,
+      domains: [],
+      desiredStatus: 'running',
+    })
+    const entry = await getServiceState('abc123', 'api')
+    assert.strictEqual(entry?.port, undefined)
+  })
+
+  it('preserves the port when the key is omitted', async () => {
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      port: 8080,
+      domains: [],
+      desiredStatus: 'running',
+    })
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      desiredStatus: 'stopped',
+    })
+    const entry = await getServiceState('abc123', 'api')
+    assert.strictEqual(entry?.port, 8080)
+  })
+
   it('marks a service stopped while preserving the port', async () => {
     await updateServiceState('abc123', 'api', {
       cwd: '/tmp/proj',

@@ -1,11 +1,13 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
-import { hostname } from 'node:os'
-import { describe, it } from 'node:test'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { hostname, tmpdir } from 'node:os'
+import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { createMockInternalProject } from '../../test/mock.ts'
 import launchctl from './launchctl.ts'
 import { ServiceManager } from './manager.ts'
+import { updateServiceState } from './state.ts'
 
 describe('ServiceManager', () => {
   describe('listServices()', () => {
@@ -208,6 +210,168 @@ describe('ServiceManager', () => {
         result.success,
         `Expected env build to succeed but got: ${result.success === false ? result.message : 'unknown'}`,
       )
+    })
+  })
+
+  describe('resolveServicePort()', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-ports-`)
+      process.env.HOME = tmpHome
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    it('returns no port for a service without an http block', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        worker: { command: 'node worker.js' },
+      }
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('worker')
+
+      ok(resolved.success)
+      strictEqual(resolved.port, undefined)
+      strictEqual(resolved.source, 'none')
+      strictEqual(resolved.conflict, false)
+    })
+
+    it('returns no port for a non-http service even with forceRandom', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        worker: { command: 'node worker.js' },
+      }
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('worker', {
+        forceRandom: true,
+      })
+
+      ok(resolved.success)
+      strictEqual(resolved.port, undefined)
+    })
+
+    it('ignores a stale state port for a non-http service', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        worker: { command: 'node worker.js' },
+      }
+      await updateServiceState(project.id, 'worker', {
+        cwd: project.path,
+        port: 8123,
+        domains: [],
+        desiredStatus: 'running',
+      })
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('worker')
+
+      ok(resolved.success)
+      strictEqual(resolved.port, undefined)
+    })
+
+    it('allocates a random port for a service with an http block but no port', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: {} },
+      }
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('web')
+
+      ok(resolved.success)
+      strictEqual(resolved.source, 'allocated')
+      ok(
+        resolved.port !== undefined &&
+          resolved.port >= 8000 &&
+          resolved.port <= 9999,
+      )
+    })
+
+    it('reuses the state port for an http service', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: {} },
+      }
+      await updateServiceState(project.id, 'web', {
+        cwd: project.path,
+        port: 8123,
+        domains: [],
+        desiredStatus: 'running',
+      })
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('web')
+
+      ok(resolved.success)
+      strictEqual(resolved.port, 8123)
+      strictEqual(resolved.source, 'state')
+    })
+  })
+
+  describe('getEffectivePort()', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-ports-`)
+      process.env.HOME = tmpHome
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    it('returns undefined for a non-http service even when state has a port', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        worker: { command: 'node worker.js' },
+      }
+      await updateServiceState(project.id, 'worker', {
+        cwd: project.path,
+        port: 8123,
+        domains: [],
+        desiredStatus: 'running',
+      })
+      const manager = new ServiceManager(project)
+
+      strictEqual(await manager.getEffectivePort('worker'), undefined)
+      strictEqual(await manager.getServiceLocalUrl('worker'), null)
+    })
+
+    it('returns the state port for an http service', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: { port: 4000 } },
+      }
+      await updateServiceState(project.id, 'web', {
+        cwd: project.path,
+        port: 8123,
+        domains: [],
+        desiredStatus: 'running',
+      })
+      const manager = new ServiceManager(project)
+
+      strictEqual(await manager.getEffectivePort('web'), 8123)
+    })
+
+    it('falls back to the config port for an http service without state', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: { port: 4000 } },
+      }
+      const manager = new ServiceManager(project)
+
+      strictEqual(await manager.getEffectivePort('web'), 4000)
     })
   })
 
