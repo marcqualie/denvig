@@ -1,5 +1,10 @@
 # Denvig Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Services without an `http` block no longer get a random port allocated or show a `localhost` URL; only http services are assigned ports
 
 ## [0.7.0-alpha.4] - 2026-06-06
 

@@ -141,7 +141,12 @@ export const getServiceState = async (
   return state.services[serviceStateKey(projectId, serviceName)] ?? null
 }
 
-/** Merge new fields into a service's state entry. Creates the entry if missing. */
+/**
+ * Merge new fields into a service's state entry. Creates the entry if
+ * missing. Passing an explicit `port: undefined` clears a previously
+ * recorded port (used when a service no longer needs one); omitting the
+ * key preserves it.
+ */
 export const updateServiceState = async (
   projectId: string,
   serviceName: string,
@@ -152,7 +157,7 @@ export const updateServiceState = async (
   const existing = state.services[key]
   state.services[key] = {
     cwd: entry.cwd,
-    port: entry.port ?? existing?.port,
+    port: 'port' in entry ? entry.port : existing?.port,
     domains: entry.domains ?? existing?.domains ?? [],
     desiredStatus: entry.desiredStatus ?? existing?.desiredStatus ?? 'running',
     project: entry.project ?? existing?.project,

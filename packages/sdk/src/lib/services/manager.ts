@@ -165,15 +165,17 @@ export class ServiceManager {
    * Decide which port to run a service on.
    *
    * Resolution order:
-   * 1. If `forceRandom`, always allocate a fresh random port (preferring the
+   * 1. If the service has no `http` block it never needs a port — return
+   *    no port, ignoring any state entry and the `forceRandom` flag.
+   * 2. If `forceRandom`, always allocate a fresh random port (preferring the
    *    previously-allocated one when free).
-   * 2. If state already records a port for this service, reuse it. State is
+   * 3. If state already records a port for this service, reuse it. State is
    *    authoritative once allocated so restarts stay on the same port and
    *    don't re-prompt about the config port being busy. Run
    *    `services teardown` to reset.
-   * 3. Otherwise try the config port — falling back to a random port and
+   * 4. Otherwise try the config port — falling back to a random port and
    *    flagging `conflict: true` when it's already in use.
-   * 4. Otherwise (no config port, no state) allocate a random port.
+   * 5. Otherwise (no config port, no state) allocate a random port.
    */
   async resolveServicePort(
     name: string,
@@ -196,7 +198,19 @@ export class ServiceManager {
       }
     }
 
-    const configPort = config.http?.port
+    // Services without an `http` block don't serve HTTP traffic, so they
+    // never need a port — even when an older version recorded one in state
+    // or the caller asked for a random port.
+    if (!config.http) {
+      return {
+        success: true,
+        port: undefined,
+        source: 'none',
+        conflict: false,
+      }
+    }
+
+    const configPort = config.http.port
     const previous = await getServiceState(this.project.id, name)
 
     if (options?.forceRandom) {
@@ -1071,12 +1085,16 @@ export class ServiceManager {
 
   /**
    * Get the effective runtime port for a service, considering state-tracked
-   * allocations first and falling back to the config port.
+   * allocations first and falling back to the config port. Services without
+   * an `http` block never have a port, even when an older version recorded
+   * one in state.
    */
   async getEffectivePort(name: string): Promise<number | undefined> {
+    const config = this.getServiceConfig(name)
+    if (!config?.http) return undefined
     const state = await getServiceState(this.project.id, name)
     if (state?.port !== undefined) return state.port
-    return this.getServiceConfig(name)?.http?.port
+    return config.http.port
   }
 
   /**

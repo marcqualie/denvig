@@ -195,7 +195,9 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
     protectedLabels.add(label)
     try {
       const start = await manager.startService(entry.serviceName, {
-        port: entry.port,
+        // Non-http services never need a port — drop any stale allocation
+        // recorded by an older version.
+        port: entry.config?.http ? entry.port : undefined,
         portResolved: true,
         // Liveness is launchd's job — only re-bootstrap on a real plist
         // change, never just because the process is momentarily down.
