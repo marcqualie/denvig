@@ -5,6 +5,7 @@
 ### Fixed
 
 - Services without an `http` block no longer get a random port allocated or show a `localhost` URL; only http services are assigned ports
+- `denvig deps outdated` no longer lists `link:` or `workspace:` dependencies, since they point at local code
 
 ## [0.7.0-alpha.4] - 2026-06-06
 
