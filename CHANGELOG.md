@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `semver` (7.8.1 → 7.8.4) and `rolldown-plugin-dts` (0.25.1 → 0.25.2) patch dependencies
+
 ### Fixed
 
 - Services without an `http` block no longer get a random port allocated or show a `localhost` URL; only http services are assigned ports
