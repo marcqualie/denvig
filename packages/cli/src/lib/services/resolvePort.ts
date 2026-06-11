@@ -20,7 +20,8 @@ export type CliStartResolution = {
   /**
    * Whether the caller has explicitly opted to claim the configured
    * domain even though another project currently owns the route. `null`
-   * means "leave the existing route untouched".
+   * or `false` means "leave the existing route untouched" — the service
+   * then starts on a dynamically assigned temporary domain.
    */
   claimDomain: boolean | null
 }
@@ -129,14 +130,15 @@ export const resolveServicePortForCli = async (
       if (ownedByOther) {
         if (isInteractive(flags)) {
           claimDomain = await confirm(
-            `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}. Override it to point at this start (port ${chosenPort})?`,
+            `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}. Move it to this start (port ${chosenPort})? Declining starts on a temporary domain instead.`,
           )
         } else {
-          // Non-interactive default: don't disturb the existing route.
+          // Non-interactive default: don't disturb the existing route; the
+          // service starts on a dynamically assigned temporary domain.
           claimDomain = false
           if (!flags.json) {
             console.log(
-              `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}; leaving the route untouched. Use --claim-domain to override.`,
+              `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}; starting on a temporary domain instead. Use --claim-domain to move it here.`,
             )
           }
         }

@@ -40,7 +40,7 @@ export const servicesStartCommand = new Command({
     {
       name: 'claim-domain',
       description:
-        'Override the existing gateway route so the configured domain points at this start',
+        'Move the configured domain to this start, unassigning it from its current owner (handed back on stop)',
       required: false,
       type: 'boolean',
       defaultValue: false,
@@ -48,7 +48,7 @@ export const servicesStartCommand = new Command({
     {
       name: 'no-claim-domain',
       description:
-        'Leave the existing gateway route untouched even when the config port is busy',
+        'Leave the existing gateway route untouched and start on a temporary domain instead',
       required: false,
       type: 'boolean',
       defaultValue: false,

@@ -26,7 +26,7 @@ export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
 export { default as launchctl } from './lib/services/launchctl.ts'
 export { ServiceManager } from './lib/services/manager.ts'
 export { reconcileServices } from './lib/services/reconcile.ts'
-export { getGatewayRoute } from './lib/services/state.ts'
+export { getGatewayRoute, setGatewayRoute } from './lib/services/state.ts'
 export { brewUpdate, brewUpgrade, getBrewOutdated } from './lib/system/brew.ts'
 export { runDenvig } from './lib/system/denvig.ts'
 export {
