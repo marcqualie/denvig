@@ -44,7 +44,7 @@
   "dependencies": {
     "@denvig/sdk": "workspace:*",
     "node-forge": "^1.4.0",
-    "semver": "^7.8.1",
+    "semver": "^7.8.4",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
