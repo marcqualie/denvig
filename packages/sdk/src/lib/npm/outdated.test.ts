@@ -1,7 +1,7 @@
-import { strictEqual } from 'node:assert'
-import { describe, it } from 'node:test'
+import { deepStrictEqual, strictEqual } from 'node:assert'
+import { describe, it, mock } from 'node:test'
 
-import { extractDepInfo } from './outdated.ts'
+import { extractDepInfo, isLocalDependency, npmOutdated } from './outdated.ts'
 
 describe('extractDepInfo()', () => {
   it('returns the first version entry for plain importer specifiers', () => {
@@ -64,5 +64,80 @@ describe('extractDepInfo()', () => {
       ],
     })
     strictEqual(info?.specifier, 'catalog:')
+  })
+})
+
+describe('isLocalDependency()', () => {
+  it('returns true for workspace: specifiers', () => {
+    strictEqual(
+      isLocalDependency({ current: 'link:../cli', specifier: 'workspace:*' }),
+      true,
+    )
+  })
+
+  it('returns true for link: specifiers', () => {
+    strictEqual(
+      isLocalDependency({
+        current: 'link:../local-pkg',
+        specifier: 'link:../local-pkg',
+      }),
+      true,
+    )
+  })
+
+  it('returns true when only the resolved version is a link:', () => {
+    strictEqual(
+      isLocalDependency({ current: 'link:../cli', specifier: '*' }),
+      true,
+    )
+  })
+
+  it('returns false for regular semver dependencies', () => {
+    strictEqual(
+      isLocalDependency({ current: '1.2.3', specifier: '^1.2.0' }),
+      false,
+    )
+  })
+})
+
+describe('npmOutdated()', () => {
+  it('excludes link: and workspace: dependencies without querying the registry', async () => {
+    const fetchMock = mock.method(globalThis, 'fetch', async () => {
+      throw new Error('unexpected registry fetch for a local dependency')
+    })
+
+    try {
+      const result = await npmOutdated([
+        {
+          id: 'npm:@denvig-test/workspace-pkg',
+          name: '@denvig-test/workspace-pkg',
+          ecosystem: 'npm',
+          versions: [
+            {
+              resolved: 'link:../workspace-pkg',
+              specifier: 'workspace:*',
+              source: 'packages/app#dependencies',
+            },
+          ],
+        },
+        {
+          id: 'npm:@denvig-test/linked-pkg',
+          name: '@denvig-test/linked-pkg',
+          ecosystem: 'npm',
+          versions: [
+            {
+              resolved: 'link:../linked-pkg',
+              specifier: 'link:../linked-pkg',
+              source: '.#dependencies',
+            },
+          ],
+        },
+      ])
+
+      deepStrictEqual(result, [])
+      strictEqual(fetchMock.mock.callCount(), 0)
+    } finally {
+      fetchMock.mock.restore()
+    }
   })
 })

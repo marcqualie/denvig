@@ -148,6 +148,20 @@ export const extractDepInfo = (
 }
 
 /**
+ * Check whether a dependency points at local code rather than the registry.
+ * `link:` and `workspace:` dependencies live on disk, so the registry can
+ * never have a newer version of them.
+ */
+export const isLocalDependency = (info: {
+  current: string
+  specifier: string
+}): boolean => {
+  const isLocalSpec = (value: string) =>
+    value.startsWith('link:') || value.startsWith('workspace:')
+  return isLocalSpec(info.specifier) || isLocalSpec(info.current)
+}
+
+/**
  * Check npm packages for outdated versions.
  * Takes a list of dependencies and returns info about which are outdated.
  */
@@ -164,6 +178,7 @@ export const npmOutdated = async (
   const fetchPromises = toCheck.map(async (dep) => {
     const info = extractDepInfo(dep)
     if (!info) return
+    if (isLocalDependency(info)) return
 
     const npmInfo = await fetchNpmPackageInfo(dep.name, !useCache)
     if (!npmInfo) return
