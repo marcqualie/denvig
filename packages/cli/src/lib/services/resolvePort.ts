@@ -10,8 +10,8 @@ import type {
 type Flags = {
   json?: unknown
   'random-port'?: unknown
-  'claim-domain'?: unknown
-  'no-claim-domain'?: unknown
+  'claim-domains'?: unknown
+  'no-claim-domains'?: unknown
 }
 
 export type CliStartResolution = {
@@ -23,7 +23,7 @@ export type CliStartResolution = {
    * or `false` means "leave the existing route untouched" — the service
    * then starts on a dynamically assigned temporary domain.
    */
-  claimDomain: boolean | null
+  claimDomains: boolean | null
 }
 
 const isInteractive = (flags: Flags): boolean =>
@@ -43,8 +43,8 @@ const describeRouteOwner = (route: GatewayRoute): string =>
  *
  * When the port was allocated (i.e. config port was busy) and the service
  * has a configured domain owned by another project, we additionally prompt
- * the user about taking the domain over for this start. `--claim-domain`
- * and `--no-claim-domain` bypass the prompt in either direction.
+ * the user about taking the domain over for this start. `--claim-domains`
+ * and `--no-claim-domains` bypass the prompt in either direction.
  *
  * Returns `null` when the user explicitly aborts in an interactive prompt
  * or no free port could be allocated.
@@ -110,11 +110,11 @@ export const resolveServicePortForCli = async (
   // direction; otherwise we prompt the user when the port was allocated
   // (the usual worktree case) and the domain is currently owned by a
   // different service.
-  let claimDomain: boolean | null = null
-  if (flags['claim-domain']) {
-    claimDomain = true
-  } else if (flags['no-claim-domain']) {
-    claimDomain = false
+  let claimDomains: boolean | null = null
+  if (flags['claim-domains']) {
+    claimDomains = true
+  } else if (flags['no-claim-domains']) {
+    claimDomains = false
   } else if (allocated) {
     const config = manager.getServiceConfig(serviceName)
     const domain = config?.http?.domain
@@ -129,16 +129,16 @@ export const resolveServicePortForCli = async (
 
       if (ownedByOther) {
         if (isInteractive(flags)) {
-          claimDomain = await confirm(
+          claimDomains = await confirm(
             `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}. Move it to this start (port ${chosenPort})? Declining starts on a temporary domain instead.`,
           )
         } else {
           // Non-interactive default: don't disturb the existing route; the
           // service starts on a dynamically assigned temporary domain.
-          claimDomain = false
+          claimDomains = false
           if (!flags.json) {
             console.log(
-              `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}; starting on a temporary domain instead. Use --claim-domain to move it here.`,
+              `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}; starting on a temporary domain instead. Use --claim-domains to move it here.`,
             )
           }
         }
@@ -146,5 +146,5 @@ export const resolveServicePortForCli = async (
     }
   }
 
-  return { port: chosenPort, claimDomain }
+  return { port: chosenPort, claimDomains }
 }

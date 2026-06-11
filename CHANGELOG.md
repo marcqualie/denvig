@@ -6,8 +6,8 @@
 
 - Services whose domain is already used by another running service now start on a temporary domain (e.g. `hello-mybranch.denvig.me`), so worktrees can run the same service side by side
 - Temporary domains are kept across restarts and unassigned when the service stops
-- `--claim-domain` now moves the domain to the new service, and stopping that service hands the domain back to its original owner
-- The SDK's `service.start()` accepts a `claimDomain` option matching the CLI's `--claim-domain` flag
+- `--claim-domains` (renamed from `--claim-domain`, since it claims the domain and all its cnames) now moves the domains to the new service, and stopping that service hands them back to their original owner
+- The SDK's `service.start()` accepts a `claimDomains` option matching the CLI's `--claim-domains` flag
 
 ### Changed
 

@@ -538,7 +538,7 @@ describe('ServiceManager', () => {
       )
     })
 
-    it('moves the domain to this start when claimDomain is true', async (t) => {
+    it('moves the domain to this start when claimDomains is true', async (t) => {
       const original = createOriginalProject()
       await seedRunningOriginal(original)
       const worktree = createWorktreeProject()
@@ -548,7 +548,7 @@ describe('ServiceManager', () => {
       const result = await manager.startService('hello', {
         port: 9001,
         portResolved: true,
-        claimDomain: true,
+        claimDomains: true,
       })
       ok(result.success, result.message)
 
@@ -590,7 +590,7 @@ describe('ServiceManager', () => {
       await manager.startService('hello', {
         port: 9001,
         portResolved: true,
-        claimDomain: true,
+        claimDomains: true,
       })
 
       t.mock.restoreAll()

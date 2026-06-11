@@ -280,12 +280,13 @@ export class ServiceManager {
    * @param options.port - Pre-resolved port to use for this service. When
    *   omitted, the manager resolves the port itself, auto-allocating a
    *   random port if the config port is busy.
-   * @param options.claimDomain - When the service's configured domain is
-   *   already claimed by a different project, this flag controls whether
-   *   this start should replace the route as an override (`true`) or
-   *   leave the existing route alone (`false`). When undefined and the
-   *   domain has no existing owner, the route is registered as the
-   *   natural owner (`defaultService: true`).
+   * @param options.claimDomains - When the service's configured domains
+   *   (the primary domain and its cnames) are already claimed by a
+   *   different project, this flag controls whether this start should
+   *   replace those routes as an override (`true`) or leave the existing
+   *   routes alone (`false`). When undefined and a domain has no existing
+   *   owner, its route is registered as the natural owner
+   *   (`defaultService: true`).
    * @param options.reviveIfNotRunning - When the service is already
    *   bootstrapped with an unchanged plist but isn't currently running,
    *   bootout and bootstrap again to kick it (`true`, the default — what an
@@ -299,7 +300,7 @@ export class ServiceManager {
     options?: {
       port?: number
       portResolved?: boolean
-      claimDomain?: boolean
+      claimDomains?: boolean
       reviveIfNotRunning?: boolean
     },
   ): Promise<ServiceResult> {
@@ -429,7 +430,7 @@ export class ServiceManager {
             desiredStatus: 'running',
             cert: certKey,
           })
-        } else if (options?.claimDomain === true) {
+        } else if (options?.claimDomains === true) {
           await setGatewayRoute(domain, {
             project: this.project.id,
             service: name,
@@ -772,7 +773,7 @@ export class ServiceManager {
     options?: {
       port?: number
       portResolved?: boolean
-      claimDomain?: boolean
+      claimDomains?: boolean
     },
   ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)

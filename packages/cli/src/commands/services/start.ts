@@ -10,7 +10,7 @@ export const servicesStartCommand = new Command({
   name: 'services:start',
   description: 'Start a service',
   usage:
-    'services start <name> [--worktree <branch>] [--random-port] [--claim-domain]',
+    'services start <name> [--worktree <branch>] [--random-port] [--claim-domains]',
   example: 'services start api',
   args: [
     {
@@ -38,15 +38,15 @@ export const servicesStartCommand = new Command({
       defaultValue: false,
     },
     {
-      name: 'claim-domain',
+      name: 'claim-domains',
       description:
-        'Move the configured domain to this start, unassigning it from its current owner (handed back on stop)',
+        'Move the configured domain and its cnames to this start, unassigning them from their current owner (handed back on stop)',
       required: false,
       type: 'boolean',
       defaultValue: false,
     },
     {
-      name: 'no-claim-domain',
+      name: 'no-claim-domains',
       description:
         'Leave the existing gateway route untouched and start on a temporary domain instead',
       required: false,
@@ -106,7 +106,7 @@ export const servicesStartCommand = new Command({
     const result = await manager.startService(serviceName, {
       port: portResolution.port,
       portResolved: true,
-      claimDomain: portResolution.claimDomain ?? undefined,
+      claimDomains: portResolution.claimDomains ?? undefined,
     })
 
     if (!result.success) {

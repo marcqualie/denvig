@@ -40,35 +40,35 @@ describe('resolveServicePortForCli', () => {
     rmSync(tmpHome, { recursive: true, force: true })
   })
 
-  it('claims the domain when --claim-domain is passed', async () => {
+  it('claims the domain when --claim-domains is passed', async () => {
     const project = createProject('/tmp/wt-claim')
     const manager = new ServiceManager(project)
 
     const resolution = await resolveServicePortForCli(
       manager,
       'hello',
-      { json: true, 'claim-domain': true },
+      { json: true, 'claim-domains': true },
       project,
     )
 
     ok(resolution !== null)
-    strictEqual(resolution.claimDomain, true)
+    strictEqual(resolution.claimDomains, true)
     ok(resolution.port !== undefined)
   })
 
-  it('declines the claim when --no-claim-domain is passed', async () => {
+  it('declines the claim when --no-claim-domains is passed', async () => {
     const project = createProject('/tmp/wt-noclaim')
     const manager = new ServiceManager(project)
 
     const resolution = await resolveServicePortForCli(
       manager,
       'hello',
-      { json: true, 'no-claim-domain': true },
+      { json: true, 'no-claim-domains': true },
       project,
     )
 
     ok(resolution !== null)
-    strictEqual(resolution.claimDomain, false)
+    strictEqual(resolution.claimDomains, false)
   })
 
   it('defaults to not claiming a domain owned by another service when non-interactive', async () => {
@@ -91,7 +91,7 @@ describe('resolveServicePortForCli', () => {
     )
 
     ok(resolution !== null)
-    strictEqual(resolution.claimDomain, false)
+    strictEqual(resolution.claimDomains, false)
   })
 
   it('leaves the claim undecided when the domain has no other owner', async () => {
@@ -106,6 +106,6 @@ describe('resolveServicePortForCli', () => {
     )
 
     ok(resolution !== null)
-    strictEqual(resolution.claimDomain, null)
+    strictEqual(resolution.claimDomains, null)
   })
 })

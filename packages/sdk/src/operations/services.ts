@@ -254,12 +254,13 @@ export type ServiceOperationOptions = {
 
 export type StartServiceOptions = ServiceOperationOptions & {
   /**
-   * Move the service's configured domain to this start when another running
-   * service currently owns its route; the domain is handed back when this
-   * service stops. When omitted, a conflicting start is routed on a
-   * dynamically assigned temporary domain instead.
+   * Move the service's configured domains (the primary domain and its
+   * cnames) to this start when another running service currently owns
+   * their routes; they are handed back when this service stops. When
+   * omitted, a conflicting start is routed on a dynamically assigned
+   * temporary domain instead.
    */
-  claimDomain?: boolean
+  claimDomains?: boolean
 }
 
 /**
@@ -325,7 +326,7 @@ export const startService = async (
   const result = await manager.startService(serviceName, {
     port: resolution.success ? resolution.port : undefined,
     portResolved: true,
-    claimDomain: options.claimDomain,
+    claimDomains: options.claimDomains,
   })
   if (!result.success) {
     throw new DenvigOperationError(result.message, {
@@ -399,7 +400,7 @@ export const restartService = async (
   const result = await manager.restartService(serviceName, {
     port: resolution.success ? resolution.port : undefined,
     portResolved: true,
-    claimDomain: options.claimDomain,
+    claimDomains: options.claimDomains,
   })
   if (!result.success) {
     throw new DenvigOperationError(result.message, {
