@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- Service commands accept `local:` and bare path identifiers again (e.g. `denvig services start local:~/src/owner/project/dev`), inferring the service name from the final path segment
 - Services without an `http` block no longer get a random port allocated or show a `localhost` URL; only http services are assigned ports
 - `denvig deps outdated` no longer lists `link:` or `workspace:` dependencies, since they point at local code
 

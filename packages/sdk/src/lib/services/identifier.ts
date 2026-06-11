@@ -2,6 +2,7 @@ import { expandTilde } from '../config.ts'
 import { DenvigProject } from '../project.ts'
 import { parseProjectId, resolveProjectPath } from '../project-id.ts'
 import { listProjects } from '../projects.ts'
+import { isDirectory } from '../safeReadFile.ts'
 import {
   createGlobalProject,
   createGlobalServiceManager,
@@ -178,6 +179,30 @@ export const getServiceContext = async (
         .activeWorktree
       const manager = new ServiceManager(worktree)
       return { project: worktree, manager, serviceName: parsed.serviceName }
+    }
+  }
+
+  // `local:` and bare-path identifiers carry the service as their final
+  // path segment (e.g. `local:~/src/owner/project/dev`), which
+  // parseProjectId can't split on its own. Infer it from config: when the
+  // parent path is a directory whose project defines the final segment as
+  // a service, target that service.
+  if (
+    (parsed.type === 'local' || parsed.type === 'path') &&
+    parsed.serviceName === undefined
+  ) {
+    const slashIndex = parsed.value.lastIndexOf('/')
+    if (slashIndex > 0) {
+      const candidateService = parsed.value.slice(slashIndex + 1)
+      const candidatePath = expandTilde(parsed.value.slice(0, slashIndex))
+      if (await isDirectory(candidatePath)) {
+        const worktree = (await DenvigProject.retrieve(candidatePath))
+          .activeWorktree
+        if (worktree.config.services?.[candidateService]) {
+          const manager = new ServiceManager(worktree)
+          return { project: worktree, manager, serviceName: candidateService }
+        }
+      }
     }
   }
 
