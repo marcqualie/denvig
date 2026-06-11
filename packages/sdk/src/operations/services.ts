@@ -252,6 +252,16 @@ export type ServiceOperationOptions = {
   includeLogs?: boolean
 }
 
+export type StartServiceOptions = ServiceOperationOptions & {
+  /**
+   * Move the service's configured domain to this start when another running
+   * service currently owns its route; the domain is handed back when this
+   * service stops. When omitted, a conflicting start is routed on a
+   * dynamically assigned temporary domain instead.
+   */
+  claimDomain?: boolean
+}
+
 /**
  * Resolve the manager + service name for a service identifier, applying an
  * optional worktree override.
@@ -303,7 +313,7 @@ const waitForStart = () =>
 export const startService = async (
   project: DenvigProject,
   name: string,
-  options: ServiceOperationOptions = {},
+  options: StartServiceOptions = {},
 ): Promise<ServiceResponse> => {
   const {
     manager,
@@ -315,6 +325,7 @@ export const startService = async (
   const result = await manager.startService(serviceName, {
     port: resolution.success ? resolution.port : undefined,
     portResolved: true,
+    claimDomain: options.claimDomain,
   })
   if (!result.success) {
     throw new DenvigOperationError(result.message, {
@@ -376,7 +387,7 @@ export const stopService = async (
 export const restartService = async (
   project: DenvigProject,
   name: string,
-  options: ServiceOperationOptions = {},
+  options: StartServiceOptions = {},
 ): Promise<ServiceResponse> => {
   const {
     manager,
@@ -388,6 +399,7 @@ export const restartService = async (
   const result = await manager.restartService(serviceName, {
     port: resolution.success ? resolution.port : undefined,
     portResolved: true,
+    claimDomain: options.claimDomain,
   })
   if (!result.success) {
     throw new DenvigOperationError(result.message, {
