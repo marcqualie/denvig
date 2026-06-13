@@ -17,7 +17,7 @@
     "test:ci": "turbo run test:ci"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
+    "@biomejs/biome": "^2.5.0",
     "@types/node": "^25.9.3",
     "rolldown": "^1.1.1",
     "rolldown-plugin-dts": "^0.25.2",
