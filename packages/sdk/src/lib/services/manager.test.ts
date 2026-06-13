@@ -1,13 +1,18 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { hostname, tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { createMockInternalProject } from '../../test/mock.ts'
 import launchctl from './launchctl.ts'
-import { ServiceManager } from './manager.ts'
-import { updateServiceState } from './state.ts'
+import { ServiceManager, type ServiceManagerProject } from './manager.ts'
+import {
+  getGatewayRoute,
+  getServiceState,
+  setGatewayRoute,
+  updateServiceState,
+} from './state.ts'
 
 describe('ServiceManager', () => {
   describe('listServices()', () => {
@@ -372,6 +377,300 @@ describe('ServiceManager', () => {
       const manager = new ServiceManager(project)
 
       strictEqual(await manager.getEffectivePort('web'), 4000)
+    })
+  })
+
+  describe('gateway domain mapping', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-domains-`)
+      process.env.HOME = tmpHome
+      mkdirSync(`${tmpHome}/Library/LaunchAgents`, { recursive: true })
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    const httpServiceConfig = {
+      command: 'node server.js',
+      http: { domain: 'hello.denvig.me' },
+    }
+
+    /** Project whose `hello` service naturally owns hello.denvig.me. */
+    const createOriginalProject = () => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/repo`,
+      })
+      project.config.services = { hello: { ...httpServiceConfig } }
+      return project
+    }
+
+    /** Sibling worktree checkout declaring the same service + domain. */
+    const createWorktreeProject = () => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/worktrees/feature-x`,
+      })
+      project.config.services = { hello: { ...httpServiceConfig } }
+      return project
+    }
+
+    /** Record the original project's service as running and owning the domain. */
+    const seedRunningOriginal = async (project: ServiceManagerProject) => {
+      await updateServiceState(project.id, 'hello', {
+        cwd: project.path,
+        port: 8080,
+        domains: ['hello.denvig.me'],
+        desiredStatus: 'running',
+        project: {
+          id: project.id,
+          slug: project.slug,
+          name: project.name,
+          path: project.path,
+        },
+        serviceName: 'hello',
+      })
+      await setGatewayRoute('hello.denvig.me', {
+        project: project.id,
+        service: 'hello',
+        port: 8080,
+        secure: false,
+        defaultService: true,
+        desiredStatus: 'running',
+      })
+    }
+
+    const mockLaunchctlStart = (t: any) => {
+      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(launchctl, 'enable', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+    }
+
+    const mockLaunchctlStop = (t: any, manager: ServiceManager) => {
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        pid: 123,
+        state: 'running',
+        status: 'running',
+      }))
+      t.mock.method(launchctl, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'disable', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
+    }
+
+    it('starts on a dynamic domain when the configured domain is owned by another running service', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      // The original keeps its domain untouched.
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, original.id)
+      strictEqual(route?.desiredStatus, 'running')
+
+      // The worktree start is routed on a dynamically assigned domain.
+      const state = await getServiceState(worktree.id, 'hello')
+      strictEqual(state?.dynamicDomain, 'hello-feature-x.denvig.me')
+      const dynamicRoute = await getGatewayRoute('hello-feature-x.denvig.me')
+      strictEqual(dynamicRoute?.project, worktree.id)
+      strictEqual(dynamicRoute?.service, 'hello')
+      strictEqual(dynamicRoute?.port, 9001)
+      strictEqual(dynamicRoute?.temporary, true)
+      strictEqual(dynamicRoute?.defaultService, false)
+      strictEqual(
+        await manager.getServiceUrl('hello'),
+        'http://hello-feature-x.denvig.me',
+      )
+    })
+
+    it('reuses the dynamic domain recorded in state on subsequent starts', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      await updateServiceState(worktree.id, 'hello', {
+        cwd: worktree.path,
+        dynamicDomain: 'hello-custom.denvig.me',
+        domains: ['hello.denvig.me'],
+        desiredStatus: 'stopped',
+      })
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const dynamicRoute = await getGatewayRoute('hello-custom.denvig.me')
+      strictEqual(dynamicRoute?.project, worktree.id)
+      strictEqual(dynamicRoute?.temporary, true)
+      strictEqual(
+        await getGatewayRoute('hello-feature-x.denvig.me'),
+        null,
+        'no new dynamic domain should be generated',
+      )
+    })
+
+    it('moves the domain to this start when claimDomains is true', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+        claimDomains: true,
+      })
+      ok(result.success, result.message)
+
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, worktree.id)
+      strictEqual(route?.port, 9001)
+      strictEqual(route?.defaultService, false)
+      strictEqual(
+        await manager.getServiceUrl('hello'),
+        'http://hello.denvig.me',
+      )
+    })
+
+    it('stop removes the temporary domain and keeps it in state for the next start', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+      await manager.startService('hello', { port: 9001, portResolved: true })
+
+      t.mock.restoreAll()
+      mockLaunchctlStop(t, manager)
+      const result = await manager.stopService('hello')
+      ok(result.success, result.message)
+
+      strictEqual(await getGatewayRoute('hello-feature-x.denvig.me'), null)
+      const state = await getServiceState(worktree.id, 'hello')
+      strictEqual(state?.dynamicDomain, 'hello-feature-x.denvig.me')
+      strictEqual(state?.desiredStatus, 'stopped')
+    })
+
+    it('stop hands a claimed domain back to the original running service', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+      await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+        claimDomains: true,
+      })
+
+      t.mock.restoreAll()
+      mockLaunchctlStop(t, manager)
+      const result = await manager.stopService('hello')
+      ok(result.success, result.message)
+
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, original.id)
+      strictEqual(route?.service, 'hello')
+      strictEqual(route?.port, 8080)
+      strictEqual(route?.desiredStatus, 'running')
+      strictEqual(route?.defaultService, true)
+    })
+
+    it('restart keeps the dynamic domain routed', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+      await manager.startService('hello', { port: 9001, portResolved: true })
+
+      t.mock.restoreAll()
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        pid: 123,
+        state: 'running',
+        status: 'running',
+      }))
+      for (const method of ['enable', 'bootstrap', 'bootout', 'disable']) {
+        t.mock.method(launchctl, method as any, async () => ({
+          success: true,
+          output: '',
+        }))
+      }
+      t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
+
+      const result = await manager.restartService('hello', {
+        port: 9001,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const dynamicRoute = await getGatewayRoute('hello-feature-x.denvig.me')
+      strictEqual(dynamicRoute?.project, worktree.id)
+      strictEqual(dynamicRoute?.desiredStatus, 'running')
+      const state = await getServiceState(worktree.id, 'hello')
+      strictEqual(state?.dynamicDomain, 'hello-feature-x.denvig.me')
+    })
+
+    it('removes a stale temporary route once the configured domain is free again', async (t) => {
+      const worktree = createWorktreeProject()
+      await updateServiceState(worktree.id, 'hello', {
+        cwd: worktree.path,
+        dynamicDomain: 'hello-feature-x.denvig.me',
+        domains: ['hello.denvig.me'],
+        desiredStatus: 'stopped',
+      })
+      await setGatewayRoute('hello-feature-x.denvig.me', {
+        project: worktree.id,
+        service: 'hello',
+        port: 9001,
+        secure: false,
+        defaultService: false,
+        desiredStatus: 'stopped',
+        temporary: true,
+      })
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, worktree.id)
+      strictEqual(await getGatewayRoute('hello-feature-x.denvig.me'), null)
     })
   })
 

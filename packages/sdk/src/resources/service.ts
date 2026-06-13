@@ -9,6 +9,17 @@ import type { DenvigProject as InternalProject } from '../lib/project.ts'
 import type { ServiceResponse } from '../types/responses.ts'
 import type { ResourceContext } from './context.ts'
 
+export type ServiceStartOptions = {
+  /**
+   * Move the service's configured domains (the primary domain and its
+   * cnames) to this start when another running service currently owns
+   * their routes; they are handed back when this service stops. When
+   * omitted, a conflicting start is routed on a dynamically assigned
+   * temporary domain instead.
+   */
+  claimDomains?: boolean
+}
+
 /**
  * A single service belonging to a project. Lifecycle calls resolve the service
  * (including cross-project identifiers and the optional worktree override) and
@@ -37,10 +48,11 @@ export class DenvigService {
   }
 
   /** Start the service and return its resulting status. */
-  async start(): Promise<ServiceResponse> {
+  async start(options: ServiceStartOptions = {}): Promise<ServiceResponse> {
     return track(this.ctx, 'services.start', this.project.slug, () =>
       startService(this.project, this.serviceName, {
         worktree: this.worktreeName,
+        claimDomains: options.claimDomains,
       }),
     )
   }

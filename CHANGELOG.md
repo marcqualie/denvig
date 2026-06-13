@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- Services whose domain is already used by another running service now start on a temporary domain (e.g. `hello-mybranch.denvig.me`), so worktrees can run the same service side by side
+- Temporary domains are kept across restarts and unassigned when the service stops
+- `--claim-domains` (renamed from `--claim-domain`, since it claims the domain and all its cnames) now moves the domains to the new service, and stopping that service hands them back to their original owner
+- The SDK's `service.start()` accepts a `claimDomains` option matching the CLI's `--claim-domains` flag
+
 ### Changed
 
 - Updated `semver` (7.8.1 → 7.8.4) and `rolldown-plugin-dts` (0.25.1 → 0.25.2) patch dependencies

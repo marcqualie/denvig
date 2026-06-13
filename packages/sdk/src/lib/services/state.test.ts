@@ -11,6 +11,8 @@ import {
   markGatewayRoutesStoppedForService,
   markServiceStopped,
   readState,
+  releaseGatewayRoutesForService,
+  removeGatewayRoute,
   removeGatewayRoutesForService,
   removeServiceState,
   reservedPorts,
@@ -90,6 +92,36 @@ describe('service state', () => {
     })
     const entry = await getServiceState('abc123', 'api')
     assert.strictEqual(entry?.port, 8080)
+  })
+
+  it('preserves the dynamic domain when the key is omitted', async () => {
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      domains: [],
+      dynamicDomain: 'api-wt.test',
+      desiredStatus: 'running',
+    })
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      desiredStatus: 'stopped',
+    })
+    const entry = await getServiceState('abc123', 'api')
+    assert.strictEqual(entry?.dynamicDomain, 'api-wt.test')
+  })
+
+  it('clears the dynamic domain when explicitly set to undefined', async () => {
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      domains: [],
+      dynamicDomain: 'api-wt.test',
+      desiredStatus: 'running',
+    })
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      dynamicDomain: undefined,
+    })
+    const entry = await getServiceState('abc123', 'api')
+    assert.strictEqual(entry?.dynamicDomain, undefined)
   })
 
   it('marks a service stopped while preserving the port', async () => {
@@ -212,6 +244,108 @@ describe('service state', () => {
     assert.strictEqual(await getGatewayRoute('api.test'), null)
     const survivor = await getGatewayRoute('shared.test')
     assert.strictEqual(survivor?.service, 'other')
+  })
+
+  it('removes a single gateway route', async () => {
+    await setGatewayRoute('api.test', {
+      project: 'abc',
+      service: 'api',
+      port: 8000,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    await removeGatewayRoute('api.test')
+    assert.strictEqual(await getGatewayRoute('api.test'), null)
+  })
+
+  it('removes temporary routes when releasing a service', async () => {
+    await setGatewayRoute('api-wt.test', {
+      project: 'wt',
+      service: 'api',
+      port: 9001,
+      secure: false,
+      defaultService: false,
+      desiredStatus: 'running',
+      temporary: true,
+    })
+    await releaseGatewayRoutesForService('wt', 'api')
+    assert.strictEqual(await getGatewayRoute('api-wt.test'), null)
+  })
+
+  it('hands a released domain back to the running service that declares it', async () => {
+    await updateServiceState('orig', 'api', {
+      cwd: '/tmp/orig',
+      port: 8080,
+      domains: ['api.test'],
+      desiredStatus: 'running',
+      project: {
+        id: 'orig',
+        slug: 'github:owner/repo',
+        name: 'repo',
+        path: '/tmp/orig',
+      },
+      serviceName: 'api',
+    })
+    await setGatewayRoute('api.test', {
+      project: 'wt',
+      service: 'api',
+      port: 9001,
+      secure: true,
+      defaultService: false,
+      desiredStatus: 'running',
+      cert: 'wildcard.test',
+    })
+    await releaseGatewayRoutesForService('wt', 'api')
+    const route = await getGatewayRoute('api.test')
+    assert.strictEqual(route?.project, 'orig')
+    assert.strictEqual(route?.service, 'api')
+    assert.strictEqual(route?.port, 8080)
+    assert.strictEqual(route?.desiredStatus, 'running')
+    assert.strictEqual(route?.defaultService, true)
+    assert.strictEqual(route?.cert, 'wildcard.test')
+  })
+
+  it('marks a released domain stopped when the original owner is not running', async () => {
+    await updateServiceState('orig', 'api', {
+      cwd: '/tmp/orig',
+      port: 8080,
+      domains: ['api.test'],
+      desiredStatus: 'stopped',
+      project: {
+        id: 'orig',
+        slug: 'github:owner/repo',
+        name: 'repo',
+        path: '/tmp/orig',
+      },
+      serviceName: 'api',
+    })
+    await setGatewayRoute('api.test', {
+      project: 'wt',
+      service: 'api',
+      port: 9001,
+      secure: false,
+      defaultService: false,
+      desiredStatus: 'running',
+    })
+    await releaseGatewayRoutesForService('wt', 'api')
+    const route = await getGatewayRoute('api.test')
+    assert.strictEqual(route?.project, 'wt')
+    assert.strictEqual(route?.desiredStatus, 'stopped')
+  })
+
+  it('leaves routes owned by other services alone when releasing', async () => {
+    await setGatewayRoute('other.test', {
+      project: 'xyz',
+      service: 'other',
+      port: 8001,
+      secure: false,
+      defaultService: true,
+      desiredStatus: 'running',
+    })
+    await releaseGatewayRoutesForService('wt', 'api')
+    const route = await getGatewayRoute('other.test')
+    assert.strictEqual(route?.desiredStatus, 'running')
   })
 
   it('sets and reads a cert entry', async () => {

@@ -41,6 +41,12 @@ export const ServiceStateEntrySchema = z.object({
   cwd: z.string(),
   port: z.number().int().positive().optional(),
   domains: z.array(z.string()).default([]),
+  /**
+   * Temporary domain assigned when the configured domain was owned by
+   * another running service. Sticky across stop/start (like `port`) so
+   * restarts come back up on the same address; removed on teardown.
+   */
+  dynamicDomain: z.string().optional(),
   desiredStatus: z.enum(['running', 'stopped']).default('running'),
   /**
    * Project + service config snapshot. Optional so entries written by
@@ -70,6 +76,12 @@ export const GatewayRouteSchema = z.object({
   secure: z.boolean().default(false),
   desiredStatus: z.enum(['running', 'stopped']).default('running'),
   cert: z.string().optional(),
+  /**
+   * Route for a dynamically assigned (temporary) domain. Temporary routes
+   * are removed entirely when their service stops instead of being kept
+   * around for a later restart.
+   */
+  temporary: z.boolean().optional(),
 })
 
 /**
@@ -145,7 +157,7 @@ export const getServiceState = async (
  * Merge new fields into a service's state entry. Creates the entry if
  * missing. Passing an explicit `port: undefined` clears a previously
  * recorded port (used when a service no longer needs one); omitting the
- * key preserves it.
+ * key preserves it. `dynamicDomain` behaves the same way.
  */
 export const updateServiceState = async (
   projectId: string,
@@ -159,6 +171,8 @@ export const updateServiceState = async (
     cwd: entry.cwd,
     port: 'port' in entry ? entry.port : existing?.port,
     domains: entry.domains ?? existing?.domains ?? [],
+    dynamicDomain:
+      'dynamicDomain' in entry ? entry.dynamicDomain : existing?.dynamicDomain,
     desiredStatus: entry.desiredStatus ?? existing?.desiredStatus ?? 'running',
     project: entry.project ?? existing?.project,
     serviceName: entry.serviceName ?? existing?.serviceName ?? serviceName,
@@ -223,6 +237,63 @@ export const setGatewayRoute = async (
   const state = await readState()
   state.gatewayRoutes[domain] = route
   await writeState(state)
+}
+
+/** Remove the gateway route for a single domain. */
+export const removeGatewayRoute = async (domain: string): Promise<void> => {
+  const state = await readState()
+  if (!(domain in state.gatewayRoutes)) return
+  delete state.gatewayRoutes[domain]
+  await writeState(state)
+}
+
+/**
+ * Release every gateway route owned by a service when it stops. Temporary
+ * routes (dynamically assigned domains) are removed entirely. For regular
+ * domains, when another running service declares the domain in its own
+ * state entry (the original owner a claim displaced), the route is handed
+ * back to it; otherwise the route is just marked stopped so a restart can
+ * reclaim it.
+ */
+export const releaseGatewayRoutesForService = async (
+  projectId: string,
+  serviceName: string,
+): Promise<void> => {
+  const state = await readState()
+  let changed = false
+  for (const [domain, route] of Object.entries(state.gatewayRoutes)) {
+    if (route.project !== projectId || route.service !== serviceName) continue
+    changed = true
+    if (route.temporary) {
+      delete state.gatewayRoutes[domain]
+      continue
+    }
+    const heir = Object.values(state.services).find(
+      (entry) =>
+        entry.desiredStatus === 'running' &&
+        entry.project !== undefined &&
+        entry.serviceName !== undefined &&
+        !(
+          entry.project.id === projectId && entry.serviceName === serviceName
+        ) &&
+        entry.port !== undefined &&
+        entry.domains.includes(domain),
+    )
+    if (heir?.project && heir.serviceName && heir.port !== undefined) {
+      state.gatewayRoutes[domain] = {
+        project: heir.project.id,
+        service: heir.serviceName,
+        port: heir.port,
+        secure: heir.config?.http?.secure ?? route.secure,
+        defaultService: true,
+        desiredStatus: 'running',
+        cert: route.cert,
+      }
+    } else {
+      state.gatewayRoutes[domain] = { ...route, desiredStatus: 'stopped' }
+    }
+  }
+  if (changed) await writeState(state)
 }
 
 /**
