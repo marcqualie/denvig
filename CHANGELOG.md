@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0-alpha.5] - 2026-06-13
+
 ### Added
 
 - Services whose domain is already used by another running service now start on a temporary domain (e.g. `hello-mybranch.denvig.me`), so worktrees can run the same service side by side
