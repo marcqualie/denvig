@@ -13,6 +13,7 @@
 
 - Updated `semver` (7.8.1 → 7.8.4) and `rolldown-plugin-dts` (0.25.1 → 0.25.2) patch dependencies
 - Updated `@types/node` (25.9.1 → 25.9.3) and `turbo` (2.9.16 → 2.9.18) patch dependencies
+- Updated `rolldown` (1.0.3 → 1.1.1) minor dependency
 
 ### Fixed
 
