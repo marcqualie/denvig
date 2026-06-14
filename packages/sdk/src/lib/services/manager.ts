@@ -528,15 +528,25 @@ export class ServiceManager {
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
       }
-    } else if (
-      plistChanged ||
-      (options?.reviveIfNotRunning !== false && !isLive)
-    ) {
-      // Plist changed, or (for an explicit start) the service is bootstrapped
-      // but no longer running and the caller asked to revive it. Bootout and
-      // bootstrap again to give launchd a fresh start. The reconciler opts out
-      // (`reviveIfNotRunning: false`): a bootstrapped service's liveness is
-      // launchd's to manage, so it leaves an unchanged plist alone.
+    } else if (isLive) {
+      // The service is already running — never tear it down on `start`. The
+      // gateway routes (including any newly claimed domains) were updated in
+      // state above and the caller refreshes the gateway, so domain changes
+      // take effect without restarting the process. A changed plist has been
+      // written to disk and applies on the next explicit `services restart`.
+      return {
+        name,
+        success: true,
+        message: plistChanged
+          ? 'Service already running; refreshed gateway (run `services restart` to apply config changes)'
+          : 'Service already running; refreshed gateway',
+      }
+    } else if (plistChanged || options?.reviveIfNotRunning !== false) {
+      // The service is bootstrapped but no longer running. Bootout and
+      // bootstrap again to give launchd a fresh start — for an explicit start
+      // (revival) or because the plist changed. The reconciler opts out of
+      // revival (`reviveIfNotRunning: false`): a bootstrapped service's
+      // liveness is launchd's to manage, so it leaves an unchanged plist alone.
       const bootoutResult = await launchctl.bootout(label)
       if (!bootoutResult.success) {
         return {
@@ -557,7 +567,8 @@ export class ServiceManager {
         }
       }
     } else {
-      // Already running with the same plist — nothing to do.
+      // Bootstrapped, idle, unchanged plist and the reconciler opted out of
+      // revival — nothing to do.
       return {
         name,
         success: true,

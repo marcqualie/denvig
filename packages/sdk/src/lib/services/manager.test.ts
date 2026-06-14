@@ -562,6 +562,64 @@ describe('ServiceManager', () => {
       )
     })
 
+    it('claims the domain without restarting an already-running service', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+
+      // Initial start on a temporary domain lays down the plist and state.
+      mockLaunchctlStart(t)
+      await manager.startService('hello', { port: 9001, portResolved: true })
+
+      // Re-run with --claim-domains while the service is live. The process must
+      // be left untouched (no bootout/bootstrap) and only the gateway route moves.
+      t.mock.restoreAll()
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        pid: 123,
+        state: 'running',
+        status: 'running',
+      }))
+      const bootout = t.mock.method(launchctl, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      const bootstrap = t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'enable', async () => ({
+        success: true,
+        output: '',
+      }))
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+        claimDomains: true,
+      })
+      ok(result.success, result.message)
+      strictEqual(
+        bootout.mock.callCount(),
+        0,
+        'should not bootout a live service',
+      )
+      strictEqual(
+        bootstrap.mock.callCount(),
+        0,
+        'should not bootstrap a live service',
+      )
+
+      // The claim still takes effect: the configured domain now routes here.
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, worktree.id)
+      strictEqual(route?.port, 9001)
+      strictEqual(route?.defaultService, false)
+      // The temporary domain is released now the real one is claimed.
+      strictEqual(await getGatewayRoute('hello-feature-x.denvig.me'), null)
+    })
+
     it('stop removes the temporary domain and keeps it in state for the next start', async (t) => {
       const original = createOriginalProject()
       await seedRunningOriginal(original)
