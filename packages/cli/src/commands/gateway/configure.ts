@@ -12,13 +12,6 @@ export const gatewayConfigureCommand = new Command({
     const { reconcile: reconcileResult, gateway: result } =
       await sdk.gateway.configure()
 
-    if (!result) {
-      console.error(
-        'Gateway is not enabled. Add experimental.gateway.enabled: true to ~/.denvig/config.yml',
-      )
-      return { success: false, message: 'Gateway is not enabled' }
-    }
-
     if (flags.json) {
       console.log(
         JSON.stringify(

@@ -1173,7 +1173,7 @@ export class ServiceManager {
    */
   async reconfigureGateway(): Promise<void> {
     const result = await configureGateway()
-    if (result && !result.success) {
+    if (!result.success) {
       console.warn(`[gateway] ${result.message}`)
     }
   }

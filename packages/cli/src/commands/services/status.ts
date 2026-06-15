@@ -125,15 +125,14 @@ export const servicesStatusCommand = new Command({
       console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
     }
 
-    // Show nginx config path if gateway is enabled and service has domain
+    // Show nginx config path if the service has a domain
     const globalConfig = await getGlobalConfig()
-    const gateway = globalConfig.experimental?.gateway
     const serviceConfig = manager.getServiceConfig(serviceName)
-    if (gateway?.enabled && serviceConfig?.http?.domain) {
+    if (serviceConfig?.http?.domain) {
       const nginxPath = getNginxConfigPath(
         targetProject.id,
         serviceName,
-        gateway.configsPath,
+        globalConfig.gateway.configsPath,
       )
       if (await pathExists(nginxPath)) {
         console.log(`Nginx:   ${nginxPath}`)

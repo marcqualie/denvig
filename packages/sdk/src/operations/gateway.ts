@@ -50,20 +50,18 @@ export type GatewayServiceStatus = {
   certFound: boolean
   /** The certificate directory backing the domain, if any. */
   certDir: string | null
-  /** The nginx config path for this service, or `null` when gateway is off. */
-  nginxConfigPath: string | null
+  /** The nginx config path for this service. */
+  nginxConfigPath: string
   nginxConfigExists: boolean
 }
 
 export type GatewayStatus = {
-  /** Whether the experimental gateway is enabled in the global config. */
-  enabled: boolean
   /** The gateway handler (currently always `nginx`). */
   handler: string
   /** Directory nginx server configs are written to. */
-  configsPath: string | null
+  configsPath: string
   /** Path of the generated nginx include file. */
-  nginxConf: string | null
+  nginxConf: string
   /** The nginx process state. */
   nginx: NginxProcessStatus
   /** Gateway-configured services for the resolved project. */
@@ -84,8 +82,7 @@ export const getGatewayStatus = async (
   options: GatewayStatusOptions = {},
 ): Promise<GatewayStatus> => {
   const globalConfig = await getGlobalConfig()
-  const gateway = globalConfig.experimental?.gateway
-  const enabled = gateway?.enabled ?? false
+  const gateway = globalConfig.gateway
 
   const services: GatewayServiceStatus[] = []
   const { project } = await resolveProjectContext({
@@ -102,9 +99,11 @@ export const getGatewayStatus = async (
       const secure = config.http?.secure ?? false
       const certDir = secure ? await findCertForDomain(domain) : null
       const sslPaths = certDir ? await resolveSslPaths(certDir) : null
-      const nginxConfigPath = gateway?.enabled
-        ? getNginxConfigPath(worktree.id, name, gateway.configsPath)
-        : null
+      const nginxConfigPath = getNginxConfigPath(
+        worktree.id,
+        name,
+        gateway.configsPath,
+      )
 
       services.push({
         name,
@@ -115,20 +114,15 @@ export const getGatewayStatus = async (
         certFound: !!sslPaths,
         certDir,
         nginxConfigPath,
-        nginxConfigExists: nginxConfigPath
-          ? await pathExists(nginxConfigPath)
-          : false,
+        nginxConfigExists: await pathExists(nginxConfigPath),
       })
     }
   }
 
   return {
-    enabled,
-    handler: gateway?.handler ?? 'nginx',
-    configsPath: gateway?.configsPath ?? null,
-    nginxConf: gateway?.configsPath
-      ? getNginxConfPath(gateway.configsPath)
-      : null,
+    handler: gateway.handler,
+    configsPath: gateway.configsPath,
+    nginxConf: getNginxConfPath(gateway.configsPath),
     nginx: getNginxProcessStatus(),
     services,
   }
@@ -136,8 +130,8 @@ export const getGatewayStatus = async (
 
 export type ConfigureGatewayOutput = {
   reconcile: ReconcileResult
-  /** The gateway rebuild result, or `null` when the gateway is not enabled. */
-  gateway: ConfigureGatewayResult | null
+  /** The gateway rebuild result. */
+  gateway: ConfigureGatewayResult
 }
 
 /**
