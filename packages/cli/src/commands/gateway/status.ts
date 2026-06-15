@@ -13,7 +13,6 @@ export const gatewayStatusCommand = new Command({
     if (flags.json) {
       console.log(
         JSON.stringify({
-          enabled: status.enabled,
           handler: status.handler,
           nginx: status.nginx,
           nginxConf: status.nginxConf,
@@ -29,18 +28,6 @@ export const gatewayStatusCommand = new Command({
     console.log('Gateway Status')
     console.log('==============')
     console.log('')
-
-    if (!status.enabled) {
-      console.log('Status:  Disabled')
-      console.log('')
-      console.log('To enable gateway, add to ~/.denvig/config.yml:')
-      console.log('')
-      console.log('  experimental:')
-      console.log('    gateway:')
-      console.log('      enabled: true')
-      console.log('')
-      return { success: true, message: 'Gateway is disabled' }
-    }
 
     const statusLabel = status.nginx.running
       ? `Started (pid ${status.nginx.pid})`

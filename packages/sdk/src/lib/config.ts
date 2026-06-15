@@ -10,7 +10,7 @@ const GLOBAL_CONFIG_PATH = resolve(`${process.env.HOME}/.denvig/config.yml`)
 const DEFAULT_GLOBAL_CONFIG = {
   projectPaths: ['~/src/*/*', '~/.dotfiles'],
   quickActions: undefined,
-} satisfies GlobalConfigSchema
+} satisfies Partial<GlobalConfigSchema>
 
 export type ConfigWithSourcePaths<C> = C & {
   $sources: string[]

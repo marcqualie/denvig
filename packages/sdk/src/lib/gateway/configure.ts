@@ -47,8 +47,7 @@ type RouteGroup = {
 
 /**
  * Remove all denvig nginx configs and rebuild from the runtime gateway
- * routes recorded in `~/.denvig/state.json`. Returns null if gateway is
- * not enabled.
+ * routes recorded in `~/.denvig/state.json`.
  *
  * The state's `gatewayRoutes` map is the source of truth: each running
  * route generates an nginx server block that proxies the domain to the
@@ -56,14 +55,9 @@ type RouteGroup = {
  * pair are merged into a single nginx config so cnames sit alongside
  * the primary domain in the same `server_name` directive.
  */
-export async function configureGateway(): Promise<ConfigureGatewayResult | null> {
+export async function configureGateway(): Promise<ConfigureGatewayResult> {
   const globalConfig = await getGlobalConfig()
-  const gateway = globalConfig.experimental?.gateway
-  if (!gateway?.enabled) {
-    return null
-  }
-
-  const configsPath = gateway.configsPath
+  const configsPath = globalConfig.gateway.configsPath
 
   // Write gateway HTML files and nginx.conf
   await writeGatewayHtmlFiles()

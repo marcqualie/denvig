@@ -93,17 +93,12 @@ export const GlobalConfigSchema = z.object({
   services: ServicesConfigSchema.describe(
     'Global services that can be managed from any directory',
   ),
-  experimental: z
+  gateway: z
     .object({
-      gateway: z
-        .object({
-          enabled: z.boolean(),
-          handler: z.enum(['nginx']).default('nginx'),
-          configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
-        })
-        .optional(),
+      handler: z.enum(['nginx']).default('nginx'),
+      configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
     })
-    .optional(),
+    .prefault({}),
 })
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>
