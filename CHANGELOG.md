@@ -2,8 +2,6 @@
 
 ## [Unreleased]
 
-## [0.7.0-alpha.7] - 2026-06-16
-
 ### Added
 
 - `services start`/`services restart` accept `--domains` to route any domains to a service at launch, replacing the configured ones (e.g. `services start hello --domains hello2.denvig.me`); pairs with `--worktree` to give a worktree its own domain
