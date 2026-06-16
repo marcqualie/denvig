@@ -10,7 +10,7 @@ export const servicesStartCommand = new Command({
   name: 'services:start',
   description: 'Start a service',
   usage:
-    'services start <name> [--worktree <branch>] [--random-port] [--claim-domains]',
+    'services start <name> [--worktree <branch>] [--random-port] [--domains <list>]',
   example: 'services start api',
   args: [
     {
@@ -38,20 +38,11 @@ export const servicesStartCommand = new Command({
       defaultValue: false,
     },
     {
-      name: 'claim-domains',
+      name: 'domains',
       description:
-        'Move the configured domain and its cnames to this start, unassigning them from their current owner (handed back on stop)',
+        'Comma-separated domains to route to this start, replacing the configured ones and claiming them from any current owner (handed back on stop)',
       required: false,
-      type: 'boolean',
-      defaultValue: false,
-    },
-    {
-      name: 'no-claim-domains',
-      description:
-        'Leave the existing gateway route untouched and start on a temporary domain instead',
-      required: false,
-      type: 'boolean',
-      defaultValue: false,
+      type: 'string',
     },
   ],
   completions: ({ project, sdk }) => {
@@ -93,11 +84,18 @@ export const servicesStartCommand = new Command({
       manager,
       serviceName,
       flags,
-      targetProject,
     )
     if (portResolution === null) {
       return { success: false, message: 'Port resolution aborted.' }
     }
+
+    const domains =
+      typeof flags.domains === 'string'
+        ? flags.domains
+            .split(',')
+            .map((domain) => domain.trim())
+            .filter(Boolean)
+        : undefined
 
     if (!flags.json) {
       console.log(`Starting ${projectPrefix}${serviceName}...`)
@@ -106,7 +104,7 @@ export const servicesStartCommand = new Command({
     const result = await manager.startService(serviceName, {
       port: portResolution.port,
       portResolved: true,
-      claimDomains: portResolution.claimDomains ?? undefined,
+      domains: domains && domains.length > 0 ? domains : undefined,
     })
 
     if (!result.success) {

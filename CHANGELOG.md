@@ -2,10 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+
+- `services start`/`services restart` accept `--domains` to route any domains to a service at launch, replacing the configured ones (e.g. `services start hello --domains hello2.denvig.me`); pairs with `--worktree` to give a worktree its own domain
+- The SDK's `service.start()` accepts a `domains` option matching the CLI's `--domains` flag
+
 ### Changed
 
 - The gateway is now always enabled; the `experimental.gateway` config has been replaced by a top-level `gateway` config (with no `enabled` flag)
-- `services start` (including `--claim-domains`) no longer restarts a service that is already running; it just refreshes the gateway so domain changes apply without interrupting the process
+- `services start` no longer restarts a service that is already running; it just refreshes the gateway so domain changes apply without interrupting the process
+- Starting a service now claims its domains outright instead of falling back to a temporary domain when another service owns them; use `--domains` to route a worktree elsewhere
+
+### Removed
+
+- The `--claim-domains`/`--no-claim-domains` flags and the `claimDomains` SDK option, along with automatic temporary domains, in favour of the explicit `--domains` flag
 - Starting a service now keeps only the 10 most recent log files, removing older ones to save disk space
 - CLI usage logging is now disabled by default; set `DENVIG_CLI_LOGS_ENABLED=true` to enable it
 - CLI usage logs are now written to a daily file (`~/.denvig/logs/cli/{YYYY-MM-DD}.jsonl`) instead of a single growing file

@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, it } from 'node:test'
 import {
   ServiceManager,
   type ServiceManagerProject,
-  setGatewayRoute,
 } from '@denvig/sdk/internal'
 
 import { resolveServicePortForCli } from './resolvePort.ts'
@@ -19,7 +18,10 @@ const createProject = (path: string): ServiceManagerProject => ({
     services: {
       hello: {
         command: 'node server.js',
-        http: { domain: 'hello.denvig.me' },
+        http: { port: 8080, domain: 'hello.denvig.me' },
+      },
+      worker: {
+        command: 'node worker.js',
       },
     },
   },
@@ -40,72 +42,41 @@ describe('resolveServicePortForCli', () => {
     rmSync(tmpHome, { recursive: true, force: true })
   })
 
-  it('claims the domain when --claim-domains is passed', async () => {
-    const project = createProject('/tmp/wt-claim')
+  it('resolves a port for an http service', async () => {
+    const project = createProject('/tmp/wt-port')
     const manager = new ServiceManager(project)
 
-    const resolution = await resolveServicePortForCli(
-      manager,
-      'hello',
-      { json: true, 'claim-domains': true },
-      project,
-    )
-
-    ok(resolution !== null)
-    strictEqual(resolution.claimDomains, true)
-    ok(resolution.port !== undefined)
-  })
-
-  it('declines the claim when --no-claim-domains is passed', async () => {
-    const project = createProject('/tmp/wt-noclaim')
-    const manager = new ServiceManager(project)
-
-    const resolution = await resolveServicePortForCli(
-      manager,
-      'hello',
-      { json: true, 'no-claim-domains': true },
-      project,
-    )
-
-    ok(resolution !== null)
-    strictEqual(resolution.claimDomains, false)
-  })
-
-  it('defaults to not claiming a domain owned by another service when non-interactive', async () => {
-    await setGatewayRoute('hello.denvig.me', {
-      project: 'other-project',
-      service: 'hello',
-      port: 8080,
-      secure: false,
-      defaultService: true,
-      desiredStatus: 'running',
+    const resolution = await resolveServicePortForCli(manager, 'hello', {
+      json: true,
     })
-    const project = createProject('/tmp/wt-conflict')
-    const manager = new ServiceManager(project)
-
-    const resolution = await resolveServicePortForCli(
-      manager,
-      'hello',
-      { json: true },
-      project,
-    )
 
     ok(resolution !== null)
-    strictEqual(resolution.claimDomains, false)
+    ok(typeof resolution.port === 'number')
   })
 
-  it('leaves the claim undecided when the domain has no other owner', async () => {
-    const project = createProject('/tmp/wt-free')
+  it('allocates a random port when --random-port is passed', async () => {
+    const project = createProject('/tmp/wt-random')
     const manager = new ServiceManager(project)
 
-    const resolution = await resolveServicePortForCli(
-      manager,
-      'hello',
-      { json: true },
-      project,
-    )
+    const resolution = await resolveServicePortForCli(manager, 'hello', {
+      json: true,
+      'random-port': true,
+    })
 
     ok(resolution !== null)
-    strictEqual(resolution.claimDomains, null)
+    ok(resolution.port !== undefined)
+    ok(resolution.port !== 8080)
+  })
+
+  it('returns no port for a service without an http block', async () => {
+    const project = createProject('/tmp/wt-noport')
+    const manager = new ServiceManager(project)
+
+    const resolution = await resolveServicePortForCli(manager, 'worker', {
+      json: true,
+    })
+
+    ok(resolution !== null)
+    strictEqual(resolution.port, undefined)
   })
 })
