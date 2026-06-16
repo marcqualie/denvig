@@ -3,6 +3,7 @@ import {
   appendFile,
   chmod,
   mkdir,
+  readdir,
   readFile,
   rm,
   symlink,
@@ -1128,7 +1129,31 @@ export class ServiceManager {
       }),
     )
 
+    await this.pruneOldLogFiles(logDir)
+
     return logPath
+  }
+
+  /**
+   * Remove old timestamped log files, keeping only the most recent ones.
+   * Symlinks (latest.log, latest.[hostname].log) are always preserved.
+   */
+  private async pruneOldLogFiles(logDir: string, keep = 10): Promise<void> {
+    try {
+      const entries = await readdir(logDir)
+      const timestamped = entries
+        .filter((name) => /^\d+\.log$/.test(name))
+        .sort()
+        .reverse()
+
+      await Promise.all(
+        timestamped
+          .slice(keep)
+          .map((name) => unlink(resolve(logDir, name)).catch(() => {})),
+      )
+    } catch {
+      // Ignore pruning errors - they should never block service startup
+    }
   }
 
   /**

@@ -1,7 +1,15 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
 import { ok, strictEqual } from 'node:assert'
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { hostname, tmpdir } from 'node:os'
+import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { createMockInternalProject } from '../../test/mock.ts'
@@ -186,6 +194,67 @@ describe('ServiceManager', () => {
       ok(path.includes(`.denvig/services/${project.id}.dev-watch/logs`))
       ok(path.includes(`latest.${hostname()}.log`))
       ok(!path.includes(':'))
+    })
+  })
+
+  describe('pruneOldLogFiles()', () => {
+    it('should keep only the 10 most recent log files and preserve symlinks', async () => {
+      const project = createMockInternalProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const logDir = mkdtempSync(resolve(tmpdir(), 'denvig-prune-'))
+      try {
+        // Create 15 timestamped log files
+        const timestamps = Array.from({ length: 15 }, (_, i) => 1700000000 + i)
+        for (const ts of timestamps) {
+          writeFileSync(resolve(logDir, `${ts}.log`), '')
+        }
+        // Symlinks should always be preserved regardless of count
+        symlinkSync('1700000014.log', resolve(logDir, 'latest.log'))
+        symlinkSync(
+          '1700000014.log',
+          resolve(logDir, `latest.${hostname()}.log`),
+        )
+
+        await (manager as any).pruneOldLogFiles(logDir)
+
+        const remaining = readdirSync(logDir)
+        const logFiles = remaining
+          .filter((name) => /^\d+\.log$/.test(name))
+          .sort()
+        strictEqual(logFiles.length, 10, 'should keep 10 timestamped logs')
+        strictEqual(logFiles[0], '1700000005.log', 'should keep newest 10')
+        strictEqual(logFiles[9], '1700000014.log')
+
+        ok(remaining.includes('latest.log'), 'latest.log preserved')
+        ok(
+          remaining.includes(`latest.${hostname()}.log`),
+          'host symlink preserved',
+        )
+      } finally {
+        rmSync(logDir, { recursive: true, force: true })
+      }
+    })
+
+    it('should leave files untouched when fewer than the limit exist', async () => {
+      const project = createMockInternalProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const logDir = mkdtempSync(resolve(tmpdir(), 'denvig-prune-'))
+      try {
+        for (const ts of [1700000000, 1700000001, 1700000002]) {
+          writeFileSync(resolve(logDir, `${ts}.log`), '')
+        }
+
+        await (manager as any).pruneOldLogFiles(logDir)
+
+        const logFiles = readdirSync(logDir).filter((name) =>
+          /^\d+\.log$/.test(name),
+        )
+        strictEqual(logFiles.length, 3)
+      } finally {
+        rmSync(logDir, { recursive: true, force: true })
+      }
     })
   })
 
