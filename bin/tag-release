@@ -19,21 +19,212 @@
 
 set -euo pipefail
 
-# shellcheck source=lib/release-common.sh
-source "$(dirname "${BASH_SOURCE[0]}")/lib/release-common.sh"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-export RELEASE_ASSUME_YES=0  # consumed by release_confirm in the sourced lib
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+# Print the current version from the workspace root package.json.
+current_version() {
+  node -e "process.stdout.write(require('$REPO_ROOT/package.json').version)"
+}
+
+# True (exit 0) if the given version carries a prerelease suffix.
+is_prerelease() {
+  [[ "$1" == *-* ]]
+}
+
+# Compare two semver versions. Prints -1, 0, or 1 (v1 <, ==, > v2).
+# Implements semver precedence (including prerelease rules) with no dependency.
+semver_compare() {
+  node -e '
+    const [v1, v2] = process.argv.slice(1);
+    const parse = (v) => {
+      const [main, pre] = v.split("-");
+      return { nums: main.split(".").map(Number), pre: pre ? pre.split(".") : null };
+    };
+    const cmpMain = (a, b) => {
+      for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+      return 0;
+    };
+    const cmpPre = (a, b) => {
+      if (!a && !b) return 0;
+      if (!a) return 1;   // a has no prerelease -> higher precedence
+      if (!b) return -1;
+      const len = Math.max(a.length, b.length);
+      for (let i = 0; i < len; i++) {
+        if (a[i] === undefined) return -1;
+        if (b[i] === undefined) return 1;
+        const an = /^\d+$/.test(a[i]);
+        const bn = /^\d+$/.test(b[i]);
+        if (an && bn) { const x = +a[i], y = +b[i]; if (x !== y) return x < y ? -1 : 1; }
+        else if (an) return -1;   // numeric identifiers rank below alphanumeric
+        else if (bn) return 1;
+        else if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+      }
+      return 0;
+    };
+    const p1 = parse(v1), p2 = parse(v2);
+    const m = cmpMain(p1.nums, p2.nums);
+    process.stdout.write(String(m !== 0 ? m : cmpPre(p1.pre, p2.pre)));
+  ' "$1" "$2"
+}
+
+# Abort unless $1 (new version) is strictly greater than $2 (current version).
+assert_greater() {
+  [ "$(semver_compare "$1" "$2")" = "1" ] || die "$1 is not greater than the current version $2"
+}
+
+# Compute the next version from the current one.
+#   $1 current version   $2 channel (latest|alpha|beta|rc)   $3 bump (major|minor|patch, may be empty)
+# Stable channel ('latest') drops any prerelease suffix. Prerelease channels
+# increment within the same channel, promote a higher channel from the same
+# base (resetting to .1), or — when starting from a stable version — apply the
+# bump to pick the base. Exits non-zero with a message on an invalid transition.
+compute_version() {
+  # shellcheck disable=SC2016  # ${...} are JS template literals, expanded by node not bash
+  node -e '
+    const [current, channel, bump] = process.argv.slice(1);
+    const order = { alpha: 1, beta: 2, rc: 3 };
+    const [main, pre] = current.split("-");
+    const [maj, min, pat] = main.split(".").map(Number);
+    const preParts = pre ? pre.split(".") : null;
+    const fail = (m) => { console.error(m); process.exit(1); };
+
+    const bumpBase = (hasPre) => {
+      if (bump === "patch") return hasPre ? [maj, min, pat] : [maj, min, pat + 1];
+      if (bump === "minor") return (hasPre && pat === 0) ? [maj, min, 0] : [maj, min + 1, 0];
+      if (bump === "major") return (hasPre && min === 0 && pat === 0) ? [maj, 0, 0] : [maj + 1, 0, 0];
+      fail("a bump (major|minor|patch) is required here");
+    };
+
+    const compute = () => {
+      if (channel === "latest") return bumpBase(!!preParts).join(".");
+      if (!order[channel]) fail(`unknown channel: ${channel}`);
+      if (preParts) {
+        const curChannel = preParts[0];
+        const curNum = Number(preParts[1]);
+        if (channel === curChannel) return `${maj}.${min}.${pat}-${channel}.${curNum + 1}`;
+        if (order[channel] > (order[curChannel] || 0)) return `${maj}.${min}.${pat}-${channel}.1`;
+        fail(`cannot go from ${curChannel} back to ${channel} on the same version`);
+      }
+      const [a, b, c] = bumpBase(false);
+      return `${a}.${b}.${c}-${channel}.1`;
+    };
+
+    process.stdout.write(compute());
+  ' "$1" "$2" "${3:-}"
+}
+
+# Present a numbered menu and echo the chosen option to stdout.
+#   $1 prompt   $2.. options
+menu() {
+  local prompt="$1"; shift
+  local opt
+  PS3="$prompt "
+  select opt in "$@"; do
+    if [ -n "$opt" ]; then echo "$opt"; return 0; fi
+    echo "Invalid choice, try again." >&2
+  done
+  return 1
+}
+
+# Prompt for confirmation (unless --yes was passed). Returns 0 to proceed.
+confirm() {
+  [ "$ASSUME_YES" = "1" ] && return 0
+  local reply
+  read -r -p "$1 [y/N] " reply
+  [[ "$reply" =~ ^[Yy]$ ]]
+}
+
+# Ensure we are on the main branch with a clean working tree, so the release
+# commit contains only the version bump and changelog entry.
+assert_clean_main() {
+  local branch
+  branch="$(git -C "$REPO_ROOT" branch --show-current)"
+  [ "$branch" = "main" ] || die "must be on the main branch (currently on '$branch')"
+  if ! git -C "$REPO_ROOT" diff --quiet || ! git -C "$REPO_ROOT" diff --cached --quiet; then
+    die "working tree is not clean; commit or stash changes before releasing"
+  fi
+}
+
+# Bump the version in the workspace root and every package in lockstep.
+bump_versions() {
+  ( cd "$REPO_ROOT" && node -e "
+    const fs = require('fs');
+    const files = ['package.json', ...fs.readdirSync('packages').map((p) => 'packages/' + p + '/package.json').filter((f) => fs.existsSync(f))];
+    for (const file of files) {
+      const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+      pkg.version = '$1';
+      fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
+      console.log('Updated ' + file + ' -> $1');
+    }
+  ")
+}
+
+# Insert a new '## [version] - date' heading directly below the '## [Unreleased]'
+# heading, keeping [Unreleased] in place so future work keeps accumulating.
+update_changelog() {
+  ( cd "$REPO_ROOT" && node -e "
+    const fs = require('fs');
+    const path = 'CHANGELOG.md';
+    const lines = fs.readFileSync(path, 'utf8').split('\n');
+    const idx = lines.findIndex((l) => l.trim() === '## [Unreleased]');
+    if (idx === -1) { console.error('Could not find ## [Unreleased] in CHANGELOG.md'); process.exit(1); }
+    if (lines.some((l) => l.startsWith('## [$1]'))) {
+      console.error('CHANGELOG.md already has an entry for $1'); process.exit(1);
+    }
+    lines.splice(idx + 1, 0, '', '## [$1] - $2');
+    fs.writeFileSync(path, lines.join('\n'));
+    console.log('Inserted ## [$1] - $2 below [Unreleased]');
+  ")
+}
+
+# Stage the version/changelog changes, commit on main, and tag the commit.
+commit_and_tag() {
+  git -C "$REPO_ROOT" add package.json packages/*/package.json CHANGELOG.md
+  git -C "$REPO_ROOT" commit -m "release $1"
+  git -C "$REPO_ROOT" tag "$1"
+  echo "Committed and tagged $1"
+}
+
+# Extract the changelog section body for a given version (used as release notes).
+changelog_section() {
+  ( cd "$REPO_ROOT" && awk -v v="## [$1]" '
+    index($0, v) == 1 { f = 1; next }
+    /^## \[/ { if (f) exit }
+    f { print }
+  ' CHANGELOG.md )
+}
+
+# Push the commit and tag, then create the GitHub release.
+#   $1 tag   $2 date   $3 prerelease flag (1 = --prerelease)
+push_and_publish() {
+  git -C "$REPO_ROOT" push
+  git -C "$REPO_ROOT" push origin "$1"
+
+  local notes
+  notes="$(changelog_section "${1#v}")"
+
+  local gh_args=(release create "$1" --title "$1 - $2" --notes "$notes")
+  [ "$3" = "1" ] && gh_args+=(--prerelease)
+  ( cd "$REPO_ROOT" && gh "${gh_args[@]}" )
+}
+
+ASSUME_YES=0
 TAG=""
 INTERACTIVE=0
 for arg in "$@"; do
   case "$arg" in
-    --yes|-y) RELEASE_ASSUME_YES=1 ;;
-    -*) release_die "unknown option: $arg" ;;
+    --yes|-y) ASSUME_YES=1 ;;
+    -*) die "unknown option: $arg" ;;
     *) TAG="$arg" ;;
   esac
 done
 
-CURRENT="$(release_current_version)"
+CURRENT="$(current_version)"
 echo "Current version: $CURRENT"
 
 PRERELEASE=0
@@ -41,48 +232,48 @@ PRERELEASE=0
 if [ -n "$TAG" ]; then
   # Explicit tag: validate and infer whether it is a prerelease.
   if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
-    release_die "tag must be vX.Y.Z or vX.Y.Z-<alpha|beta|rc>.<n> (e.g. v0.7.0 or v0.7.0-alpha.8)"
+    die "tag must be vX.Y.Z or vX.Y.Z-<alpha|beta|rc>.<n> (e.g. v0.7.0 or v0.7.0-alpha.8)"
   fi
-  release_is_prerelease "$TAG" && PRERELEASE=1
+  is_prerelease "$TAG" && PRERELEASE=1
   VERSION="${TAG#v}"
 else
   # Interactive: pick a channel, then a bump only when one is needed.
-  [ -t 0 ] || release_die "no tag given and not a terminal; pass an explicit tag (e.g. v0.7.0)"
+  [ -t 0 ] || die "no tag given and not a terminal; pass an explicit tag (e.g. v0.7.0)"
   INTERACTIVE=1
 
-  CHANNEL="$(release_menu "Release channel?" latest alpha beta rc)"
+  CHANNEL="$(menu "Release channel?" latest alpha beta rc)"
 
   # A bump is needed for a stable release, or to pick the base when starting a
   # prerelease from a stable version. A continuing/promoting prerelease doesn't.
   BUMP=""
-  if [ "$CHANNEL" = "latest" ] || ! release_is_prerelease "$CURRENT"; then
-    BUMP="$(release_menu "Which bump?" patch minor major)"
+  if [ "$CHANNEL" = "latest" ] || ! is_prerelease "$CURRENT"; then
+    BUMP="$(menu "Which bump?" patch minor major)"
   fi
 
   [ "$CHANNEL" != "latest" ] && PRERELEASE=1
-  VERSION="$(release_compute_version "$CURRENT" "$CHANNEL" "$BUMP")"
+  VERSION="$(compute_version "$CURRENT" "$CHANNEL" "$BUMP")"
   TAG="v$VERSION"
 fi
 
-DATE="$(release_today)"
+DATE="$(date +%Y-%m-%d)"
 echo "New release:     $VERSION ($DATE)"
 
-release_assert_greater "$VERSION" "$CURRENT"
+assert_greater "$VERSION" "$CURRENT"
 
 # Confirm the computed tag before mutating anything (interactive runs only).
-if [ "$INTERACTIVE" = "1" ] && [ "$RELEASE_ASSUME_YES" != "1" ]; then
-  release_confirm "Proceed with $TAG?" || release_die "aborted"
+if [ "$INTERACTIVE" = "1" ] && [ "$ASSUME_YES" != "1" ]; then
+  confirm "Proceed with $TAG?" || die "aborted"
 fi
 
-release_assert_clean_main
+assert_clean_main
 
-release_bump_versions "$VERSION"
-release_update_changelog "$VERSION" "$DATE"
-release_commit_and_tag "$TAG"
+bump_versions "$VERSION"
+update_changelog "$VERSION" "$DATE"
+commit_and_tag "$TAG"
 
 echo
-if release_confirm "Push $TAG and create the GitHub release?"; then
-  release_push_and_publish "$TAG" "$DATE" "$PRERELEASE"
+if confirm "Push $TAG and create the GitHub release?"; then
+  push_and_publish "$TAG" "$DATE" "$PRERELEASE"
   echo
   if [ "$PRERELEASE" = "1" ]; then
     echo "Pushed. The publish workflow will deploy to npm under the matching dist-tag."
