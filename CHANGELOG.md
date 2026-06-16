@@ -6,6 +6,8 @@
 
 - `services start`/`services restart` accept `--domains` to route any domains to a service at launch, replacing the configured ones (e.g. `services start hello --domains hello2.denvig.me`); pairs with `--worktree` to give a worktree its own domain
 - The SDK's `service.start()` accepts a `domains` option matching the CLI's `--domains` flag
+- `services start`/`services restart` accept `--port` to pick a specific port (e.g. `--port 3000`) or `--port random` to allocate a free one; a busy port still falls back to a random one
+- The SDK's `service.start()` accepts a `port` option (`number | 'random'`)
 
 ### Changed
 
@@ -16,6 +18,7 @@
 ### Removed
 
 - The `--claim-domains`/`--no-claim-domains` flags and the `claimDomains` SDK option, along with automatic temporary domains, in favour of the explicit `--domains` flag
+- The `--random-port` flag, replaced by `--port random`
 - Starting a service now keeps only the 10 most recent log files, removing older ones to save disk space
 - CLI usage logging is now disabled by default; set `DENVIG_CLI_LOGS_ENABLED=true` to enable it
 - CLI usage logs are now written to a daily file (`~/.denvig/logs/cli/{YYYY-MM-DD}.jsonl`) instead of a single growing file

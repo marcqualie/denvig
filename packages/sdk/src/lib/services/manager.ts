@@ -167,25 +167,32 @@ export class ServiceManager {
    *
    * Resolution order:
    * 1. If the service has no `http` block it never needs a port — return
-   *    no port, ignoring any state entry and the `forceRandom` flag.
-   * 2. If `forceRandom`, always allocate a fresh random port (preferring the
-   *    previously-allocated one when free).
-   * 3. If state already records a port for this service, reuse it. State is
+   *    no port, ignoring any state entry and the requested port.
+   * 2. If `port` is `'random'`, always allocate a fresh random port
+   *    (preferring the previously-allocated one when free).
+   * 3. If `port` is a specific number, use it — unless it's already in use
+   *    by something other than this service, in which case fall back to a
+   *    random port and flag `conflict: true`.
+   * 4. If state already records a port for this service, reuse it. State is
    *    authoritative once allocated so restarts stay on the same port and
    *    don't re-prompt about the config port being busy. Run
    *    `services teardown` to reset.
-   * 4. Otherwise try the config port — falling back to a random port and
+   * 5. Otherwise try the config port — falling back to a random port and
    *    flagging `conflict: true` when it's already in use.
-   * 5. Otherwise (no config port, no state) allocate a random port.
+   * 6. Otherwise (no config port, no state) allocate a random port.
+   *
+   * @param options.port - The requested port: a specific number, the
+   *   string `'random'` to always allocate a free port, or `undefined` to
+   *   fall back to the state/config port.
    */
   async resolveServicePort(
     name: string,
-    options?: { forceRandom?: boolean },
+    options?: { port?: number | 'random' },
   ): Promise<
     | {
         success: true
         port: number | undefined
-        source: 'config' | 'allocated' | 'state' | 'none'
+        source: 'config' | 'allocated' | 'requested' | 'state' | 'none'
         conflict: boolean
         configPort?: number
       }
@@ -214,7 +221,7 @@ export class ServiceManager {
     const configPort = config.http.port
     const previous = await getServiceState(this.project.id, name)
 
-    if (options?.forceRandom) {
+    if (options?.port === 'random') {
       const allocated = await allocateRandomPort({
         preferredPort: previous?.port,
       })
@@ -224,6 +231,31 @@ export class ServiceManager {
         source: allocated === null ? 'none' : 'allocated',
         conflict: false,
         configPort,
+      }
+    }
+
+    // A specific port was requested. Use it directly when free — or when
+    // this service already holds it (e.g. mid-restart the old process is
+    // still bound). Otherwise fall back to a random port and flag the
+    // conflict so the caller can surface it.
+    if (typeof options?.port === 'number') {
+      const requested = options.port
+      if (previous?.port === requested || !(await isPortInUse(requested))) {
+        return {
+          success: true,
+          port: requested,
+          source: 'requested',
+          conflict: false,
+          configPort: requested,
+        }
+      }
+      const fallback = await allocateRandomPort()
+      return {
+        success: true,
+        port: fallback ?? undefined,
+        source: fallback === null ? 'none' : 'allocated',
+        conflict: true,
+        configPort: requested,
       }
     }
 

@@ -8,6 +8,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { type AddressInfo, createServer } from 'node:net'
 import { hostname, tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
@@ -21,6 +22,20 @@ import {
   setGatewayRoute,
   updateServiceState,
 } from './state.ts'
+
+/** Bind an ephemeral TCP port and return it with a release callback. */
+const occupyPort = async (): Promise<{
+  port: number
+  release: () => Promise<void>
+}> => {
+  const server = createServer()
+  await new Promise<void>((res) => server.listen(0, res))
+  const port = (server.address() as AddressInfo).port
+  return {
+    port,
+    release: () => new Promise<void>((res) => server.close(() => res())),
+  }
+}
 
 describe('ServiceManager', () => {
   describe('listServices()', () => {
@@ -317,7 +332,7 @@ describe('ServiceManager', () => {
       strictEqual(resolved.conflict, false)
     })
 
-    it('returns no port for a non-http service even with forceRandom', async () => {
+    it('returns no port for a non-http service even with port "random"', async () => {
       const project = createMockInternalProject({ path: '/tmp/test-ports' })
       project.config.services = {
         worker: { command: 'node worker.js' },
@@ -325,11 +340,94 @@ describe('ServiceManager', () => {
       const manager = new ServiceManager(project)
 
       const resolved = await manager.resolveServicePort('worker', {
-        forceRandom: true,
+        port: 'random',
       })
 
       ok(resolved.success)
       strictEqual(resolved.port, undefined)
+    })
+
+    it('allocates a random port when port is "random"', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: { port: 4000 } },
+      }
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('web', {
+        port: 'random',
+      })
+
+      ok(resolved.success)
+      strictEqual(resolved.source, 'allocated')
+      strictEqual(resolved.conflict, false)
+      ok(resolved.port !== undefined && resolved.port !== 4000)
+    })
+
+    it('uses a requested port when it is free', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: { port: 4000 } },
+      }
+      const manager = new ServiceManager(project)
+
+      const resolved = await manager.resolveServicePort('web', { port: 8456 })
+
+      ok(resolved.success)
+      strictEqual(resolved.port, 8456)
+      strictEqual(resolved.source, 'requested')
+      strictEqual(resolved.conflict, false)
+    })
+
+    it('falls back to a random port when the requested port is in use', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: { port: 4000 } },
+      }
+      const manager = new ServiceManager(project)
+      const busy = await occupyPort()
+      try {
+        const resolved = await manager.resolveServicePort('web', {
+          port: busy.port,
+        })
+
+        ok(resolved.success)
+        strictEqual(resolved.source, 'allocated')
+        strictEqual(resolved.conflict, true)
+        strictEqual(resolved.configPort, busy.port)
+        ok(resolved.port !== undefined && resolved.port !== busy.port)
+      } finally {
+        await busy.release()
+      }
+    })
+
+    it('keeps a requested port this service already holds (mid-restart)', async () => {
+      const project = createMockInternalProject({ path: '/tmp/test-ports' })
+      project.config.services = {
+        web: { command: 'node server.js', http: { port: 4000 } },
+      }
+      const busy = await occupyPort()
+      // State records the port and the port reads as in use — but it's this
+      // service's own, so it must be kept rather than swapped for a random one.
+      await updateServiceState(project.id, 'web', {
+        cwd: project.path,
+        port: busy.port,
+        domains: [],
+        desiredStatus: 'running',
+      })
+      const manager = new ServiceManager(project)
+      try {
+        const resolved = await manager.resolveServicePort('web', {
+          port: busy.port,
+        })
+
+        ok(resolved.success)
+        strictEqual(resolved.port, busy.port)
+        strictEqual(resolved.source, 'requested')
+        strictEqual(resolved.conflict, false)
+      } finally {
+        await busy.release()
+      }
     })
 
     it('ignores a stale state port for a non-http service', async () => {

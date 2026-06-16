@@ -17,6 +17,12 @@ export type ServiceStartOptions = {
    * this service stops. When omitted, the configured domains are used.
    */
   domains?: string[]
+  /**
+   * The port to start the service on: a specific number, or `'random'` to
+   * always allocate a free port. When omitted, the configured port is used,
+   * falling back to a random port when it's already in use.
+   */
+  port?: number | 'random'
 }
 
 /**
@@ -52,6 +58,7 @@ export class DenvigService {
       startService(this.project, this.serviceName, {
         worktree: this.worktreeName,
         domains: options.domains,
+        port: options.port,
       }),
     )
   }

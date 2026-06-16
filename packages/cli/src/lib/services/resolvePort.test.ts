@@ -54,18 +54,43 @@ describe('resolveServicePortForCli', () => {
     ok(typeof resolution.port === 'number')
   })
 
-  it('allocates a random port when --random-port is passed', async () => {
+  it('allocates a random port when --port random is passed', async () => {
     const project = createProject('/tmp/wt-random')
     const manager = new ServiceManager(project)
 
     const resolution = await resolveServicePortForCli(manager, 'hello', {
       json: true,
-      'random-port': true,
+      port: 'random',
     })
 
     ok(resolution !== null)
-    ok(resolution.port !== undefined)
+    ok(typeof resolution.port === 'number')
     ok(resolution.port !== 8080)
+  })
+
+  it('resolves a specific --port value', async () => {
+    const project = createProject('/tmp/wt-specific')
+    const manager = new ServiceManager(project)
+
+    const resolution = await resolveServicePortForCli(manager, 'hello', {
+      json: true,
+      port: '8456',
+    })
+
+    ok(resolution !== null)
+    ok(typeof resolution.port === 'number')
+  })
+
+  it('rejects an invalid --port value', async () => {
+    const project = createProject('/tmp/wt-invalid')
+    const manager = new ServiceManager(project)
+
+    const resolution = await resolveServicePortForCli(manager, 'hello', {
+      json: true,
+      port: 'nonsense',
+    })
+
+    strictEqual(resolution, null)
   })
 
   it('returns no port for a service without an http block', async () => {
