@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# Tag a new stable release and publish it.
+#
+# Usage: bin/tag-release vX.Y.Z
+#   e.g. bin/tag-release v0.7.0
+#
+# Bumps every package.json in lockstep, adds a dated changelog entry below
+# [Unreleased], commits and tags on main, then (after confirmation) pushes and
+# creates a GitHub release. The publish workflow then deploys to npm under the
+# 'latest' dist-tag.
+#
+# Pass --yes to skip the push confirmation prompt.
+
+set -euo pipefail
+
+# shellcheck source=lib/release-common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/release-common.sh"
+
+export RELEASE_ASSUME_YES=0  # consumed by release_confirm in the sourced lib
+TAG=""
+for arg in "$@"; do
+  case "$arg" in
+    --yes|-y) RELEASE_ASSUME_YES=1 ;;
+    -*) release_die "unknown option: $arg" ;;
+    *) TAG="$arg" ;;
+  esac
+done
+
+[ -n "$TAG" ] || release_die "usage: bin/tag-release vX.Y.Z (e.g. v0.7.0)"
+
+# Strict stable format: vX.Y.Z with no prerelease suffix.
+if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  release_die "tag must be vX.Y.Z with no prerelease suffix (e.g. v0.7.0)"
+fi
+
+VERSION="${TAG#v}"
+DATE="$(release_today)"
+CURRENT="$(release_current_version)"
+
+echo "Current version: $CURRENT"
+echo "New release:     $VERSION ($DATE)"
+
+release_assert_greater "$VERSION" "$CURRENT"
+release_assert_clean_main
+
+release_bump_versions "$VERSION"
+release_update_changelog "$VERSION" "$DATE"
+release_commit_and_tag "$TAG"
+
+echo
+if release_confirm "Push $TAG and create the GitHub release?"; then
+  release_push_and_publish "$TAG" "$DATE" 0
+  echo
+  echo "Pushed. The publish workflow will deploy to npm under the 'latest' dist-tag."
+  echo "Track it: https://github.com/marcqualie/denvig/actions?query=branch%3Amain"
+else
+  echo "Skipped push. When ready, run:"
+  echo "  git push && git push origin $TAG"
+fi
