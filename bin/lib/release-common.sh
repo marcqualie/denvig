@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# Shared helpers for bin/tag-release and bin/tag-prerelease.
+# Shared helpers for bin/tag-release.
 # Source this file; do not execute it directly.
 
 # Resolve the repository root from this library's location so the helpers work
@@ -66,6 +66,64 @@ release_assert_greater() {
   if [ "$cmp" != "1" ]; then
     release_die "$new is not greater than the current version $current"
   fi
+}
+
+# True (exit 0) if the given version carries a prerelease suffix.
+release_is_prerelease() {
+  [[ "$1" == *-* ]]
+}
+
+# Compute the next version from the current one.
+#   $1 current version   $2 channel (latest|alpha|beta|rc)   $3 bump (major|minor|patch, may be empty)
+# Stable channel ('latest') drops any prerelease suffix. Prerelease channels
+# increment within the same channel, promote a higher channel from the same
+# base (resetting to .1), or — when starting from a stable version — apply the
+# bump to pick the base. Exits non-zero with a message on an invalid transition.
+release_compute_version() {
+  node -e '
+    const [current, channel, bump] = process.argv.slice(1);
+    const order = { alpha: 1, beta: 2, rc: 3 };
+    const [main, pre] = current.split("-");
+    const [maj, min, pat] = main.split(".").map(Number);
+    const preParts = pre ? pre.split(".") : null;
+    const fail = (m) => { console.error(m); process.exit(1); };
+
+    const bumpBase = (hasPre) => {
+      if (bump === "patch") return hasPre ? [maj, min, pat] : [maj, min, pat + 1];
+      if (bump === "minor") return (hasPre && pat === 0) ? [maj, min, 0] : [maj, min + 1, 0];
+      if (bump === "major") return (hasPre && min === 0 && pat === 0) ? [maj, 0, 0] : [maj + 1, 0, 0];
+      fail("a bump (major|minor|patch) is required here");
+    };
+
+    const compute = () => {
+      if (channel === "latest") return bumpBase(!!preParts).join(".");
+      if (!order[channel]) fail(`unknown channel: ${channel}`);
+      if (preParts) {
+        const curChannel = preParts[0];
+        const curNum = Number(preParts[1]);
+        if (channel === curChannel) return `${maj}.${min}.${pat}-${channel}.${curNum + 1}`;
+        if (order[channel] > (order[curChannel] || 0)) return `${maj}.${min}.${pat}-${channel}.1`;
+        fail(`cannot go from ${curChannel} back to ${channel} on the same version`);
+      }
+      const [a, b, c] = bumpBase(false);
+      return `${a}.${b}.${c}-${channel}.1`;
+    };
+
+    process.stdout.write(compute());
+  ' "$1" "$2" "${3:-}"
+}
+
+# Present a numbered menu and echo the chosen option to stdout.
+#   $1 prompt   $2.. options
+release_menu() {
+  local prompt="$1"; shift
+  local opt
+  PS3="$prompt "
+  select opt in "$@"; do
+    if [ -n "$opt" ]; then echo "$opt"; return 0; fi
+    echo "Invalid choice, try again." >&2
+  done
+  return 1
 }
 
 # Ensure we are on the main branch with a clean working tree, so the release

@@ -1,14 +1,19 @@
 #!/bin/bash
 #
-# Tag a new stable release and publish it.
+# Tag and publish a release — stable or prerelease.
 #
-# Usage: bin/tag-release vX.Y.Z
-#   e.g. bin/tag-release v0.7.0
+# Interactive (no arguments): asks for the channel (latest/alpha/beta/rc), then
+# for a standard release (or when starting a prerelease from a stable version)
+# asks for the bump (patch/minor/major); a continuing prerelease just increments.
 #
-# Bumps every package.json in lockstep, adds a dated changelog entry below
-# [Unreleased], commits and tags on main, then (after confirmation) pushes and
-# creates a GitHub release. The publish workflow then deploys to npm under the
-# 'latest' dist-tag.
+# Non-interactive: pass an explicit tag to skip the prompts.
+#   bin/tag-release v0.7.0          # stable
+#   bin/tag-release v0.7.0-alpha.8  # prerelease
+#
+# In both modes it bumps every package.json in lockstep, adds a dated changelog
+# entry below [Unreleased], commits and tags on main, then (after confirmation)
+# pushes and creates the GitHub release. The publish workflow then deploys to
+# npm under the matching dist-tag (latest/alpha/beta/rc).
 #
 # Pass --yes to skip the push confirmation prompt.
 
@@ -19,6 +24,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/release-common.sh"
 
 export RELEASE_ASSUME_YES=0  # consumed by release_confirm in the sourced lib
 TAG=""
+INTERACTIVE=0
 for arg in "$@"; do
   case "$arg" in
     --yes|-y) RELEASE_ASSUME_YES=1 ;;
@@ -27,21 +33,47 @@ for arg in "$@"; do
   esac
 done
 
-[ -n "$TAG" ] || release_die "usage: bin/tag-release vX.Y.Z (e.g. v0.7.0)"
+CURRENT="$(release_current_version)"
+echo "Current version: $CURRENT"
 
-# Strict stable format: vX.Y.Z with no prerelease suffix.
-if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  release_die "tag must be vX.Y.Z with no prerelease suffix (e.g. v0.7.0)"
+PRERELEASE=0
+
+if [ -n "$TAG" ]; then
+  # Explicit tag: validate and infer whether it is a prerelease.
+  if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+    release_die "tag must be vX.Y.Z or vX.Y.Z-<alpha|beta|rc>.<n> (e.g. v0.7.0 or v0.7.0-alpha.8)"
+  fi
+  release_is_prerelease "$TAG" && PRERELEASE=1
+  VERSION="${TAG#v}"
+else
+  # Interactive: pick a channel, then a bump only when one is needed.
+  [ -t 0 ] || release_die "no tag given and not a terminal; pass an explicit tag (e.g. v0.7.0)"
+  INTERACTIVE=1
+
+  CHANNEL="$(release_menu "Release channel?" latest alpha beta rc)"
+
+  # A bump is needed for a stable release, or to pick the base when starting a
+  # prerelease from a stable version. A continuing/promoting prerelease doesn't.
+  BUMP=""
+  if [ "$CHANNEL" = "latest" ] || ! release_is_prerelease "$CURRENT"; then
+    BUMP="$(release_menu "Which bump?" patch minor major)"
+  fi
+
+  [ "$CHANNEL" != "latest" ] && PRERELEASE=1
+  VERSION="$(release_compute_version "$CURRENT" "$CHANNEL" "$BUMP")"
+  TAG="v$VERSION"
 fi
 
-VERSION="${TAG#v}"
 DATE="$(release_today)"
-CURRENT="$(release_current_version)"
-
-echo "Current version: $CURRENT"
 echo "New release:     $VERSION ($DATE)"
 
 release_assert_greater "$VERSION" "$CURRENT"
+
+# Confirm the computed tag before mutating anything (interactive runs only).
+if [ "$INTERACTIVE" = "1" ] && [ "$RELEASE_ASSUME_YES" != "1" ]; then
+  release_confirm "Proceed with $TAG?" || release_die "aborted"
+fi
+
 release_assert_clean_main
 
 release_bump_versions "$VERSION"
@@ -50,9 +82,13 @@ release_commit_and_tag "$TAG"
 
 echo
 if release_confirm "Push $TAG and create the GitHub release?"; then
-  release_push_and_publish "$TAG" "$DATE" 0
+  release_push_and_publish "$TAG" "$DATE" "$PRERELEASE"
   echo
-  echo "Pushed. The publish workflow will deploy to npm under the 'latest' dist-tag."
+  if [ "$PRERELEASE" = "1" ]; then
+    echo "Pushed. The publish workflow will deploy to npm under the matching dist-tag."
+  else
+    echo "Pushed. The publish workflow will deploy to npm under the 'latest' dist-tag."
+  fi
   echo "Track it: https://github.com/marcqualie/denvig/actions?query=branch%3Amain"
 else
   echo "Skipped push. When ready, run:"
