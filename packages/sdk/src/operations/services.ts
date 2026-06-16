@@ -260,6 +260,12 @@ export type StartServiceOptions = ServiceOperationOptions & {
    * this service stops. When omitted, the configured domains are used.
    */
   domains?: string[]
+  /**
+   * The port to start the service on: a specific number, or `'random'` to
+   * always allocate a free port. When omitted, the configured port is used,
+   * falling back to a random port when it's already in use.
+   */
+  port?: number | 'random'
 }
 
 /**
@@ -321,7 +327,9 @@ export const startService = async (
     project: targetProject,
   } = await resolveServiceTarget(project, name, options.worktree)
 
-  const resolution = await manager.resolveServicePort(serviceName, {})
+  const resolution = await manager.resolveServicePort(serviceName, {
+    port: options.port,
+  })
   const result = await manager.startService(serviceName, {
     port: resolution.success ? resolution.port : undefined,
     portResolved: true,
@@ -395,7 +403,9 @@ export const restartService = async (
     project: targetProject,
   } = await resolveServiceTarget(project, name, options.worktree)
 
-  const resolution = await manager.resolveServicePort(serviceName, {})
+  const resolution = await manager.resolveServicePort(serviceName, {
+    port: options.port,
+  })
   const result = await manager.restartService(serviceName, {
     port: resolution.success ? resolution.port : undefined,
     portResolved: true,

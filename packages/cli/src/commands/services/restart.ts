@@ -10,7 +10,7 @@ export const servicesRestartCommand = new Command({
   name: 'services:restart',
   description: 'Restart a service',
   usage:
-    'services restart <name> [--worktree <branch>] [--random-port] [--domains <list>]',
+    'services restart <name> [--worktree <branch>] [--port <port>] [--domains <list>]',
   example: 'services restart api',
   args: [
     {
@@ -30,12 +30,11 @@ export const servicesRestartCommand = new Command({
       type: 'string',
     },
     {
-      name: 'random-port',
+      name: 'port',
       description:
-        'Skip the config port and start on a randomly allocated dev port',
+        'Port to start on, or "random" to allocate a free dev port; defaults to the configured port, falling back to a random one when busy',
       required: false,
-      type: 'boolean',
-      defaultValue: false,
+      type: 'string',
     },
     {
       name: 'domains',
