@@ -1,29 +1,15 @@
-import { type GatewayRoute, getGatewayRoute } from '@denvig/sdk/internal'
-
 import { confirm } from '../input.ts'
 
-import type {
-  ServiceManager,
-  ServiceManagerProject,
-} from '@denvig/sdk/internal'
+import type { ServiceManager } from '@denvig/sdk/internal'
 
 type Flags = {
   json?: unknown
   'random-port'?: unknown
-  'claim-domains'?: unknown
-  'no-claim-domains'?: unknown
 }
 
 export type CliStartResolution = {
   /** Port to start the service on; `undefined` means no PORT env. */
   port: number | undefined
-  /**
-   * Whether the caller has explicitly opted to claim the configured
-   * domain even though another project currently owns the route. `null`
-   * or `false` means "leave the existing route untouched" — the service
-   * then starts on a dynamically assigned temporary domain.
-   */
-  claimDomains: boolean | null
 }
 
 const isInteractive = (flags: Flags): boolean =>
@@ -32,19 +18,11 @@ const isInteractive = (flags: Flags): boolean =>
   process.stdout.isTTY === true &&
   !flags['random-port']
 
-const describeRouteOwner = (route: GatewayRoute): string =>
-  `${route.project.slice(0, 8)}/${route.service}`
-
 /**
  * Resolve the port a service should start on, prompting the user when the
  * config port is in use and the session is interactive. In non-interactive
  * contexts (JSON output, no TTY, --random-port) we silently fall back to a
  * randomly allocated port to match the documented automation behaviour.
- *
- * When the port was allocated (i.e. config port was busy) and the service
- * has a configured domain owned by another project, we additionally prompt
- * the user about taking the domain over for this start. `--claim-domains`
- * and `--no-claim-domains` bypass the prompt in either direction.
  *
  * Returns `null` when the user explicitly aborts in an interactive prompt
  * or no free port could be allocated.
@@ -53,7 +31,6 @@ export const resolveServicePortForCli = async (
   manager: ServiceManager,
   serviceName: string,
   flags: Flags,
-  project: ServiceManagerProject,
 ): Promise<CliStartResolution | null> => {
   const forceRandom = !!flags['random-port']
   const resolved = await manager.resolveServicePort(serviceName, {
@@ -105,46 +82,5 @@ export const resolveServicePortForCli = async (
     }
   }
 
-  // Decide whether to claim the configured domain when another project
-  // already owns its route. Explicit flags override the prompt in either
-  // direction; otherwise we prompt the user when the port was allocated
-  // (the usual worktree case) and the domain is currently owned by a
-  // different service.
-  let claimDomains: boolean | null = null
-  if (flags['claim-domains']) {
-    claimDomains = true
-  } else if (flags['no-claim-domains']) {
-    claimDomains = false
-  } else if (allocated) {
-    const config = manager.getServiceConfig(serviceName)
-    const domain = config?.http?.domain
-    if (domain) {
-      const existingRoute = await getGatewayRoute(domain)
-      const ownedByOther =
-        existingRoute !== null &&
-        !(
-          existingRoute.project === project.id &&
-          existingRoute.service === serviceName
-        )
-
-      if (ownedByOther) {
-        if (isInteractive(flags)) {
-          claimDomains = await confirm(
-            `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}. Move it to this start (port ${chosenPort})? Declining starts on a temporary domain instead.`,
-          )
-        } else {
-          // Non-interactive default: don't disturb the existing route; the
-          // service starts on a dynamically assigned temporary domain.
-          claimDomains = false
-          if (!flags.json) {
-            console.log(
-              `Domain ${domain} is currently routed to ${describeRouteOwner(existingRoute)}; starting on a temporary domain instead. Use --claim-domains to move it here.`,
-            )
-          }
-        }
-      }
-    }
-  }
-
-  return { port: chosenPort, claimDomains }
+  return { port: chosenPort }
 }

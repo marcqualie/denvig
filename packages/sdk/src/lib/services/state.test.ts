@@ -94,36 +94,6 @@ describe('service state', () => {
     assert.strictEqual(entry?.port, 8080)
   })
 
-  it('preserves the dynamic domain when the key is omitted', async () => {
-    await updateServiceState('abc123', 'api', {
-      cwd: '/tmp/proj',
-      domains: [],
-      dynamicDomain: 'api-wt.test',
-      desiredStatus: 'running',
-    })
-    await updateServiceState('abc123', 'api', {
-      cwd: '/tmp/proj',
-      desiredStatus: 'stopped',
-    })
-    const entry = await getServiceState('abc123', 'api')
-    assert.strictEqual(entry?.dynamicDomain, 'api-wt.test')
-  })
-
-  it('clears the dynamic domain when explicitly set to undefined', async () => {
-    await updateServiceState('abc123', 'api', {
-      cwd: '/tmp/proj',
-      domains: [],
-      dynamicDomain: 'api-wt.test',
-      desiredStatus: 'running',
-    })
-    await updateServiceState('abc123', 'api', {
-      cwd: '/tmp/proj',
-      dynamicDomain: undefined,
-    })
-    const entry = await getServiceState('abc123', 'api')
-    assert.strictEqual(entry?.dynamicDomain, undefined)
-  })
-
   it('marks a service stopped while preserving the port', async () => {
     await updateServiceState('abc123', 'api', {
       cwd: '/tmp/proj',
@@ -257,20 +227,6 @@ describe('service state', () => {
     })
     await removeGatewayRoute('api.test')
     assert.strictEqual(await getGatewayRoute('api.test'), null)
-  })
-
-  it('removes temporary routes when releasing a service', async () => {
-    await setGatewayRoute('api-wt.test', {
-      project: 'wt',
-      service: 'api',
-      port: 9001,
-      secure: false,
-      defaultService: false,
-      desiredStatus: 'running',
-      temporary: true,
-    })
-    await releaseGatewayRoutesForService('wt', 'api')
-    assert.strictEqual(await getGatewayRoute('api-wt.test'), null)
   })
 
   it('hands a released domain back to the running service that declares it', async () => {

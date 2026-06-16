@@ -11,13 +11,12 @@ import type { ResourceContext } from './context.ts'
 
 export type ServiceStartOptions = {
   /**
-   * Move the service's configured domains (the primary domain and its
-   * cnames) to this start when another running service currently owns
-   * their routes; they are handed back when this service stops. When
-   * omitted, a conflicting start is routed on a dynamically assigned
-   * temporary domain instead.
+   * Explicit domains to route to this start, replacing the domains declared
+   * in the service config. Each domain is claimed unconditionally — any
+   * existing route is taken over and handed back to a running owner when
+   * this service stops. When omitted, the configured domains are used.
    */
-  claimDomains?: boolean
+  domains?: string[]
 }
 
 /**
@@ -52,7 +51,7 @@ export class DenvigService {
     return track(this.ctx, 'services.start', this.project.slug, () =>
       startService(this.project, this.serviceName, {
         worktree: this.worktreeName,
-        claimDomains: options.claimDomains,
+        domains: options.domains,
       }),
     )
   }

@@ -15,7 +15,6 @@ import { basename, resolve } from 'node:path'
 
 import { findCertForDomain, resolveSslPaths } from '../gateway/certs.ts'
 import { configureGateway } from '../gateway/configure.ts'
-import { buildDynamicDomain } from './domains.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
@@ -25,7 +24,6 @@ import {
   getServiceState,
   markServiceStopped,
   releaseGatewayRoutesForService,
-  removeGatewayRoute,
   removeGatewayRoutesForService,
   removeServiceState,
   setCert,
@@ -281,13 +279,11 @@ export class ServiceManager {
    * @param options.port - Pre-resolved port to use for this service. When
    *   omitted, the manager resolves the port itself, auto-allocating a
    *   random port if the config port is busy.
-   * @param options.claimDomains - When the service's configured domains
-   *   (the primary domain and its cnames) are already claimed by a
-   *   different project, this flag controls whether this start should
-   *   replace those routes as an override (`true`) or leave the existing
-   *   routes alone (`false`). When undefined and a domain has no existing
-   *   owner, its route is registered as the natural owner
-   *   (`defaultService: true`).
+   * @param options.domains - Explicit domains to route to this start,
+   *   replacing the domains declared in the service config. Each domain is
+   *   claimed unconditionally — any existing route is taken over and handed
+   *   back to a running owner when this service stops. When omitted, the
+   *   configured domains are used.
    * @param options.reviveIfNotRunning - When the service is already
    *   bootstrapped with an unchanged plist but isn't currently running,
    *   bootout and bootstrap again to kick it (`true`, the default — what an
@@ -301,7 +297,7 @@ export class ServiceManager {
     options?: {
       port?: number
       portResolved?: boolean
-      claimDomains?: boolean
+      domains?: string[]
       reviveIfNotRunning?: boolean
     },
   ): Promise<ServiceResult> {
@@ -358,9 +354,16 @@ export class ServiceManager {
     // Record the desired state and a snapshot of the config before launching
     // so the gateway, list output and the reconciler all see a single
     // source of truth instead of re-deriving it from .denvig.yml each time.
-    const domains = config.http?.domain
+    // The domain set is either the caller-provided override (the CLI's
+    // `--domains` flag / SDK `domains` option) or, when omitted, the domains
+    // declared in the service config.
+    const configuredDomains = config.http?.domain
       ? [config.http.domain, ...(config.http.cnames ?? [])]
       : []
+    const domains =
+      options?.domains && options.domains.length > 0
+        ? options.domains
+        : configuredDomains
     await updateServiceState(this.project.id, name, {
       cwd: this.resolveServiceCwd(config),
       port: effectivePort,
@@ -383,7 +386,10 @@ export class ServiceManager {
       },
     })
 
-    // Manage gateway routes when the service has both a port and domain(s).
+    // Register gateway routes when the service has both a port and
+    // domain(s). Each domain is claimed unconditionally for this service:
+    // any existing route is taken over and handed back to a running owner
+    // when this service stops.
     if (effectivePort !== undefined && domains.length > 0) {
       const secure = config.http?.secure ?? false
       // Resolve the cert once per start so all routes for this service
@@ -406,57 +412,17 @@ export class ServiceManager {
           }
         }
       }
-      let conflictDomain: string | null = null
       for (const domain of domains) {
-        const existing = await getGatewayRoute(domain)
-        const isOwnedByThisService =
-          existing?.project === this.project.id && existing?.service === name
-        // A stopped route held by another service is effectively vacant —
-        // claim it back as a default mapping rather than waiting for the
-        // previous owner to clean up.
-        const previousOwnerInactive =
-          existing !== null &&
-          !isOwnedByThisService &&
-          existing.desiredStatus === 'stopped'
-
-        if (!existing || isOwnedByThisService || previousOwnerInactive) {
-          await setGatewayRoute(domain, {
-            project: this.project.id,
-            service: name,
-            port: effectivePort,
-            secure,
-            defaultService: isOwnedByThisService
-              ? (existing?.defaultService ?? true)
-              : true,
-            desiredStatus: 'running',
-            cert: certKey,
-          })
-        } else if (options?.claimDomains === true) {
-          await setGatewayRoute(domain, {
-            project: this.project.id,
-            service: name,
-            port: effectivePort,
-            secure,
-            defaultService: false,
-            desiredStatus: 'running',
-            cert: certKey,
-          })
-        } else if (domain === domains[0]) {
-          // Existing route owned by an active service in another project
-          // and no explicit claim: leave it untouched and start this
-          // service on a dynamically assigned domain instead.
-          conflictDomain = domain
-        }
-        // Conflicting cnames without a claim are simply left untouched.
+        await setGatewayRoute(domain, {
+          project: this.project.id,
+          service: name,
+          port: effectivePort,
+          secure,
+          defaultService: true,
+          desiredStatus: 'running',
+          cert: certKey,
+        })
       }
-
-      await this.syncDynamicDomain(name, {
-        conflictDomain,
-        cwd: this.resolveServiceCwd(config),
-        port: effectivePort,
-        secure,
-        certKey,
-      })
     }
 
     // Ensure denvig directories exist
@@ -593,101 +559,12 @@ export class ServiceManager {
   }
 
   /**
-   * Assign, refresh or retire the dynamically allocated domain for a
-   * service. When `conflictDomain` is set the service could not claim its
-   * configured domain (another running service owns it), so a unique domain
-   * derived from it is routed to this start instead — reusing the one
-   * previously recorded in state so the address is stable across restarts.
-   * When there is no conflict, any leftover temporary route is removed
-   * since the configured domain serves the service directly.
-   */
-  private async syncDynamicDomain(
-    name: string,
-    options: {
-      conflictDomain: string | null
-      cwd: string
-      port: number
-      secure: boolean
-      certKey?: string
-    },
-  ): Promise<string | null> {
-    const previous = await getServiceState(this.project.id, name)
-    const sticky = previous?.dynamicDomain
-
-    if (!options.conflictDomain) {
-      if (sticky) {
-        const stale = await getGatewayRoute(sticky)
-        if (
-          stale?.temporary &&
-          stale.project === this.project.id &&
-          stale.service === name
-        ) {
-          await removeGatewayRoute(sticky)
-        }
-      }
-      return null
-    }
-
-    let dynamicDomain = sticky
-    if (!dynamicDomain) {
-      const suffix = basename(this.project.path)
-      dynamicDomain = buildDynamicDomain(options.conflictDomain, suffix)
-      const taken = await getGatewayRoute(dynamicDomain)
-      const ownedByOther =
-        taken !== null &&
-        !(taken.project === this.project.id && taken.service === name)
-      if (ownedByOther || dynamicDomain === options.conflictDomain) {
-        dynamicDomain = buildDynamicDomain(
-          options.conflictDomain,
-          `${suffix}-${this.project.id.slice(0, 6)}`,
-        )
-      }
-    }
-
-    // Resolve a cert for the dynamic domain itself — a wildcard covering
-    // the configured domain usually covers the dynamic one too, but an
-    // exact-match cert does not.
-    let certKey = options.certKey
-    if (options.secure) {
-      const certDir = await findCertForDomain(dynamicDomain)
-      if (certDir && basename(certDir) !== certKey) {
-        const sslPaths = await resolveSslPaths(certDir)
-        if (sslPaths) {
-          certKey = basename(certDir)
-          await setCert(certKey, {
-            dir: certDir,
-            certPath: sslPaths.sslCertPath,
-            keyPath: sslPaths.sslKeyPath,
-            domains: [dynamicDomain],
-          })
-        }
-      }
-    }
-
-    await setGatewayRoute(dynamicDomain, {
-      project: this.project.id,
-      service: name,
-      port: options.port,
-      secure: options.secure,
-      defaultService: false,
-      desiredStatus: 'running',
-      temporary: true,
-      cert: certKey,
-    })
-    await updateServiceState(this.project.id, name, {
-      cwd: options.cwd,
-      dynamicDomain,
-    })
-    return dynamicDomain
-  }
-
-  /**
    * Stop a specific service.
    *
    * @param options.keepRoutes - Keep the service's gateway routes registered
    *   instead of releasing them. Used by restart, where the service comes
-   *   straight back up and should retain its domains (including temporary
-   *   ones and claims taken from other services).
+   *   straight back up and should retain its domains (including claims taken
+   *   from other services).
    */
   async stopService(
     name: string,
@@ -755,8 +632,7 @@ export class ServiceManager {
     // Mark the service stopped in state so its port becomes available to
     // other services, while keeping the allocation around so a restart can
     // reclaim the same port if it's still free. Gateway routes are then
-    // released: temporary (dynamically assigned) domains are removed and
-    // claimed domains are handed back to the running service that
+    // released: claimed domains are handed back to the running service that
     // originally declared them; everything else is marked stopped so nginx
     // stops proxying it.
     await markServiceStopped(this.project.id, name)
@@ -785,7 +661,7 @@ export class ServiceManager {
     options?: {
       port?: number
       portResolved?: boolean
-      claimDomains?: boolean
+      domains?: string[]
     },
   ): Promise<ServiceResult> {
     const config = this.getServiceConfig(name)
@@ -1205,16 +1081,17 @@ export class ServiceManager {
 
   /**
    * Get the canonical URL where a service can be accessed. Returns the
-   * domain URL only when this service currently owns the gateway route for
-   * its configured domain, falling back to its dynamically assigned domain
-   * when one is routed; otherwise (or when no domain is configured) falls
-   * back to a direct `http://localhost:<port>` URL.
+   * domain URL for the first routed domain this service currently owns —
+   * preferring the domains recorded in state for this start (which may be
+   * an explicit `--domains` override) and falling back to the configured
+   * domains; otherwise (or when no domain is routed) falls back to a direct
+   * `http://localhost:<port>` URL.
    */
   async getServiceUrl(name: string): Promise<string | null> {
     const config = this.getServiceConfig(name)
     if (!config) return null
 
-    if (config.http?.domain) {
+    if (config.http) {
       const protocol = config.http.secure ? 'https' : 'http'
       const ownsRunningRoute = async (domain: string): Promise<boolean> => {
         const route = await getGatewayRoute(domain)
@@ -1225,16 +1102,18 @@ export class ServiceManager {
         )
       }
 
-      if (await ownsRunningRoute(config.http.domain)) {
-        return `${protocol}://${config.http.domain}`
-      }
-
       const state = await getServiceState(this.project.id, name)
-      if (
-        state?.dynamicDomain &&
-        (await ownsRunningRoute(state.dynamicDomain))
-      ) {
-        return `${protocol}://${state.dynamicDomain}`
+      const configuredDomains = config.http.domain
+        ? [config.http.domain, ...(config.http.cnames ?? [])]
+        : []
+      const candidates =
+        state?.domains && state.domains.length > 0
+          ? state.domains
+          : configuredDomains
+      for (const domain of candidates) {
+        if (await ownsRunningRoute(domain)) {
+          return `${protocol}://${domain}`
+        }
       }
     }
 

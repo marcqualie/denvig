@@ -24,7 +24,7 @@ describe('DenvigService', () => {
     rmSync(tmpHome, { recursive: true, force: true })
   })
 
-  it('start({ claimDomains: true }) moves a domain owned by another running service', async (t) => {
+  it('start({ domains }) routes an explicit domain owned by another running service', async (t) => {
     await setGatewayRoute('hello.denvig.me', {
       project: 'other-project',
       service: 'hello',
@@ -60,14 +60,13 @@ describe('DenvigService', () => {
     }))
 
     const service = await project.services.retrieve('hello')
-    const response = await service.start({ claimDomains: true })
+    const response = await service.start({ domains: ['hello.denvig.me'] })
 
     ok(response)
     const route = await getGatewayRoute('hello.denvig.me')
     ok(route)
     strictEqual(route.project !== 'other-project', true)
     strictEqual(route.service, 'hello')
-    strictEqual(route.defaultService, false)
     strictEqual(route.desiredStatus, 'running')
   })
 })
