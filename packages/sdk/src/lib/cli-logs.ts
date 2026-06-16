@@ -19,22 +19,23 @@ export type CliLogEntry = {
 
 /**
  * Check if CLI logging is enabled.
- * Logging is enabled by default, but can be disabled via DENVIG_CLI_LOGS_ENABLED=0
+ * Logging is disabled by default, and can be enabled via DENVIG_CLI_LOGS_ENABLED=true
  */
 export const isCliLoggingEnabled = (): boolean => {
-  const envValue = process.env.DENVIG_CLI_LOGS_ENABLED
-  return envValue !== '0'
+  return process.env.DENVIG_CLI_LOGS_ENABLED === 'true'
 }
 
 /**
- * Get the path to the CLI logs file.
+ * Get the path to the CLI logs file for the current day.
+ * Logs are written to a daily file: ~/.denvig/logs/cli/{YYYY-MM-DD}.jsonl
  * Can be overridden via DENVIG_CLI_LOGS_PATH environment variable.
  */
 export const getCliLogsPath = (): string => {
   if (process.env.DENVIG_CLI_LOGS_PATH) {
     return resolve(process.env.DENVIG_CLI_LOGS_PATH)
   }
-  return resolve(homedir(), '.denvig', 'logs', 'cli.jsonl')
+  const date = new Date().toISOString().slice(0, 10)
+  return resolve(homedir(), '.denvig', 'logs', 'cli', `${date}.jsonl`)
 }
 
 /**

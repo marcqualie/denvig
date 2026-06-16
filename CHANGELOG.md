@@ -6,6 +6,9 @@
 
 - The gateway is now always enabled; the `experimental.gateway` config has been replaced by a top-level `gateway` config (with no `enabled` flag)
 - `services start` (including `--claim-domains`) no longer restarts a service that is already running; it just refreshes the gateway so domain changes apply without interrupting the process
+- Starting a service now keeps only the 10 most recent log files, removing older ones to save disk space
+- CLI usage logging is now disabled by default; set `DENVIG_CLI_LOGS_ENABLED=true` to enable it
+- CLI usage logs are now written to a daily file (`~/.denvig/logs/cli/{YYYY-MM-DD}.jsonl`) instead of a single growing file
 
 ## [0.7.0-alpha.6] - 2026-06-13
 

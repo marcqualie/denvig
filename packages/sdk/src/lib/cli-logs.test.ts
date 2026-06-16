@@ -24,6 +24,8 @@ describe('cli-logs', () => {
   beforeEach(async () => {
     // Clean up any existing log file before each test
     await rm(testLogPath, { force: true })
+    // Enable logging by default for these tests (it is disabled by default)
+    process.env.DENVIG_CLI_LOGS_ENABLED = 'true'
   })
 
   afterEach(async () => {
@@ -34,25 +36,25 @@ describe('cli-logs', () => {
   })
 
   describe('isCliLoggingEnabled()', () => {
-    it('should return true by default', () => {
+    it('should return false by default', () => {
       delete process.env.DENVIG_CLI_LOGS_ENABLED
-      assert.strictEqual(isCliLoggingEnabled(), true)
-    })
-
-    it('should return false when DENVIG_CLI_LOGS_ENABLED=0', () => {
-      process.env.DENVIG_CLI_LOGS_ENABLED = '0'
       assert.strictEqual(isCliLoggingEnabled(), false)
     })
 
-    it('should return true for any other value', () => {
-      process.env.DENVIG_CLI_LOGS_ENABLED = '1'
-      assert.strictEqual(isCliLoggingEnabled(), true)
-
+    it('should return true when DENVIG_CLI_LOGS_ENABLED=true', () => {
       process.env.DENVIG_CLI_LOGS_ENABLED = 'true'
       assert.strictEqual(isCliLoggingEnabled(), true)
+    })
+
+    it('should return false for any other value', () => {
+      process.env.DENVIG_CLI_LOGS_ENABLED = '1'
+      assert.strictEqual(isCliLoggingEnabled(), false)
+
+      process.env.DENVIG_CLI_LOGS_ENABLED = '0'
+      assert.strictEqual(isCliLoggingEnabled(), false)
 
       process.env.DENVIG_CLI_LOGS_ENABLED = 'false'
-      assert.strictEqual(isCliLoggingEnabled(), true)
+      assert.strictEqual(isCliLoggingEnabled(), false)
     })
   })
 
