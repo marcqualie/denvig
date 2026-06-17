@@ -2,120 +2,40 @@
 
 ## [Unreleased]
 
-## [0.7.0-alpha.8] - 2026-06-16
+Git worktree support is the headline of this release: run the same project's services side by side from separate worktrees, target a sibling worktree without changing directories, and have denvig resolve the right config wherever you run it.
 
 ### Added
 
-- `services start`/`services restart` accept `--domains` to route any domains to a service at launch, replacing the configured ones (e.g. `services start hello --domains hello2.denvig.me`); pairs with `--worktree` to give a worktree its own domain
-- The SDK's `service.start()` accepts a `domains` option matching the CLI's `--domains` flag
-- `services start`/`services restart` accept `--port` to pick a specific port (e.g. `--port 3000`) or `--port random` to allocate a free one; a busy port still falls back to a random one
-- The SDK's `service.start()` accepts a `port` option (`number | 'random'`)
+- `--worktree <branch>` on every `services` subcommand targets a sibling git worktree without switching directories (use `--worktree main` for the primary checkout)
+- Running denvig from inside a git worktree (including subdirectories and nested layouts) now resolves and defaults to that worktree's own config, dependencies, refs, and services
+- `denvig info` now shows `Refs:` and `Worktrees:` blocks identifying the project and listing its detached git worktrees
+- `denvig projects` groups each project's worktrees beneath it as a subtree, and `services list --worktrees` nests worktree services under each project (pair with `--all`)
+- `services start`/`services restart` accept `--domains` to route any domains to a service at launch (e.g. `--domains hello2.denvig.me`), pairing with `--worktree` to give a worktree its own domain
+- `services start`/`services restart` accept `--port` to pick a specific port (e.g. `--port 3000`) or `--port random` to allocate a free one; services without an `http.port` get a random `PORT` env var
+- `services list` gains a `--status <running|stopped|error>` filter (accepts a comma-separated list) and shows `http://localhost:<port>` when the effective port differs from the configured one
+- Runtime service state, gateway routes, and SSL certs are now persisted to `~/.denvig/state.json`, the source of truth for the gateway, certs, and `services list`
 
 ### Changed
 
-- The gateway is now always enabled; the `experimental.gateway` config has been replaced by a top-level `gateway` config (with no `enabled` flag)
-- `services start` no longer restarts a service that is already running; it just refreshes the gateway so domain changes apply without interrupting the process
-- Starting a service now claims its domains outright instead of falling back to a temporary domain when another service owns them; use `--domains` to route a worktree elsewhere
-
-### Removed
-
-- The `--claim-domains`/`--no-claim-domains` flags and the `claimDomains` SDK option, along with automatic temporary domains, in favour of the explicit `--domains` flag
-- The `--random-port` flag, replaced by `--port random`
-- Starting a service now keeps only the 10 most recent log files, removing older ones to save disk space
-- CLI usage logging is now disabled by default; set `DENVIG_CLI_LOGS_ENABLED=true` to enable it
-- CLI usage logs are now written to a daily file (`~/.denvig/logs/cli/{YYYY-MM-DD}.jsonl`) instead of a single growing file
-
-## [0.7.0-alpha.6] - 2026-06-13
-
-### Added
-
-- Services whose domain is already used by another running service now start on a temporary domain (e.g. `hello-mybranch.denvig.me`), so worktrees can run the same service side by side
-- Temporary domains are kept across restarts and unassigned when the service stops
-- `--claim-domains` (renamed from `--claim-domain`, since it claims the domain and all its cnames) now moves the domains to the new service, and stopping that service hands them back to their original owner
-- The SDK's `service.start()` accepts a `claimDomains` option matching the CLI's `--claim-domains` flag
-
-### Changed
-
-- Updated `semver` (7.8.1 → 7.8.4) and `rolldown-plugin-dts` (0.25.1 → 0.25.2) patch dependencies
-- Updated `@types/node` (25.9.1 → 25.9.3) and `turbo` (2.9.16 → 2.9.18) patch dependencies
-- Updated `rolldown` (1.0.3 → 1.1.1) minor dependency
-- Updated `@biomejs/biome` (2.4.16 → 2.5.0) minor dependency
-
-### Fixed
-
-- Service commands accept `local:` and bare path identifiers again (e.g. `denvig services start local:~/src/owner/project/dev`), inferring the service name from the final path segment
-- Services without an `http` block no longer get a random port allocated or show a `localhost` URL; only http services are assigned ports
-- `denvig deps outdated` no longer lists `link:` or `workspace:` dependencies, since they point at local code
-
-## [0.7.0-alpha.4] - 2026-06-06
-
-### Changed
-
-- `denvig run` no longer duplicates the command echo when running a pnpm `package.json` script (pnpm's own echo is suppressed, leaving denvig's single `$ …` line)
-- The CLI is now published as `@denvig/cli`; the `denvig` package re-exports it (available as `denvig/cli`) and keeps its existing SDK import
-- The SDK now runs in-process instead of shelling out to the CLI, so `DenvigSDK` calls execute directly and return data without spawning a subprocess
-- The SDK is also published standalone as `@denvig/sdk` (re-exported as `denvig/sdk`); the `DenvigSDK` constructor now only takes `client` and `cwd`
-- The SDK now exposes a resource-oriented API — resolve a project, then chain into its worktrees, actions, services, dependencies and config (e.g. `(await denvig.projects.retrieve(id)).services.retrieve('api')` then `.start()`)
-- The SDK's `project.dependencies` namespace gained `tree()` for the dependency tree and `info('npm:redis')` for registry lookups across ecosystems
-- The SDK gained `denvig.projects.list()` to enumerate every project, and the project resource now exposes its worktrees, info, plugins and service management directly
-- The SDK now serves generic helpers (`prettyPath`, `getSemverLevel`) from `@denvig/sdk/utils`, and its error classes (`DenvigValidationError`, …) and shared types are available from the package root
-- The SDK now serves filesystem helpers (`safeReadTextFile`, `pathExists`, `isDirectory`) from `@denvig/sdk/fs`
-- Certificate management now runs through the SDK: `denvig.certs.list()`/`retrieve()`/`create()`/`remove()`/`import()` plus the local CA via `denvig.certs.ca.status()`/`configure()`/`remove()` (the previous `denvig.certificates.list()` is now `denvig.certs.list()`)
-- Gateway management now runs through the SDK: `denvig.gateway.status()` and `denvig.gateway.configure()`
-- The SDK now reports its version via `denvig.version()`
-
-### Fixed
-
-- `denvig run` again resolves actions whose names contain a colon (e.g. `compile:darwin-x64`) instead of mistaking the colon for an `ecosystem:action` prefix
-- Services left behind by a deleted worktree are now cleaned up automatically, so a service can reclaim its domain instead of being stuck routing to `http://localhost:<port>` with no gateway config
-- A `services` command no longer reports spurious restarts of unrelated services (e.g. `↻ restarted … config changed since last bootstrap`); liveness is left to launchd, so a momentarily-down service is no longer needlessly re-bootstrapped
-- The `@denvig/sdk/testing` import now resolves when installed from npm (it previously pointed at source files that weren't shipped)
-
-## [0.7.0-alpha.3] - 2026-05-30
-
-### Changed
-
-- Shell completions moved to `denvig shell completions zsh` (pass the shell as an argument); unsupported shells now show a helpful error instead of being silently ignored
-- `denvig projects` now groups each project's worktrees beneath it as a subtree instead of listing them as separate projects
-- `denvig services list --worktrees` nests each project's worktree services beneath it (pair with `--all` to show worktrees for every project)
-
-### Fixed
-
-- Running denvig inside a git worktree (including subdirectories and nested layouts) now resolves the worktree's own config, dependencies, and refs
-
-## [0.7.0-alpha.2] - 2026-05-28
-
-### Changed
-
-- Prerelease tags (`vX.Y.Z-alpha.N` / `-beta.N` / `-rc.N`) now publish to npm under matching dist-tags (`@alpha`, `@beta`, `@rc`) instead of `@latest`, so `pnpm add denvig` keeps tracking stable releases
-
-## [0.7.0-alpha.1] - 2026-05-28
-
-### Added
-
-- Projects now expose a list of refs identifying themselves and the worktree they live in, shown in a new `Refs:` block in `denvig info` and on the SDK's `ProjectResponse`
-- `denvig info` now shows a `Worktrees:` block listing detached git worktrees for the project, also exposed as `worktrees` on the SDK's `ProjectResponse`
-- `--worktree <branch>` flag on every `services` subcommand to target a sibling git worktree without switching directories (use `--worktree main` for the primary checkout)
-- Running `denvig` from inside a detached git worktree now defaults to that worktree's services instead of the primary checkout's
-- `services start` and `services restart` detect when the configured port is already in use and prompt to fall back to a randomly allocated dev port (auto-allocates when non-interactive or with `--random-port`)
-- Services without a `http.port` in config now get a randomly allocated `PORT` env var when started
-- Runtime service state (allocated ports, domains, desired status) is persisted to `~/.denvig/state.json` and used by the gateway and `services list` so multiple worktrees can run services that share a config port
-- Gateway routes are now tracked in `~/.denvig/state.json` and are the source of truth for nginx configs and the `services list` URL column
-- When a worktree starts a service on a fallback port, denvig prompts to override the configured domain so the gateway points at the worktree (use `--claim-domain` / `--no-claim-domain` to skip the prompt)
-- `services list`, `services status`, and the start/restart confirmations now also show `http://localhost:<port>` when the effective port differs from the config port, giving you a direct URL even when another worktree owns the domain
-- `~/.denvig/state.json` is now the source of truth for services: `services start` snapshots the full config (command, env, http, etc.) into state and every mutating `services` command then reconciles launchctl against it (starting services that should be running, stopping unknown ones, restarting when the snapshot drifts from the on-disk plist)
-- `denvig gateway configure` now runs the same reconcile pass before rebuilding nginx, so it can be used to manually re-sync launchctl with state.json
-- `~/.denvig/state.json` now also tracks SSL certs in a top-level `certs` map and each gateway route references the cert it should present; nginx is rendered from this snapshot rather than re-scanning `~/.denvig/certs/` on every regeneration
-- `services list --status <running|stopped|error>` filters the output by runtime status, and accepts a comma-separated list (e.g., `--status stopped,error`)
-
-### Changed
-
+- The gateway is now always enabled; the `experimental.gateway` config has been replaced by a top-level `gateway` config
 - CLI now errors on unknown subcommands and unrecognised flags instead of silently falling back to the default subcommand
-- `bin/denvig-dev` no longer enables CPU profiling by default; opt in with `DEBUG=denvig:*` or `DEBUG=denvig:cpu`
 - `services list` now defaults to the current project; use `--all` for every project plus globals, or `--global` for globals only
+- `services start` no longer restarts a service that is already running; it just refreshes the gateway so domain changes apply without interrupting the process
+- Shell completions moved to `denvig shell completions zsh` (pass the shell as an argument); unsupported shells now show a helpful error
+- CLI usage logging is now disabled by default (set `DENVIG_CLI_LOGS_ENABLED=true` to enable) and writes to a daily file (`~/.denvig/logs/cli/{YYYY-MM-DD}.jsonl`); starting a service keeps only the 10 most recent log files
+- Prerelease tags now publish to npm under matching dist-tags (`@alpha`, `@beta`, `@rc`) instead of `@latest`, so `pnpm add denvig` keeps tracking stable releases
+- The CLI is now published as `@denvig/cli` and the SDK standalone as `@denvig/sdk` (re-exported as `denvig/cli` and `denvig/sdk`); the SDK now runs in-process instead of shelling out to the CLI
+- The SDK now exposes a resource-oriented API — resolve a project, then chain into its worktrees, actions, services, dependencies, certs, gateway and config (e.g. `(await denvig.projects.retrieve(id)).services.retrieve('api').start()`) — with helpers from `@denvig/sdk/utils` and `@denvig/sdk/fs`, error classes and types from the package root, and `denvig.version()`
 - Migrated the build from `tsup` to `rolldown`
-- Removed the default export from the SDK entry point; use the named import (`import { DenvigSDK } from 'denvig'`)
-- SDK `services.list()` now returns services from every project by default; pass `{ project }` to scope to one project, `{ project, worktree }` to target a worktree, and `{ status }` to filter by runtime status
+
+### Fixed
+
+- `denvig run` resolves actions whose names contain a colon (e.g. `compile:darwin-x64`) and no longer duplicates the command echo for pnpm `package.json` scripts
+- Service commands accept `local:` and bare path identifiers again, inferring the service name from the final path segment
+- Services without an `http` block no longer get a port allocated or show a `localhost` URL
+- Services left behind by a deleted worktree are cleaned up automatically, and `services` commands no longer report spurious restarts of unrelated services
+- `denvig deps outdated` no longer lists `link:` or `workspace:` dependencies, since they point at local code
+- The `@denvig/sdk/testing` import now resolves when installed from npm
 
 ## [0.6.7] - 2026-05-08
 
