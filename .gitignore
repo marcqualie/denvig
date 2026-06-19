@@ -22,3 +22,8 @@ logs/*
 
 # sensitive
 certs
+
+# ai
+.claude/settigs.local.json
+.claude/plans
+.claude/notes
