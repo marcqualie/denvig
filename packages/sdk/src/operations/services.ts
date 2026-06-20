@@ -19,7 +19,11 @@ export type ListServicesOptions = {
   all?: boolean
   /** List only global services. */
   global?: boolean
-  /** Nest each project's worktree services beneath it. */
+  /**
+   * Nest each project's worktree services beneath it. Defaults to `true`;
+   * pass `false` to list only the primary checkout's services. Targeting a
+   * single worktree or the global scope disables nesting on its own.
+   */
   worktrees?: boolean
   /** Target a sibling git worktree by branch name (use "main" for primary). */
   worktree?: string
@@ -75,8 +79,12 @@ export const collectServiceRows = async (
 ): Promise<ServiceRow[]> => {
   const all = !!options.all
   const globalOnly = !!options.global
-  const showWorktrees = !!options.worktrees
   const worktreeFlag = options.worktree ?? null
+  // Worktrees are nested by default. Targeting a single worktree or the global
+  // scope is a narrower view, so it implicitly turns nesting off unless the
+  // caller explicitly asked for it (which is then a contradiction).
+  const showWorktrees =
+    options.worktrees ?? (!globalOnly && worktreeFlag === null)
   const statusFilter = normalizeStatusFilter(options.status)
 
   if ((all || globalOnly) && worktreeFlag !== null) {
@@ -84,7 +92,7 @@ export const collectServiceRows = async (
       'worktree cannot be combined with all or global.',
     )
   }
-  if (showWorktrees && (globalOnly || worktreeFlag !== null)) {
+  if (options.worktrees === true && (globalOnly || worktreeFlag !== null)) {
     throw new DenvigValidationError(
       'worktrees cannot be combined with global or worktree.',
     )
