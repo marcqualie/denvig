@@ -13,6 +13,7 @@
 - `services` now nests each project's worktree services by default; pass `--no-worktrees` to list only the main project's services
 - `services start` on a service that is already running with matching config now skips straight to its links/ports with an "is already running" message instead of waiting
 - `services start` now uses the same "config changed since last bootstrap" wording (and shows the diff) as the reconciler when it restarts a running service to apply config changes
+- Updated build tooling dependencies (rolldown, rolldown-plugin-dts)
 
 ### Fixed
 
