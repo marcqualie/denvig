@@ -15,7 +15,14 @@ import {
 export type ReconcileAction =
   | { type: 'started'; project: string; service: string; reason: string }
   | { type: 'stopped'; project: string; service: string; reason: string }
-  | { type: 'restarted'; project: string; service: string; reason: string }
+  | {
+      type: 'restarted'
+      project: string
+      service: string
+      reason: string
+      /** Unified-style plist diff explaining the config change. */
+      diff?: string[]
+    }
   | { type: 'skipped'; project: string; service: string; reason: string }
 
 export type ReconcileResult = {
@@ -28,6 +35,13 @@ export type ReconcileResult = {
 }
 
 const LABEL_PREFIX = 'denvig.'
+
+/**
+ * Shared reason text shown whenever a running service is restarted because its
+ * rendered config changed. Used by the reconciler, `gateway configure` and
+ * `services start` so the wording stays identical across every surface.
+ */
+export const CONFIG_CHANGED_REASON = 'config changed since last bootstrap'
 
 /**
  * Parse a launchctl label of the form `denvig.{projectId}.{serviceName}`.
@@ -216,20 +230,30 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
         })
         continue
       }
-      if (start.message === 'Service already running with current config') {
-        result.actions.push({
-          type: 'skipped',
-          project: project.slug,
-          service: entry.serviceName,
-          reason: 'already running with current config',
-        })
-      } else if (launchctlByLabel.has(label)) {
-        result.actions.push({
-          type: 'restarted',
-          project: project.slug,
-          service: entry.serviceName,
-          reason: 'config changed since last bootstrap',
-        })
+      const configChanged = !!start.configDiff && start.configDiff.length > 0
+      if (launchctlByLabel.has(label)) {
+        // The service was already bootstrapped. Only report a restart when the
+        // rendered plist actually changed — otherwise the service was left
+        // running untouched. Without this guard a running service is reported
+        // as "restarted / config changed" on every reconcile, because the
+        // start path returns a "refreshed gateway" message rather than the
+        // "current config" sentinel.
+        if (configChanged) {
+          result.actions.push({
+            type: 'restarted',
+            project: project.slug,
+            service: entry.serviceName,
+            reason: CONFIG_CHANGED_REASON,
+            diff: start.configDiff,
+          })
+        } else {
+          result.actions.push({
+            type: 'skipped',
+            project: project.slug,
+            service: entry.serviceName,
+            reason: 'already running with current config',
+          })
+        }
       } else {
         result.actions.push({
           type: 'started',

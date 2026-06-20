@@ -15,6 +15,7 @@ import { basename, resolve } from 'node:path'
 
 import { findCertForDomain, resolveSslPaths } from '../gateway/certs.ts'
 import { configureGateway } from '../gateway/configure.ts'
+import { diffLines } from './diff.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
@@ -510,8 +511,22 @@ export class ServiceManager {
       // File doesn't exist yet
     }
     const plistChanged = existingPlistContent !== plistContent
-    if (plistChanged) {
-      await writeFile(plistPath, plistContent, 'utf-8')
+    // Diff the rendered config so callers can show *what* changed (and hence
+    // why a running service needs restarting). Only when an earlier plist
+    // existed — a freshly created one has nothing to compare against.
+    const configDiff =
+      plistChanged && existingPlistContent !== null
+        ? diffLines(existingPlistContent, plistContent)
+        : undefined
+
+    // The plist is written only as part of an actual (re)bootstrap below, never
+    // eagerly. Writing it without relaunching would let the on-disk plist run
+    // ahead of the live process: a later reconcile would then see plist ==
+    // desired and skip, leaving the process stuck on its old config forever.
+    // Keeping the write paired with the bootstrap means an unchanged plist is a
+    // reliable signal that the running process is already up to date.
+    const writePlist = async () => {
+      if (plistChanged) await writeFile(plistPath, plistContent, 'utf-8')
     }
 
     // Enable service so launchd will start it (reverses disable from stop)
@@ -521,6 +536,7 @@ export class ServiceManager {
     // The reconciler relies on this being idempotent: if the plist is
     // unchanged and the service is already bootstrapped, do nothing.
     if (!isBootstrapped) {
+      await writePlist()
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
         return {
@@ -529,25 +545,27 @@ export class ServiceManager {
           message: `Failed to bootstrap service: ${bootstrapResult.output}`,
         }
       }
-    } else if (isLive) {
-      // The service is already running — never tear it down on `start`. The
-      // gateway routes (including any newly claimed domains) were updated in
-      // state above and the caller refreshes the gateway, so domain changes
-      // take effect without restarting the process. A changed plist has been
-      // written to disk and applies on the next explicit `services restart`.
+    } else if (isLive && !plistChanged) {
+      // The service is already running with an up-to-date plist. Domains live
+      // in the gateway routes, not the plist, so a domain-only change leaves
+      // the plist untouched: the routes were written to state above and the
+      // caller refreshes the gateway, applying the change without interrupting
+      // the process. Nothing to restart.
       return {
         name,
         success: true,
-        message: plistChanged
-          ? 'Service already running; refreshed gateway (run `services restart` to apply config changes)'
-          : 'Service already running; refreshed gateway',
+        message: 'Service already running; refreshed gateway',
+        alreadyRunning: true,
       }
     } else if (plistChanged || options?.reviveIfNotRunning !== false) {
-      // The service is bootstrapped but no longer running. Bootout and
-      // bootstrap again to give launchd a fresh start — for an explicit start
-      // (revival) or because the plist changed. The reconciler opts out of
-      // revival (`reviveIfNotRunning: false`): a bootstrapped service's
-      // liveness is launchd's to manage, so it leaves an unchanged plist alone.
+      // Restart by booting out and bootstrapping again. This covers a running
+      // service whose plist actually changed (a new port, command or env can
+      // only take effect by relaunching the process), a bootstrapped-but-dead
+      // service being revived on an explicit start, or a dead service whose
+      // plist changed. The reconciler opts out of revival
+      // (`reviveIfNotRunning: false`): a bootstrapped service's liveness is
+      // launchd's to manage, so it leaves an unchanged plist alone — but a
+      // genuine config change is still applied here.
       const bootoutResult = await launchctl.bootout(label)
       if (!bootoutResult.success) {
         return {
@@ -559,6 +577,7 @@ export class ServiceManager {
 
       // sleep for 1 second to allow bootout to complete
       await new Promise((resolve) => setTimeout(resolve, 1000))
+      await writePlist()
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
         return {
@@ -574,6 +593,7 @@ export class ServiceManager {
         name,
         success: true,
         message: 'Service already running with current config',
+        alreadyRunning: true,
       }
     }
 
@@ -589,6 +609,7 @@ export class ServiceManager {
       name,
       success: true,
       message: 'Service started successfully',
+      configDiff,
     }
   }
 

@@ -1,3 +1,4 @@
+import { CONFIG_CHANGED_REASON } from '@denvig/sdk/internal'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
@@ -103,10 +104,6 @@ export const servicesStartCommand = new Command({
             .filter(Boolean)
         : undefined
 
-    if (!flags.json) {
-      console.log(`Starting ${projectPrefix}${serviceName}...`)
-    }
-
     const result = await manager.startService(serviceName, {
       port: portResolution.port,
       portResolved: true,
@@ -135,8 +132,30 @@ export const servicesStartCommand = new Command({
       return { success: false, message: result.message }
     }
 
-    // Wait for service to start
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    // An already-running service with matching config was left untouched — it's
+    // already up. A running service whose config changed was restarted in place
+    // to apply it (`configDiff` carries what changed). Anything else is a plain
+    // launch. The wording mirrors the reconciler / `gateway configure` so a
+    // restart reads the same however it was triggered.
+    const alreadyRunning = result.alreadyRunning === true
+    const restartedForConfig =
+      !alreadyRunning && !!result.configDiff && result.configDiff.length > 0
+    if (!alreadyRunning) {
+      if (!flags.json) {
+        if (restartedForConfig) {
+          console.log(
+            `↻ Restarting ${projectPrefix}${serviceName} — ${CONFIG_CHANGED_REASON}`,
+          )
+          for (const line of result.configDiff ?? []) {
+            console.log(`    ${line}`)
+          }
+        } else {
+          console.log(`Starting ${projectPrefix}${serviceName}...`)
+        }
+      }
+      // Wait for service to start
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
 
     // Get service response
     const response = await manager.getServiceResponse(serviceName, {
@@ -153,7 +172,11 @@ export const servicesStartCommand = new Command({
       } else {
         const urlInfo = response.url ? ` → ${response.url}` : ''
         console.log(
-          `✓ ${projectPrefix}${serviceName} started successfully${urlInfo}`,
+          alreadyRunning
+            ? `✓ ${projectPrefix}${serviceName} is already running${urlInfo}`
+            : restartedForConfig
+              ? `✓ ${projectPrefix}${serviceName} restarted${urlInfo}`
+              : `✓ ${projectPrefix}${serviceName} started successfully${urlInfo}`,
         )
         const showLocal =
           response.localUrl &&

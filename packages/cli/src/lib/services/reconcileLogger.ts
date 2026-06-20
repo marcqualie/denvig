@@ -26,6 +26,15 @@ export const reconcileAfterCommand = async (options: {
       console.log(
         `${icon} ${action.type} ${action.project}/${action.service} — ${action.reason}`,
       )
+      if (
+        action.type === 'restarted' &&
+        action.diff &&
+        action.diff.length > 0
+      ) {
+        for (const line of action.diff) {
+          console.log(`    ${line}`)
+        }
+      }
     }
     for (const err of result.errors) {
       console.error(`reconcile: ${err.project}/${err.service}: ${err.message}`)

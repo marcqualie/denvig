@@ -28,6 +28,18 @@ export type ServiceResult = {
   name: string
   success: boolean
   message: string
+  /**
+   * Unified-style diff of the launchd plist (the rendered service config) when
+   * starting changed it, explaining why the service was — or needs to be —
+   * restarted. Absent when the plist was unchanged or freshly created.
+   */
+  configDiff?: string[]
+  /**
+   * True when the service was already running with matching config and was
+   * left untouched — nothing was (re)started. Callers can skip the wait for a
+   * launch and report "already running" instead.
+   */
+  alreadyRunning?: boolean
 }
 
 /**

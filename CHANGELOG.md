@@ -6,6 +6,17 @@
 
 - `services start` accepts `--no-domains` to start a service on its port only, leaving any existing domain route owner in place
 - SDK `service.start({ domains: [] })` starts a service without claiming any domain
+- `services start` and `gateway configure` now print a diff of what config changed whenever they restart a service
+
+### Changed
+
+- `services start` on a service that is already running with matching config now skips straight to its links/ports with an "is already running" message instead of waiting
+- `services start` now uses the same "config changed since last bootstrap" wording (and shows the diff) as the reconciler when it restarts a running service to apply config changes
+
+### Fixed
+
+- `services start` and `gateway configure` no longer report every running service as restarted on each run; running services are now only flagged when their config actually changed
+- A running service whose config changed (e.g. a new port, command or env) is now actually restarted to apply the change, instead of reporting a restart that never happened
 
 ## [0.7.0] - 2026-06-17
 
