@@ -2,6 +2,7 @@ import { type LaunchctlListItem, launchctl } from '@denvig/sdk/internal'
 import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
+import { statusIcon } from '../../lib/formatters/status-icon.ts'
 
 import type {
   DenvigProject,
@@ -10,17 +11,6 @@ import type {
 } from '@denvig/sdk'
 
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
-
-const getStatusIcon = (status: ProjectServiceStatus): string => {
-  switch (status) {
-    case 'running':
-      return '🟢'
-    case 'stopped':
-      return '◯'
-    default:
-      return ''
-  }
-}
 
 /** A row in the rendered list: a project, or one of its worktrees. */
 type ProjectRow = {
@@ -116,7 +106,7 @@ export const projectsListCommand = new Command({
     for (const r of rows) {
       // Service icon in a fixed left column, one space, the name (padded), one
       // space, then the path.
-      const icon = getStatusIcon(r.status) || ' '
+      const icon = statusIcon(r.status) || ' '
       const name = nameCell(r).padEnd(nameWidth)
       console.log(`${icon} ${name} ${prettyPath(r.path)}`)
     }

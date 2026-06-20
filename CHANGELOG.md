@@ -16,6 +16,7 @@
 
 ### Fixed
 
+- Service and project status icons are now all the same width, so running and stopped rows line up in the list
 - `services start` and `gateway configure` no longer report every running service as restarted on each run; running services are now only flagged when their config actually changed
 - A running service whose config changed (e.g. a new port, command or env) is now actually restarted to apply the change, instead of reporting a restart that never happened
 

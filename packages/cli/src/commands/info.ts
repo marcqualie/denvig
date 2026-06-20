@@ -1,17 +1,7 @@
 import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../lib/command.ts'
-
-const getStatusIcon = (status: 'running' | 'stopped' | 'none'): string => {
-  switch (status) {
-    case 'running':
-      return '🟢'
-    case 'stopped':
-      return '◯'
-    default:
-      return ''
-  }
-}
+import { statusIcon } from '../lib/formatters/status-icon.ts'
 
 export const infoCommand = new Command({
   name: 'info',
@@ -28,8 +18,8 @@ export const infoCommand = new Command({
       return { success: true }
     }
 
-    const statusIcon = getStatusIcon(info.serviceStatus)
-    const statusText = statusIcon ? `${statusIcon} ` : ''
+    const icon = statusIcon(info.serviceStatus)
+    const statusText = icon ? `${icon} ` : ''
 
     console.log(`${statusText}${info.config?.name || info.slug}`)
     console.log(`   Path: ${prettyPath(info.path)}`)
