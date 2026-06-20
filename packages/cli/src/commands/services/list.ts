@@ -5,18 +5,8 @@ import {
 } from '@denvig/sdk'
 
 import { Command } from '../../lib/command.ts'
+import { statusIcon } from '../../lib/formatters/status-icon.ts'
 import { formatTable } from '../../lib/formatters/table.ts'
-
-const getStatusIcon = (status: 'running' | 'error' | 'stopped'): string => {
-  switch (status) {
-    case 'running':
-      return '🟢'
-    case 'error':
-      return '🔴'
-    default:
-      return '◯'
-  }
-}
 
 export const servicesListCommand = new Command({
   name: 'services:list',
@@ -142,7 +132,7 @@ export const servicesListCommand = new Command({
       columns: [
         {
           header: '',
-          accessor: (r) => getStatusIcon(r.service.status),
+          accessor: (r) => statusIcon(r.service.status),
         },
         ...(showProjectColumn
           ? [
