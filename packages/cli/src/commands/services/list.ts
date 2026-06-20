@@ -22,7 +22,7 @@ export const servicesListCommand = new Command({
   name: 'services:list',
   description: 'List services for the current project',
   usage:
-    'services list [--all] [--worktrees] [--global] [--worktree <branch>] [--status <status>]',
+    'services list [--all] [--no-worktrees] [--global] [--worktree <branch>] [--status <status>]',
   example: 'services list',
   args: [],
   flags: [
@@ -34,9 +34,9 @@ export const servicesListCommand = new Command({
       defaultValue: false,
     },
     {
-      name: 'worktrees',
+      name: 'no-worktrees',
       description:
-        "Nest each project's worktree services beneath it. Pair with --all to show worktrees for every project.",
+        "Only list the current project's services, hiding the worktree services nested beneath them.",
       required: false,
       type: 'boolean',
       defaultValue: false,
@@ -69,11 +69,15 @@ export const servicesListCommand = new Command({
   handler: async ({ project, flags }) => {
     const all = flags.all as boolean
     const globalOnly = flags.global as boolean
-    const showWorktrees = flags.worktrees as boolean
+    const noWorktrees = flags['no-worktrees'] as boolean
     const worktreeFlag =
       typeof flags.worktree === 'string' ? flags.worktree : undefined
     const statusFlag =
       typeof flags.status === 'string' ? flags.status : undefined
+
+    // Worktrees nest by default; --no-worktrees, --global and --worktree each
+    // collapse to a single scope.
+    const showWorktrees = !noWorktrees && !globalOnly && !worktreeFlag
 
     let filteredServices: ServiceRow[]
     try {
