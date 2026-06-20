@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- `services start` accepts `--no-domains` to start a service on its port only, leaving any existing domain route owner in place
+- SDK `service.start({ domains: [] })` starts a service without claiming any domain
+
 ## [0.7.0] - 2026-06-17
 
 Git worktree support is the headline of this release: run the same project's services side by side from separate worktrees, target a sibling worktree without changing directories, and have denvig resolve the right config wherever you run it.

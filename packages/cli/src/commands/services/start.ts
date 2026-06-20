@@ -10,7 +10,7 @@ export const servicesStartCommand = new Command({
   name: 'services:start',
   description: 'Start a service',
   usage:
-    'services start <name> [--worktree <branch>] [--port <port>] [--domains <list>]',
+    'services start <name> [--worktree <branch>] [--port <port>] [--domains <list>] [--no-domains]',
   example: 'services start api',
   args: [
     {
@@ -42,6 +42,13 @@ export const servicesStartCommand = new Command({
         'Comma-separated domains to route to this start, replacing the configured ones and claiming them from any current owner (handed back on stop)',
       required: false,
       type: 'string',
+    },
+    {
+      name: 'no-domains',
+      description:
+        'Start without claiming any domain — run on the port only and leave any existing route owner in place (takes precedence over --domains)',
+      required: false,
+      type: 'boolean',
     },
   ],
   completions: ({ project, sdk }) => {
@@ -103,7 +110,11 @@ export const servicesStartCommand = new Command({
     const result = await manager.startService(serviceName, {
       port: portResolution.port,
       portResolved: true,
-      domains: domains && domains.length > 0 ? domains : undefined,
+      domains: flags['no-domains']
+        ? []
+        : domains && domains.length > 0
+          ? domains
+          : undefined,
     })
 
     if (!result.success) {

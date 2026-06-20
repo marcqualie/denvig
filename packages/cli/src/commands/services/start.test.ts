@@ -12,7 +12,13 @@ describe('servicesStartCommand', () => {
   it('should have correct usage', () => {
     ok(
       servicesStartCommand.usage ===
-        'services start <name> [--worktree <branch>] [--port <port>] [--domains <list>]',
+        'services start <name> [--worktree <branch>] [--port <port>] [--domains <list>] [--no-domains]',
     )
+  })
+
+  it('should expose a boolean --no-domains flag', () => {
+    const flag = servicesStartCommand.flags.find((f) => f.name === 'no-domains')
+    ok(flag)
+    ok(flag.type === 'boolean')
   })
 })

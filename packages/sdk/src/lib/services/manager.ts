@@ -315,7 +315,9 @@ export class ServiceManager {
    *   replacing the domains declared in the service config. Each domain is
    *   claimed unconditionally — any existing route is taken over and handed
    *   back to a running owner when this service stops. When omitted, the
-   *   configured domains are used.
+   *   configured domains are used. Pass an empty array to start the service
+   *   without claiming any domain (it runs on its port only and does not take
+   *   over an existing route).
    * @param options.reviveIfNotRunning - When the service is already
    *   bootstrapped with an unchanged plist but isn't currently running,
    *   bootout and bootstrap again to kick it (`true`, the default — what an
@@ -392,10 +394,10 @@ export class ServiceManager {
     const configuredDomains = config.http?.domain
       ? [config.http.domain, ...(config.http.cnames ?? [])]
       : []
-    const domains =
-      options?.domains && options.domains.length > 0
-        ? options.domains
-        : configuredDomains
+    // A provided array is honoured verbatim, including an empty one: `[]`
+    // means "claim nothing" (run on the port only, don't take over a route).
+    // Only an omitted `domains` falls back to the configured domains.
+    const domains = options?.domains ?? configuredDomains
     await updateServiceState(this.project.id, name, {
       cwd: this.resolveServiceCwd(config),
       port: effectivePort,
@@ -1138,10 +1140,10 @@ export class ServiceManager {
       const configuredDomains = config.http.domain
         ? [config.http.domain, ...(config.http.cnames ?? [])]
         : []
-      const candidates =
-        state?.domains && state.domains.length > 0
-          ? state.domains
-          : configuredDomains
+      // An explicit empty array in state means "claim nothing" — honour it
+      // verbatim so the canonical URL falls back to the localhost form. Only
+      // an absent `domains` (state never recorded) uses the configured set.
+      const candidates = state?.domains ?? configuredDomains
       for (const domain of candidates) {
         if (await ownsRunningRoute(domain)) {
           return `${protocol}://${domain}`
