@@ -34,6 +34,15 @@ export const gatewayConfigureCommand = new Command({
           console.log(
             `${icon} ${action.type} ${action.project}/${action.service} — ${action.reason}`,
           )
+          if (
+            action.type === 'restarted' &&
+            action.diff &&
+            action.diff.length > 0
+          ) {
+            for (const line of action.diff) {
+              console.log(`    ${line}`)
+            }
+          }
         }
         console.log('')
       }
