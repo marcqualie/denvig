@@ -257,7 +257,9 @@ export type StartServiceOptions = ServiceOperationOptions & {
    * Explicit domains to route to this start, replacing the domains declared
    * in the service config. Each domain is claimed unconditionally — any
    * existing route is taken over and handed back to a running owner when
-   * this service stops. When omitted, the configured domains are used.
+   * this service stops. When omitted, the configured domains are used. Pass
+   * an empty array to start the service without claiming any domain (it runs
+   * on its port only and does not take over an existing route).
    */
   domains?: string[]
   /**

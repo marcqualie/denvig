@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
-import { ok, strictEqual } from 'node:assert'
+import { deepStrictEqual, ok, strictEqual } from 'node:assert'
 import {
   mkdirSync,
   mkdtempSync,
@@ -714,6 +714,76 @@ describe('ServiceManager', () => {
       })
       ok(result.success, result.message)
 
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, worktree.id)
+      strictEqual(route?.port, 9001)
+      strictEqual(
+        await manager.getServiceUrl('hello'),
+        'http://hello.denvig.me',
+      )
+    })
+
+    it('claims nothing when started with an empty domains array', async (t) => {
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+        domains: [],
+      })
+      ok(result.success, result.message)
+
+      // The desired state records the empty claim verbatim so the reconciler
+      // keeps re-applying "no domains".
+      const state = await getServiceState(worktree.id, 'hello')
+      deepStrictEqual(state?.domains, [])
+
+      // No gateway route was registered for the configured domain.
+      strictEqual(await getGatewayRoute('hello.denvig.me'), null)
+
+      // The canonical URL falls back to the localhost form.
+      strictEqual(await manager.getServiceUrl('hello'), 'http://localhost:9001')
+    })
+
+    it('does not steal a domain owned by another running service when started with []', async (t) => {
+      const original = createOriginalProject()
+      await seedRunningOriginal(original)
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+        domains: [],
+      })
+      ok(result.success, result.message)
+
+      // The original service keeps ownership of the configured domain.
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.project, original.id)
+      strictEqual(route?.port, 8080)
+      strictEqual(route?.desiredStatus, 'running')
+
+      // The worktree start runs on its port only.
+      strictEqual(await manager.getServiceUrl('hello'), 'http://localhost:9001')
+    })
+
+    it('claims the configured domain when started with omitted domains', async (t) => {
+      const worktree = createWorktreeProject()
+      const manager = new ServiceManager(worktree)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 9001,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const state = await getServiceState(worktree.id, 'hello')
+      deepStrictEqual(state?.domains, ['hello.denvig.me'])
       const route = await getGatewayRoute('hello.denvig.me')
       strictEqual(route?.project, worktree.id)
       strictEqual(route?.port, 9001)

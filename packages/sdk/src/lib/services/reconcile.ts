@@ -199,6 +199,11 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
         // recorded by an older version.
         port: entry.config?.http ? entry.port : undefined,
         portResolved: true,
+        // Re-apply the exact domain claim recorded in state rather than
+        // recomputing from config. This preserves a "no claim" start
+        // (domains: []) — without it, the reconciler would re-expand to the
+        // configured domains and steal a route the user chose not to take.
+        domains: entry.domains,
         // Liveness is launchd's job — only re-bootstrap on a real plist
         // change, never just because the process is momentarily down.
         reviveIfNotRunning: false,
