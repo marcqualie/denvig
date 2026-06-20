@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-06-20
+
 ### Added
 
 - `services start` accepts `--no-domains` to start a service on its port only, leaving any existing domain route owner in place
