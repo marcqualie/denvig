@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- Services can now run in a docker container with `runtime: docker`, mounting the project at `/denvig/project` with the working directory set to the service's location within it (set `image:` to pick the image, defaults to `alpine:3.23`)
+- Container services support `http.containerPort` to map the host port to a different port inside the container (e.g. `port: 16379` → `containerPort: 6379`)
+- Container services support `container.mountProject: false` to run without mounting the project directory (handy for utility services like a database)
+
 ## [0.7.1] - 2026-06-20
 
 ### Added

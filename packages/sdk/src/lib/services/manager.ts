@@ -11,12 +11,20 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
-import { basename, resolve } from 'node:path'
+import { basename, isAbsolute, relative, resolve } from 'node:path'
 
 import { findCertForDomain, resolveSslPaths } from '../gateway/certs.ts'
 import { configureGateway } from '../gateway/configure.ts'
+import { detectGitWorktree } from '../project/git.ts'
 import { diffLines } from './diff.ts'
+import {
+  buildDockerRunCommand,
+  CONTAINER_PROJECT_DIR,
+  DEFAULT_DOCKER_IMAGE,
+  type DockerMount,
+} from './docker.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
+import { isGlobalSlug } from './global.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
 import { allocateRandomPort, isPortInUse } from './ports.ts'
@@ -82,10 +90,123 @@ export class ServiceManager {
     return Object.entries(services).map(([name, config]) => ({
       name,
       cwd: config.cwd || '.',
-      command: config.command,
+      command: this.getDisplayCommand(config),
       http: config.http,
       startOnBoot: config.startOnBoot,
     }))
+  }
+
+  /**
+   * Whether a service runs in a docker container.
+   */
+  private isDockerService(config: ServiceConfig): boolean {
+    return (config.runtime ?? 'host') === 'docker'
+  }
+
+  /**
+   * Human-readable command shown in list/status output. For docker services
+   * this summarises the image (and any command override) rather than the full
+   * generated `docker run` invocation.
+   */
+  private getDisplayCommand(config: ServiceConfig): string {
+    if (this.isDockerService(config)) {
+      const image = config.image ?? DEFAULT_DOCKER_IMAGE
+      return config.command?.trim()
+        ? `docker run ${image} ${config.command.trim()}`
+        : `docker run ${image}`
+    }
+    return config.command ?? ''
+  }
+
+  /**
+   * Build the actual command launchd executes for a service. Host services
+   * run their command verbatim; docker services run a generated `docker run`
+   * invocation that mounts the project at /denvig/project and forwards the
+   * resolved environment into the container.
+   *
+   * @param options.hostPort - The resolved host port (the one launchd/gateway
+   *   sees). Mapped to the container port for docker services.
+   * @param options.containerPort - The port the container listens on.
+   * @param options.envKeys - Environment variable names to forward into the
+   *   container (their values come from the plist environment).
+   */
+  private buildRunCommand(
+    name: string,
+    config: ServiceConfig,
+    options: {
+      hostPort?: number
+      containerPort?: number
+      envKeys: string[]
+    },
+  ): { ok: true; command: string } | { ok: false; message: string } {
+    if (!this.isDockerService(config)) {
+      return { ok: true, command: config.command ?? '' }
+    }
+    const resolved = this.resolveDockerMounts(config)
+    if (!resolved.ok) {
+      return resolved
+    }
+    return {
+      ok: true,
+      command: buildDockerRunCommand({
+        containerName: this.getServiceLabel(name),
+        image: config.image ?? DEFAULT_DOCKER_IMAGE,
+        mounts: resolved.mounts,
+        workdir: resolved.workdir,
+        hostPort: options.hostPort,
+        containerPort: options.containerPort,
+        envKeys: options.envKeys,
+        command: config.command,
+      }),
+    }
+  }
+
+  /**
+   * Resolve the bind mounts and working directory for a docker service.
+   *
+   * The whole project (the primary checkout) is mounted at `/denvig/project`,
+   * so tools like git inside the container can reach the full project. The
+   * working directory is the service's directory expressed inside that mount:
+   * the project root for the primary checkout, or the worktree's location
+   * within the project for a detached worktree.
+   *
+   * Returns an error when the service directory lives outside the project root
+   * (the code wouldn't be part of the mount), or `mounts: []` with no working
+   * directory when `container.mountProject` is `false`.
+   */
+  private resolveDockerMounts(
+    config: ServiceConfig,
+  ):
+    | { ok: true; mounts: DockerMount[]; workdir?: string }
+    | { ok: false; message: string } {
+    const mountProject = config.container?.mountProject ?? true
+    if (!mountProject) {
+      return { ok: true, mounts: [] }
+    }
+
+    const serviceCwd = this.resolveServiceCwd(config)
+    // Global services have no surrounding project; treat their isolated
+    // working directory as the project root.
+    const projectRoot = isGlobalSlug(this.project.slug)
+      ? serviceCwd
+      : (detectGitWorktree(this.project.path)?.primaryPath ?? this.project.path)
+
+    const rel = relative(projectRoot, serviceCwd)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      return {
+        ok: false,
+        message: `Service directory "${serviceCwd}" is not inside the project root "${projectRoot}"; a docker service can only mount code within the project`,
+      }
+    }
+
+    const workdir = rel
+      ? `${CONTAINER_PROJECT_DIR}/${rel}`
+      : CONTAINER_PROJECT_DIR
+    return {
+      ok: true,
+      mounts: [{ host: projectRoot, container: CONTAINER_PROJECT_DIR }],
+      workdir,
+    }
   }
 
   /**
@@ -364,8 +485,17 @@ export class ServiceManager {
       effectivePort = resolved.port
     }
 
+    // Docker services bind to the container port inside the container, while
+    // the host port is published to the host via `-p hostPort:containerPort`.
+    // Host services bind directly to the resolved port.
+    const isDocker = this.isDockerService(config)
+    const containerPort = isDocker
+      ? (config.http?.containerPort ?? effectivePort)
+      : undefined
+    const boundPort = isDocker ? containerPort : effectivePort
+
     const envResult = await this.buildServiceEnvironment(name, {
-      port: effectivePort,
+      port: boundPort,
     })
     if (!envResult.success) {
       return {
@@ -375,6 +505,20 @@ export class ServiceManager {
       }
     }
     const label = this.getServiceLabel(name)
+
+    // Resolve the actual command launchd runs. For docker services this is a
+    // generated `docker run` invocation; the snapshot keeps the original
+    // command plus runtime/image so the reconciler can rebuild it identically.
+    const runResult = this.buildRunCommand(name, config, {
+      hostPort: effectivePort,
+      containerPort,
+      envKeys: Object.keys(envResult.env),
+    })
+    if (!runResult.ok) {
+      return { name, success: false, message: runResult.message }
+    }
+    const runCommand = runResult.command
+
     const printInfo = await launchctl.print(label)
     const isBootstrapped = printInfo !== null
     // "Live" means the service has an active PID. A bootstrapped service
@@ -412,6 +556,9 @@ export class ServiceManager {
       },
       serviceName: name,
       config: {
+        runtime: config.runtime,
+        image: config.image,
+        container: config.container,
         command: config.command,
         env: config.env,
         envFiles: config.envFiles,
@@ -476,7 +623,7 @@ export class ServiceManager {
     // Create wrapper script so Login Items shows the script name instead of "zsh"
     const scriptPath = this.getServiceScriptPath(name)
     const scriptContent = generateServiceScript({
-      command: config.command,
+      command: runCommand,
       serviceName: name,
       projectPath: this.project.path,
       projectSlug: this.project.slug,
@@ -760,7 +907,7 @@ export class ServiceManager {
       return {
         name,
         running: false,
-        command: config.command,
+        command: this.getDisplayCommand(config),
         cwd: this.resolveServiceCwd(config),
         logPath: this.getLogPath(name),
       }
@@ -773,7 +920,7 @@ export class ServiceManager {
       name,
       running: info.state === 'running',
       pid: info.pid,
-      command: config.command,
+      command: this.getDisplayCommand(config),
       cwd: this.resolveServiceCwd(config),
       logs,
       logPath: this.getLogPath(name),
@@ -1292,7 +1439,7 @@ export class ServiceManager {
       localUrl: await this.getServiceLocalUrl(name),
       port: effectivePort ?? null,
       configPort: config.http?.port ?? null,
-      command: config.command,
+      command: this.getDisplayCommand(config),
       cwd: this.resolveServiceCwd(config),
       logPath: this.getLogPath(name),
       envFiles: (config.envFiles ?? DEFAULT_ENV_FILES).map((f) =>

@@ -1,9 +1,10 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
-import { deepStrictEqual, ok, strictEqual } from 'node:assert'
+import { deepStrictEqual, match, ok, strictEqual } from 'node:assert'
 import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -997,6 +998,139 @@ describe('ServiceManager', () => {
         0,
         'disable should not be called',
       )
+    })
+  })
+
+  describe('docker runtime', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-docker-`)
+      process.env.HOME = tmpHome
+      mkdirSync(`${tmpHome}/Library/LaunchAgents`, { recursive: true })
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    const createDockerProject = (service: any) => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/repo`,
+      })
+      project.config.services = { svc: service }
+      return project
+    }
+
+    const mockLaunchctlStart = (t: any) => {
+      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(launchctl, 'enable', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+    }
+
+    it('summarises the image in the display command', async () => {
+      const manager = new ServiceManager(
+        createDockerProject({ runtime: 'docker', image: 'redis:8.8' }),
+      )
+      const services = await manager.listServices()
+      strictEqual(services[0]?.command, 'docker run redis:8.8')
+    })
+
+    it('mounts the project and runs a container via the wrapper script', async (t) => {
+      mockLaunchctlStart(t)
+      const project = createDockerProject({
+        runtime: 'docker',
+        image: 'redis:8.8',
+        http: { port: 16379, containerPort: 6379 },
+      })
+      const manager = new ServiceManager(project)
+
+      const result = await manager.startService('svc', {
+        port: 16379,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const script = readFileSync(manager.getServiceScriptPath('svc'), 'utf-8')
+      ok(script.includes('docker run --rm --init --name'))
+      // This temp project isn't a git checkout, so the project root is the
+      // project path and the working directory is the mount root.
+      ok(script.includes(`-v "${project.path}:/denvig/project"`))
+      ok(script.includes('-w /denvig/project'))
+      ok(script.includes('-p 16379:6379'))
+      ok(script.includes('redis:8.8'))
+
+      // The host port is what the gateway/state sees, not the container port.
+      const state = await getServiceState(project.id, 'svc')
+      strictEqual(state?.port, 16379)
+      strictEqual(state?.config?.runtime, 'docker')
+      strictEqual(state?.config?.image, 'redis:8.8')
+      strictEqual(state?.config?.command, undefined)
+    })
+
+    it('does not mount the project when mountProject is false', async (t) => {
+      mockLaunchctlStart(t)
+      const project = createDockerProject({
+        runtime: 'docker',
+        image: 'redis:8.8',
+        container: { mountProject: false },
+        http: { port: 16379, containerPort: 6379 },
+      })
+      const manager = new ServiceManager(project)
+
+      const result = await manager.startService('svc', {
+        port: 16379,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const script = readFileSync(manager.getServiceScriptPath('svc'), 'utf-8')
+      ok(!script.includes('/denvig/project'), 'project should not be mounted')
+      ok(!script.includes('-w '), 'no working directory should be set')
+      ok(script.includes('-p 16379:6379'))
+    })
+
+    it('sets the working directory to a nested service cwd', async (t) => {
+      mockLaunchctlStart(t)
+      const project = createDockerProject({
+        runtime: 'docker',
+        image: 'node:22-alpine',
+        cwd: 'apps/api',
+        command: 'node server.js',
+      })
+      mkdirSync(`${project.path}/apps/api`, { recursive: true })
+      const manager = new ServiceManager(project)
+
+      const result = await manager.startService('svc', { portResolved: true })
+      ok(result.success, result.message)
+
+      const script = readFileSync(manager.getServiceScriptPath('svc'), 'utf-8')
+      ok(script.includes(`-v "${project.path}:/denvig/project"`))
+      ok(script.includes('-w /denvig/project/apps/api'))
+    })
+
+    it('fails when the service directory is outside the project root', async (t) => {
+      mockLaunchctlStart(t)
+      const project = createDockerProject({
+        runtime: 'docker',
+        image: 'redis:8.8',
+        cwd: '../outside',
+      })
+      const manager = new ServiceManager(project)
+
+      const result = await manager.startService('svc', { portResolved: true })
+      strictEqual(result.success, false)
+      match(result.message, /not inside the project root/)
     })
   })
 })

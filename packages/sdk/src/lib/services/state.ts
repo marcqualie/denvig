@@ -22,12 +22,16 @@ export const ProjectSnapshotSchema = z.object({
  * and tolerates older entries.
  */
 export const ServiceConfigSnapshotSchema = z.object({
-  command: z.string(),
+  runtime: z.enum(['host', 'docker']).optional(),
+  image: z.string().optional(),
+  container: z.object({ mountProject: z.boolean().optional() }).optional(),
+  command: z.string().optional(),
   env: z.record(z.string(), z.string()).optional(),
   envFiles: z.array(z.string()).optional(),
   http: z
     .object({
       port: z.number().optional(),
+      containerPort: z.number().optional(),
       domain: z.string().optional(),
       cnames: z.array(z.string()).optional(),
       secure: z.boolean().optional(),
