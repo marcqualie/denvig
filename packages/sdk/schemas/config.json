@@ -122,7 +122,22 @@
             "description": "Start service automatically when system boots"
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "if": {
+          "required": [
+            "runtime"
+          ],
+          "properties": {
+            "runtime": {
+              "const": "docker"
+            }
+          }
+        },
+        "else": {
+          "required": [
+            "command"
+          ]
+        }
       },
       "propertyNames": {
         "type": "string",

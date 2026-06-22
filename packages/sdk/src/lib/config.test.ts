@@ -1,4 +1,7 @@
 import { deepStrictEqual, ok, strictEqual } from 'node:assert'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { getEnvOverrides, getGlobalConfig, getProjectConfig } from './config.ts'
@@ -188,5 +191,54 @@ describe('getProjectConfig()', () => {
     const config = await getProjectConfig(projectPath)
     strictEqual(config.name, undefined)
     strictEqual(config.$sources.length, 0)
+  })
+
+  const writeConfig = (yaml: string): string => {
+    const dir = mkdtempSync(`${tmpdir()}/denvig-config-`)
+    writeFileSync(join(dir, '.denvig.yml'), yaml)
+    return dir
+  }
+
+  it('loads a valid config', async () => {
+    const dir = writeConfig(
+      'name: T\nservices:\n  api:\n    command: echo hi\n',
+    )
+    try {
+      const config = await getProjectConfig(dir)
+      ok(config.services?.api)
+      strictEqual(config.$sources.length, 1)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('degrades to an empty config when a host service is missing its command', async () => {
+    // The schema rejects a host service without a command (see config schema
+    // tests and `config verify`). On the hot discovery path the loader degrades
+    // gracefully and silently — it must not emit output here (shell completion
+    // relies on this) — so the invalid config simply yields no services.
+    const dir = writeConfig(
+      'name: T\nservices:\n  broken:\n    http:\n      port: 9999\n',
+    )
+    try {
+      const config = await getProjectConfig(dir)
+      strictEqual(config.$sources.length, 0)
+      strictEqual(config.services, undefined)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('accepts a docker service without a command', async () => {
+    const dir = writeConfig(
+      'name: T\nservices:\n  redis:\n    runtime: docker\n    image: redis:8.8\n',
+    )
+    try {
+      const config = await getProjectConfig(dir)
+      ok(config.services?.redis)
+      strictEqual(config.$sources.length, 1)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

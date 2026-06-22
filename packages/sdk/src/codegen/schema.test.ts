@@ -2,7 +2,11 @@ import { deepStrictEqual, ok, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 import { z } from 'zod'
 
-import { generateConfigSchema, zodToJsonSchema } from './schema.ts'
+import {
+  generateConfigSchema,
+  generateGlobalConfigSchema,
+  zodToJsonSchema,
+} from './schema.ts'
 
 describe('zodToJsonSchema()', () => {
   describe('basic types', () => {
@@ -376,5 +380,30 @@ describe('generateConfigSchema()', () => {
       schema.required === undefined || schema.required?.length === 0,
       'All fields should be optional',
     )
+  })
+
+  it('requires command for host services but not docker services', () => {
+    const schema = generateConfigSchema()
+    const service = schema.properties?.services?.additionalProperties
+    ok(service && typeof service === 'object')
+
+    // command is not unconditionally required...
+    ok(
+      service.required === undefined || !service.required.includes('command'),
+      'command should not be unconditionally required',
+    )
+    // ...but a conditional requires it unless runtime is docker.
+    deepStrictEqual(service.if, {
+      required: ['runtime'],
+      properties: { runtime: { const: 'docker' } },
+    })
+    deepStrictEqual(service.else, { required: ['command'] })
+  })
+
+  it('applies the command conditional to global services too', () => {
+    const schema = generateGlobalConfigSchema()
+    const service = schema.properties?.services?.additionalProperties
+    ok(service && typeof service === 'object')
+    deepStrictEqual(service.else, { required: ['command'] })
   })
 })

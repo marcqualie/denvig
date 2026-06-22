@@ -8,11 +8,15 @@ import type { z } from 'zod'
 type JsonSchemaIsh = {
   title?: string
   description?: string
-  type: string
+  type?: string
   properties?: Record<string, JsonSchemaIsh>
   additionalProperties?: boolean | JsonSchemaIsh
   required?: string[]
   items?: JsonSchemaIsh
+  enum?: string[]
+  const?: unknown
+  if?: JsonSchemaIsh
+  else?: JsonSchemaIsh
 }
 
 /**
@@ -178,11 +182,33 @@ export const zodToJsonSchema = (schema: z.ZodTypeAny): JsonSchemaIsh => {
 }
 
 /**
+ * Make `command` required for host-runtime services only.
+ *
+ * Docker services fall back to the image entrypoint, so `command` is optional
+ * for them but mandatory otherwise. Zod enforces this with a refinement that
+ * JSON Schema can't read, so we express the same rule with a conditional that
+ * both JSON Schema draft-07 and OpenAPI 3.1 understand: when `runtime` is
+ * `docker` the `if` matches and nothing extra is required, otherwise the `else`
+ * branch requires `command`. (`then` is omitted: with no extra constraint for
+ * docker services, the `if`/`else` pair is enough.)
+ */
+const requireCommandForHostRuntime = (root: JsonSchemaIsh): void => {
+  const service = root.properties?.services?.additionalProperties
+  if (!service || typeof service !== 'object') return
+  service.if = {
+    required: ['runtime'],
+    properties: { runtime: { const: 'docker' } },
+  }
+  service.else = { required: ['command'] }
+}
+
+/**
  * Generate JSON Schema for denvig.yml configuration files
  * Based on ProjectConfigSchema from src/schemas/config.ts
  */
 export function generateConfigSchema() {
   const baseSchema = zodToJsonSchema(ProjectConfigSchema)
+  requireCommandForHostRuntime(baseSchema)
 
   const schema = {
     $schema: 'http://json-schema.org/draft-07/schema#',
@@ -201,6 +227,7 @@ export function generateConfigSchema() {
  */
 export function generateGlobalConfigSchema() {
   const baseSchema = zodToJsonSchema(GlobalConfigSchema)
+  requireCommandForHostRuntime(baseSchema)
 
   const schema = {
     $schema: 'http://json-schema.org/draft-07/schema#',
