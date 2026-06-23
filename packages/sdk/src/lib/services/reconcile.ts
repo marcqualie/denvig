@@ -81,6 +81,9 @@ const projectFromStateEntry = (
           // state cwd works because `resolve()` returns the second arg
           // unchanged when it's already absolute.
           cwd: entry.cwd,
+          runtime: entry.config.runtime,
+          image: entry.config.image,
+          container: entry.config.container,
           command: entry.config.command,
           env: entry.config.env,
           envFiles: entry.config.envFiles,

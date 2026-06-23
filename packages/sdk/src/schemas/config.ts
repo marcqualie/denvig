@@ -27,44 +27,98 @@ export const ServiceNameSchema = z
 /**
  * Schema for a single service configuration entry.
  */
-export const ServiceConfigSchema = z.object({
-  cwd: z
-    .string()
-    .optional()
-    .describe('Working directory for the service (relative to project root)'),
-  command: z.string().describe('Shell command to execute'),
-  http: z
-    .object({
-      port: z
-        .number()
-        .optional()
-        .describe('Port number the service listens on'),
-      domain: z
-        .string()
-        .optional()
-        .describe('Domain to use for the service URL'),
-      cnames: z
-        .array(z.string())
-        .optional()
-        .describe('Additional hosts that can be used via gateway'),
-      secure: z.boolean().optional().describe('Use HTTPS instead of HTTP'),
-    })
-    .optional()
-    .describe('HTTP configuration for the service URL'),
-  envFiles: z
-    .array(z.string())
-    .optional()
-    .describe('Paths to .env files (relative to service cwd)'),
-  env: z
-    .record(z.string(), z.string())
-    .optional()
-    .describe('Environment variables'),
-  keepAlive: z.boolean().optional().describe('Restart service if it exits'),
-  startOnBoot: z
-    .boolean()
-    .optional()
-    .describe('Start service automatically when system boots'),
-})
+export const ServiceConfigSchema = z
+  .object({
+    runtime: z
+      .enum(['host', 'docker'])
+      .optional()
+      .describe(
+        'How the service runs: directly on the host (default) or in a docker container',
+      ),
+    image: z
+      .string()
+      .optional()
+      .describe(
+        'Container image to run when runtime is "docker" (defaults to alpine:3.23)',
+      ),
+    container: z
+      .object({
+        mountProject: z
+          .boolean()
+          .optional()
+          .describe(
+            'Mount the project directory at /denvig/project (default true)',
+          ),
+        volumes: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Bind mounts passed to docker run as -v (host:container[:options]); relative host paths resolve against the service directory',
+          ),
+        ports: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Published ports passed to docker run as -p (host:container)',
+          ),
+      })
+      .optional()
+      .describe('Container runtime options used when runtime is "docker"'),
+    cwd: z
+      .string()
+      .optional()
+      .describe('Working directory for the service (relative to project root)'),
+    command: z.string().optional().describe('Shell command to execute'),
+    http: z
+      .object({
+        port: z
+          .number()
+          .optional()
+          .describe('Port number the service listens on'),
+        containerPort: z
+          .number()
+          .optional()
+          .describe(
+            'Port the container listens on when runtime is "docker" (defaults to the host port)',
+          ),
+        domain: z
+          .string()
+          .optional()
+          .describe('Domain to use for the service URL'),
+        cnames: z
+          .array(z.string())
+          .optional()
+          .describe('Additional hosts that can be used via gateway'),
+        secure: z.boolean().optional().describe('Use HTTPS instead of HTTP'),
+      })
+      .optional()
+      .describe('HTTP configuration for the service URL'),
+    envFiles: z
+      .array(z.string())
+      .optional()
+      .describe('Paths to .env files (relative to service cwd)'),
+    env: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe('Environment variables'),
+    keepAlive: z.boolean().optional().describe('Restart service if it exits'),
+    startOnBoot: z
+      .boolean()
+      .optional()
+      .describe('Start service automatically when system boots'),
+  })
+  .superRefine((config, ctx) => {
+    // Host services run an explicit command. Docker services may omit it and
+    // rely on the image's default entrypoint instead.
+    const runtime = config.runtime ?? 'host'
+    if (runtime !== 'docker' && !config.command?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['command'],
+        message: 'command is required for host runtime services',
+      })
+    }
+  })
 
 /**
  * Schema for the services record (name → config).

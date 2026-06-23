@@ -244,6 +244,104 @@ describe('ProjectConfigSchema - services', () => {
     ok(!result.success)
   })
 
+  it('should parse a docker service without a command', () => {
+    const config = {
+      name: 'my-project',
+      services: {
+        redis: {
+          runtime: 'docker',
+          image: 'redis:8.8',
+          http: {
+            port: 16379,
+            containerPort: 6379,
+          },
+        },
+      },
+    }
+
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(result.success)
+  })
+
+  it('should parse a docker service with a command override', () => {
+    const config = {
+      name: 'my-project',
+      services: {
+        worker: {
+          runtime: 'docker',
+          image: 'node:22',
+          command: 'node worker.js',
+        },
+      },
+    }
+
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(result.success)
+  })
+
+  it('should parse a docker service with container.mountProject', () => {
+    const config = {
+      name: 'my-project',
+      services: {
+        redis: {
+          runtime: 'docker',
+          image: 'redis:8.8',
+          container: { mountProject: false },
+          http: { port: 16379, containerPort: 6379 },
+        },
+      },
+    }
+
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(result.success)
+  })
+
+  it('should reject a non-boolean container.mountProject', () => {
+    const config = {
+      name: 'my-project',
+      services: {
+        redis: {
+          runtime: 'docker',
+          image: 'redis:8.8',
+          container: { mountProject: 'nope' },
+        },
+      },
+    }
+
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
+  it('should reject a host service without a command', () => {
+    const config = {
+      name: 'my-project',
+      services: {
+        api: {
+          runtime: 'host',
+          http: { port: 3000 },
+        },
+      },
+    }
+
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
+  it('should reject an unknown runtime', () => {
+    const config = {
+      name: 'my-project',
+      services: {
+        api: {
+          runtime: 'podman',
+          command: 'echo test',
+        },
+      },
+    }
+
+    const result = ProjectConfigSchema.safeParse(config)
+    ok(!result.success)
+  })
+
   it('should reject invalid field types in service', () => {
     const invalidConfig = {
       name: 'my-project',

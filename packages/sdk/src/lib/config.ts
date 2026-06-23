@@ -129,8 +129,9 @@ export const getProjectConfig = async (
         $sources: [configPath],
       }
     } catch {
-      // Silently ignore config parsing errors here.
-      // Users can run `denvig config verify` to diagnose config issues.
+      // Silently ignore config parsing errors here — this runs in the hot
+      // discovery path (including shell completion), which must not emit
+      // output. Users can run `denvig config verify` to diagnose config issues.
     }
   }
   return {

@@ -24,6 +24,43 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
+          "runtime": {
+            "type": "string",
+            "enum": [
+              "host",
+              "docker"
+            ],
+            "description": "How the service runs: directly on the host (default) or in a docker container"
+          },
+          "image": {
+            "type": "string",
+            "description": "Container image to run when runtime is \"docker\" (defaults to alpine:3.23)"
+          },
+          "container": {
+            "type": "object",
+            "properties": {
+              "mountProject": {
+                "type": "boolean",
+                "description": "Mount the project directory at /denvig/project (default true)"
+              },
+              "volumes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Bind mounts passed to docker run as -v (host:container[:options]); relative host paths resolve against the service directory"
+              },
+              "ports": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Published ports passed to docker run as -p (host:container)"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Container runtime options used when runtime is \"docker\""
+          },
           "cwd": {
             "type": "string",
             "description": "Working directory for the service (relative to project root)"
@@ -38,6 +75,10 @@
               "port": {
                 "type": "number",
                 "description": "Port number the service listens on"
+              },
+              "containerPort": {
+                "type": "number",
+                "description": "Port the container listens on when runtime is \"docker\" (defaults to the host port)"
               },
               "domain": {
                 "type": "string",
@@ -82,9 +123,21 @@
           }
         },
         "additionalProperties": false,
-        "required": [
-          "command"
-        ]
+        "if": {
+          "required": [
+            "runtime"
+          ],
+          "properties": {
+            "runtime": {
+              "const": "docker"
+            }
+          }
+        },
+        "else": {
+          "required": [
+            "command"
+          ]
+        }
       },
       "propertyNames": {
         "type": "string",
