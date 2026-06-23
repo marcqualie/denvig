@@ -6,6 +6,10 @@
 
 - Services can now run in a docker container with `runtime: docker`, mounting the project at `/denvig/project` with the working directory set to the service's location within it
 
+### Fixed
+
+- `services logs` no longer shows an empty log after running an unrelated services command; a service's `latest.log` is now only rotated when the service is actually started or restarted, not on every reconcile
+
 ## [0.7.1] - 2026-06-20
 
 ### Added

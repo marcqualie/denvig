@@ -636,8 +636,14 @@ export class ServiceManager {
     // Ensure denvig directories exist
     await this.ensureDenvigDirectories()
 
-    // Create a new timestamped log file for this service run
-    const logFilePath = await this.createLogFile(name)
+    // A fresh timestamped log file (and the `latest.log` / `latest.<host>.log`
+    // symlinks pointing at it) is created only when launchd actually (re)opens
+    // it below — on a genuine bootstrap or restart. A no-op start (an
+    // already-running service whose plist is unchanged, which the reconciler
+    // performs after every command for every running service) must leave the
+    // existing symlinks pointing at the file the live process is still writing
+    // to, rather than swapping them for a fresh empty file it will never touch.
+    let logFilePath: string | undefined
 
     // Ensure plist file exists
     const plistPath = this.getPlistPath(name)
@@ -645,6 +651,12 @@ export class ServiceManager {
 
     // Ensure working directory exists (e.g. global services use auto-generated paths)
     await mkdir(workingDirectory, { recursive: true })
+
+    // The service directory holds the wrapper script (written below) and the
+    // log files. It must exist on every start, including no-op reconciles that
+    // skip creating a fresh log, so create it explicitly rather than relying on
+    // `createLogFile()` to make it as a side effect.
+    await mkdir(this.getServiceDir(name), { recursive: true })
 
     // Create wrapper script so Login Items shows the script name instead of "zsh"
     const scriptPath = this.getServiceScriptPath(name)
@@ -709,6 +721,7 @@ export class ServiceManager {
     // The reconciler relies on this being idempotent: if the plist is
     // unchanged and the service is already bootstrapped, do nothing.
     if (!isBootstrapped) {
+      logFilePath = await this.createLogFile(name)
       await writePlist()
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
@@ -750,6 +763,7 @@ export class ServiceManager {
 
       // sleep for 1 second to allow bootout to complete
       await new Promise((resolve) => setTimeout(resolve, 1000))
+      logFilePath = await this.createLogFile(name)
       await writePlist()
       const bootstrapResult = await launchctl.bootstrap(plistPath)
       if (!bootstrapResult.success) {
@@ -771,11 +785,17 @@ export class ServiceManager {
     }
 
     // Append Service Started entry to the new log file
-    try {
-      const timestamp = new Date().toISOString()
-      await appendFile(logFilePath, `[${timestamp}] Service Started\n`, 'utf-8')
-    } catch {
-      // ignore logging errors
+    if (logFilePath) {
+      try {
+        const timestamp = new Date().toISOString()
+        await appendFile(
+          logFilePath,
+          `[${timestamp}] Service Started\n`,
+          'utf-8',
+        )
+      } catch {
+        // ignore logging errors
+      }
     }
 
     return {

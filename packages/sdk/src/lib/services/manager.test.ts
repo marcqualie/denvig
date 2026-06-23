@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -271,6 +272,129 @@ describe('ServiceManager', () => {
       } finally {
         rmSync(logDir, { recursive: true, force: true })
       }
+    })
+  })
+
+  describe('log rotation on start', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-logs-`)
+      process.env.HOME = tmpHome
+      mkdirSync(`${tmpHome}/Library/LaunchAgents`, { recursive: true })
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    const createProject = () => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/repo`,
+      })
+      project.config.services = { api: { command: 'node server.js' } }
+      return project
+    }
+
+    const timestampedLogs = (logDir: string) =>
+      readdirSync(logDir)
+        .filter((name) => /^\d+\.log$/.test(name))
+        .sort()
+
+    it('rotates the log and repoints both symlinks on a real start', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(launchctl, 'enable', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+
+      const result = await manager.startService('api', { portResolved: true })
+      ok(result.success, result.message)
+
+      const logDir = manager.getServiceLogDir('api')
+      const logs = timestampedLogs(logDir)
+      strictEqual(logs.length, 1, 'one timestamped log after first start')
+      // Both the stable (plist) symlink and the host symlink point at the new run.
+      strictEqual(readlinkSync(manager.getStableLogPath('api')), logs[0])
+      strictEqual(readlinkSync(manager.getLogPath('api')), logs[0])
+    })
+
+    it('leaves the log symlink untouched when a live service is re-started with an unchanged plist', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+
+      // Initial start lays down the plist and the first log file.
+      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(launchctl, 'enable', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+      await manager.startService('api', { portResolved: true })
+
+      const logDir = manager.getServiceLogDir('api')
+      const stableLink = manager.getStableLogPath('api')
+      const liveTarget = readlinkSync(stableLink)
+
+      // Re-run while the service is live with an unchanged plist — exactly what
+      // the reconciler does after every command, for every running service in
+      // every project and worktree. The symlink must keep pointing at the file
+      // the live process is still writing to, not a fresh empty file.
+      t.mock.restoreAll()
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        pid: 123,
+        state: 'running',
+        status: 'running',
+      }))
+      const bootout = t.mock.method(launchctl, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      const bootstrap = t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+      t.mock.method(launchctl, 'enable', async () => ({
+        success: true,
+        output: '',
+      }))
+
+      const result = await manager.startService('api', {
+        portResolved: true,
+        reviveIfNotRunning: false,
+      })
+      ok(result.success, result.message)
+      strictEqual(bootout.mock.callCount(), 0, 'live service is not booted out')
+      strictEqual(
+        bootstrap.mock.callCount(),
+        0,
+        'live service is not bootstrapped',
+      )
+
+      strictEqual(
+        readlinkSync(stableLink),
+        liveTarget,
+        'latest.log still points at the live log',
+      )
+      strictEqual(
+        timestampedLogs(logDir).length,
+        1,
+        'no extra empty log file was created',
+      )
     })
   })
 
