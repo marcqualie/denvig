@@ -7,9 +7,9 @@ import {
   DEFAULT_DOCKER_IMAGE,
 } from './docker.ts'
 
-/** A single project mount used by most cases. */
-const projectMount = (host = '/Users/me/project') => [
-  { host, container: CONTAINER_PROJECT_DIR },
+/** A single project bind-mount spec used by most cases. */
+const projectVolume = (host = '/Users/me/project') => [
+  `${host}:${CONTAINER_PROJECT_DIR}`,
 ]
 
 describe('buildDockerRunCommand', () => {
@@ -17,7 +17,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'denvig.abc.redis',
       image: 'redis:8.8',
-      mounts: projectMount('/Users/me/project'),
+      volumes: projectVolume('/Users/me/project'),
       workdir: CONTAINER_PROJECT_DIR,
     })
     match(cmd, /-v "\/Users\/me\/project:\/denvig\/project"/)
@@ -29,7 +29,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'node:22-alpine',
-      mounts: projectMount(),
+      volumes: projectVolume(),
       workdir: `${CONTAINER_PROJECT_DIR}/.claude/worktrees/feature`,
     })
     match(cmd, /-w \/denvig\/project\/\.claude\/worktrees\/feature/)
@@ -39,17 +39,40 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'redis:8.8',
-      mounts: [],
+      volumes: [],
     })
     ok(!cmd.includes('-v '))
     ok(!cmd.includes('-w '))
+  })
+
+  it('renders multiple bind-mount volumes', () => {
+    const cmd = buildDockerRunCommand({
+      containerName: 'c',
+      image: 'nginx:1.27',
+      volumes: [
+        '/h/nginx.conf:/etc/nginx/nginx.conf',
+        '/h/certs:/etc/nginx/certs:ro',
+      ],
+    })
+    match(cmd, /-v "\/h\/nginx\.conf:\/etc\/nginx\/nginx\.conf"/)
+    match(cmd, /-v "\/h\/certs:\/etc\/nginx\/certs:ro"/)
+  })
+
+  it('renders extra published ports', () => {
+    const cmd = buildDockerRunCommand({
+      containerName: 'c',
+      image: 'nginx:1.27',
+      ports: ['80:80', '443:443'],
+    })
+    match(cmd, /-p 80:80/)
+    match(cmd, /-p 443:443/)
   })
 
   it('removes any previous container before starting', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'denvig.abc.redis',
       image: 'redis:8.8',
-      mounts: projectMount(),
+      volumes: projectVolume(),
       workdir: CONTAINER_PROJECT_DIR,
     })
     ok(cmd.startsWith('docker rm -f denvig.abc.redis >/dev/null 2>&1; '))
@@ -59,7 +82,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'redis:8.8',
-      mounts: projectMount(),
+      volumes: projectVolume(),
       hostPort: 16379,
       containerPort: 6379,
     })
@@ -70,7 +93,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'nginx',
-      mounts: projectMount(),
+      volumes: projectVolume(),
       hostPort: 8080,
     })
     match(cmd, /-p 8080:8080/)
@@ -80,7 +103,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'alpine',
-      mounts: projectMount(),
+      volumes: projectVolume(),
     })
     ok(!cmd.includes('-p '))
   })
@@ -89,7 +112,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'alpine',
-      mounts: projectMount(),
+      volumes: projectVolume(),
       envKeys: ['PORT', 'DENVIG_SERVICE', 'DENVIG_PROJECT'],
     })
     match(cmd, /-e DENVIG_PROJECT -e DENVIG_SERVICE -e PORT/)
@@ -99,7 +122,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'alpine',
-      mounts: projectMount(),
+      volumes: projectVolume(),
       command: 'sh -c "echo hi"',
     })
     match(cmd, /alpine sh -c "echo hi"$/)
@@ -109,7 +132,7 @@ describe('buildDockerRunCommand', () => {
     const cmd = buildDockerRunCommand({
       containerName: 'c',
       image: 'redis:8.8',
-      mounts: projectMount(),
+      volumes: projectVolume(),
     })
     ok(cmd.trim().endsWith('redis:8.8'))
   })

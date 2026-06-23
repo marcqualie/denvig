@@ -1132,5 +1132,42 @@ describe('ServiceManager', () => {
       strictEqual(result.success, false)
       match(result.message, /not inside the project root/)
     })
+
+    it('mounts container.volumes, resolving relative host paths', async (t) => {
+      mockLaunchctlStart(t)
+      const project = createDockerProject({
+        runtime: 'docker',
+        image: 'nginx:1.27',
+        container: {
+          mountProject: false,
+          volumes: [
+            './nginx/nginx.conf:/etc/nginx/nginx.conf',
+            '/abs/certs:/etc/nginx/certs:ro',
+            'named-vol:/data',
+          ],
+          ports: ['80:80', '443:443'],
+        },
+      })
+      const manager = new ServiceManager(project)
+
+      const result = await manager.startService('svc', { portResolved: true })
+      ok(result.success, result.message)
+
+      const script = readFileSync(manager.getServiceScriptPath('svc'), 'utf-8')
+      // Relative host path resolves against the service directory.
+      ok(
+        script.includes(
+          `-v "${project.path}/nginx/nginx.conf:/etc/nginx/nginx.conf"`,
+        ),
+        script,
+      )
+      // Absolute host path and options are preserved.
+      ok(script.includes('-v "/abs/certs:/etc/nginx/certs:ro"'))
+      // Named volume is left untouched.
+      ok(script.includes('-v "named-vol:/data"'))
+      // Extra published ports are passed through.
+      ok(script.includes('-p 80:80'))
+      ok(script.includes('-p 443:443'))
+    })
   })
 })

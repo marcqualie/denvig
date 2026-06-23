@@ -21,7 +21,6 @@ import {
   buildDockerRunCommand,
   CONTAINER_PROJECT_DIR,
   DEFAULT_DOCKER_IMAGE,
-  type DockerMount,
 } from './docker.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import { isGlobalSlug } from './global.ts'
@@ -151,8 +150,9 @@ export class ServiceManager {
       command: buildDockerRunCommand({
         containerName: this.getServiceLabel(name),
         image: config.image ?? DEFAULT_DOCKER_IMAGE,
-        mounts: resolved.mounts,
+        volumes: resolved.volumes,
         workdir: resolved.workdir,
+        ports: config.container?.ports,
         hostPort: options.hostPort,
         containerPort: options.containerPort,
         envKeys: options.envKeys,
@@ -162,51 +162,77 @@ export class ServiceManager {
   }
 
   /**
-   * Resolve the bind mounts and working directory for a docker service.
+   * Resolve the bind-mount specs and working directory for a docker service.
    *
-   * The whole project (the primary checkout) is mounted at `/denvig/project`,
-   * so tools like git inside the container can reach the full project. The
-   * working directory is the service's directory expressed inside that mount:
-   * the project root for the primary checkout, or the worktree's location
-   * within the project for a detached worktree.
+   * Unless `container.mountProject` is `false`, the whole project (the primary
+   * checkout) is mounted at `/denvig/project`, with the working directory set
+   * to the service's location within it (the project root for the primary
+   * checkout, or the worktree's path within the project for a detached
+   * worktree). Any `container.volumes` are appended, with relative host paths
+   * resolved against the service directory.
    *
-   * Returns an error when the service directory lives outside the project root
-   * (the code wouldn't be part of the mount), or `mounts: []` with no working
-   * directory when `container.mountProject` is `false`.
+   * Returns an error when the project mount is requested but the service
+   * directory lives outside the project root (the code wouldn't be part of the
+   * mount).
    */
   private resolveDockerMounts(
     config: ServiceConfig,
   ):
-    | { ok: true; mounts: DockerMount[]; workdir?: string }
+    | { ok: true; volumes: string[]; workdir?: string }
     | { ok: false; message: string } {
+    const volumes: string[] = []
+    let workdir: string | undefined
+
     const mountProject = config.container?.mountProject ?? true
-    if (!mountProject) {
-      return { ok: true, mounts: [] }
-    }
+    if (mountProject) {
+      const serviceCwd = this.resolveServiceCwd(config)
+      // Global services have no surrounding project; treat their isolated
+      // working directory as the project root.
+      const projectRoot = isGlobalSlug(this.project.slug)
+        ? serviceCwd
+        : (detectGitWorktree(this.project.path)?.primaryPath ??
+          this.project.path)
 
-    const serviceCwd = this.resolveServiceCwd(config)
-    // Global services have no surrounding project; treat their isolated
-    // working directory as the project root.
-    const projectRoot = isGlobalSlug(this.project.slug)
-      ? serviceCwd
-      : (detectGitWorktree(this.project.path)?.primaryPath ?? this.project.path)
-
-    const rel = relative(projectRoot, serviceCwd)
-    if (rel.startsWith('..') || isAbsolute(rel)) {
-      return {
-        ok: false,
-        message: `Service directory "${serviceCwd}" is not inside the project root "${projectRoot}"; a docker service can only mount code within the project`,
+      const rel = relative(projectRoot, serviceCwd)
+      if (rel.startsWith('..') || isAbsolute(rel)) {
+        return {
+          ok: false,
+          message: `Service directory "${serviceCwd}" is not inside the project root "${projectRoot}"; a docker service can only mount code within the project`,
+        }
       }
+
+      volumes.push(`${projectRoot}:${CONTAINER_PROJECT_DIR}`)
+      workdir = rel ? `${CONTAINER_PROJECT_DIR}/${rel}` : CONTAINER_PROJECT_DIR
     }
 
-    const workdir = rel
-      ? `${CONTAINER_PROJECT_DIR}/${rel}`
-      : CONTAINER_PROJECT_DIR
-    return {
-      ok: true,
-      mounts: [{ host: projectRoot, container: CONTAINER_PROJECT_DIR }],
-      workdir,
+    // User-defined volumes: resolve relative host paths against the service
+    // directory (matching docker-compose semantics), leaving absolute paths
+    // and named volumes untouched.
+    const baseDir = this.resolveServiceCwd(config)
+    for (const spec of config.container?.volumes ?? []) {
+      volumes.push(this.resolveVolumeSpec(spec, baseDir))
     }
+
+    return { ok: true, volumes, workdir }
+  }
+
+  /**
+   * Resolve a docker volume spec (`host:container[:options]`), turning a
+   * filesystem-style host path into an absolute path relative to `baseDir`.
+   * Named volumes (a host that isn't a path) are returned unchanged.
+   */
+  private resolveVolumeSpec(spec: string, baseDir: string): string {
+    const colon = spec.indexOf(':')
+    if (colon <= 0) return spec
+    const host = spec.slice(0, colon)
+    const rest = spec.slice(colon + 1)
+    const looksLikePath =
+      host.startsWith('.') || host.startsWith('/') || host.startsWith('~')
+    if (!looksLikePath) return spec
+    const expanded = host.startsWith('~/')
+      ? resolve(homedir(), host.slice(2))
+      : host
+    return `${resolve(baseDir, expanded)}:${rest}`
   }
 
   /**

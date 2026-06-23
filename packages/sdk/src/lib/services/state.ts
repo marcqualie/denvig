@@ -24,7 +24,13 @@ export const ProjectSnapshotSchema = z.object({
 export const ServiceConfigSnapshotSchema = z.object({
   runtime: z.enum(['host', 'docker']).optional(),
   image: z.string().optional(),
-  container: z.object({ mountProject: z.boolean().optional() }).optional(),
+  container: z
+    .object({
+      mountProject: z.boolean().optional(),
+      volumes: z.array(z.string()).optional(),
+      ports: z.array(z.string()).optional(),
+    })
+    .optional(),
   command: z.string().optional(),
   env: z.record(z.string(), z.string()).optional(),
   envFiles: z.array(z.string()).optional(),

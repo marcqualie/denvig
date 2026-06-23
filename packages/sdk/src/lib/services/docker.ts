@@ -6,21 +6,23 @@ export const DEFAULT_DOCKER_IMAGE = 'alpine:3.23'
 /** Container path the whole project (the primary checkout) is mounted at. */
 export const CONTAINER_PROJECT_DIR = '/denvig/project'
 
-/** A single host→container bind mount. */
-export type DockerMount = {
-  host: string
-  container: string
-}
-
 export type DockerRunOptions = {
   /** Container name, used so restarts can replace the previous container. */
   containerName: string
   /** Image to run. */
   image: string
-  /** Bind mounts (host directory → container path). */
-  mounts: DockerMount[]
+  /**
+   * Bind-mount specs rendered as `-v` (e.g. `/host/path:/container/path` or
+   * `/host:/container:ro`). Host paths should already be absolute.
+   */
+  volumes?: string[]
   /** Working directory inside the container. Omit to use the image default. */
   workdir?: string
+  /**
+   * Extra published-port specs rendered as `-p` (e.g. `8025:8025`). Used for
+   * docker services that expose ports directly rather than via the gateway.
+   */
+  ports?: string[]
   /** Host port to expose. Omit when the service has no http port. */
   hostPort?: number
   /** Container port the host port maps to. Defaults to the host port. */
@@ -56,8 +58,8 @@ export function buildDockerRunCommand(options: DockerRunOptions): string {
     options.containerName,
   ]
 
-  for (const mount of options.mounts) {
-    args.push('-v', `"${mount.host}:${mount.container}"`)
+  for (const volume of options.volumes ?? []) {
+    args.push('-v', `"${volume}"`)
   }
   if (options.workdir) {
     args.push('-w', options.workdir)
@@ -66,6 +68,9 @@ export function buildDockerRunCommand(options: DockerRunOptions): string {
   if (options.hostPort !== undefined) {
     const containerPort = options.containerPort ?? options.hostPort
     args.push('-p', `${options.hostPort}:${containerPort}`)
+  }
+  for (const port of options.ports ?? []) {
+    args.push('-p', port)
   }
 
   // Forward env vars by name (value comes from the plist environment). Sorted

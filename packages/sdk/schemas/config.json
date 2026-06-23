@@ -56,6 +56,20 @@
               "mountProject": {
                 "type": "boolean",
                 "description": "Mount the project directory at /denvig/project (default true)"
+              },
+              "volumes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Bind mounts passed to docker run as -v (host:container[:options]); relative host paths resolve against the service directory"
+              },
+              "ports": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Published ports passed to docker run as -p (host:container)"
               }
             },
             "additionalProperties": false,

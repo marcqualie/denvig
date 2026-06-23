@@ -49,6 +49,18 @@ export const ServiceConfigSchema = z
           .describe(
             'Mount the project directory at /denvig/project (default true)',
           ),
+        volumes: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Bind mounts passed to docker run as -v (host:container[:options]); relative host paths resolve against the service directory',
+          ),
+        ports: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Published ports passed to docker run as -p (host:container)',
+          ),
       })
       .optional()
       .describe('Container runtime options used when runtime is "docker"'),
