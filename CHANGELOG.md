@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-06-23
+
 ### Added
 
 - Services can now run in a docker container with `runtime: docker`, mounting the project at `/denvig/project` with the working directory set to the service's location within it
