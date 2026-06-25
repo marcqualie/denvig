@@ -203,13 +203,11 @@ export class DenvigSDK {
 
   gateway = {
     /**
-     * Report the gateway's global state plus the gateway-configured services of
-     * the project resolved from the SDK's `cwd`.
+     * Report the gateway's global state plus every running gateway service
+     * recorded in state.json.
      */
     status: (): Promise<GatewayStatus> =>
-      track(this.ctx, 'gateway.status', null, () =>
-        getGatewayStatus({ cwd: this.ctx.cwd }),
-      ),
+      track(this.ctx, 'gateway.status', null, () => getGatewayStatus()),
 
     /** Reconcile services and rebuild every nginx config from runtime state. */
     configure: (): Promise<ConfigureGatewayOutput> =>

@@ -1,8 +1,6 @@
 import { execSync } from 'node:child_process'
 
 import { getGlobalConfig } from '../lib/config.ts'
-import { resolveProjectContext } from '../lib/context.ts'
-import { findCertForDomain, resolveSslPaths } from '../lib/gateway/certs.ts'
 import {
   type ConfigureGatewayResult,
   configureGateway,
@@ -11,6 +9,7 @@ import {
   getDenvigNginxConfPath,
   getNginxConfPath,
 } from '../lib/gateway/nginx.ts'
+import { resolveGatewayServices } from '../lib/gateway/routes.ts'
 import { safeReadTextFile } from '../lib/safeReadFile.ts'
 import {
   type ReconcileResult,
@@ -42,17 +41,21 @@ const getNginxProcessStatus = (): NginxProcessStatus => {
   }
 }
 
-/** Gateway status for a single service with an `http.domain`. */
+/** Gateway status for a single running route, as recorded in state.json. */
 export type GatewayServiceStatus = {
   name: string
+  /** Slug of the project (checkout) that owns the route. */
+  projectSlug: string
   domain: string
   cnames: string[]
-  port: number | undefined
+  port: number
   secure: boolean
-  /** Whether usable SSL key/cert files were resolved for the domain. */
-  certFound: boolean
+  /** Cert resolution for a secure route; `not_configured` when not secure. */
+  certStatus: 'valid' | 'missing' | 'not_configured'
   /** The certificate directory backing the domain, if any. */
   certDir: string | null
+  /** Explanation when `certStatus` is `missing`. */
+  certMessage?: string
   /** The nginx config path for this service. */
   nginxConfigPath: string
   nginxConfigExists: boolean
@@ -67,61 +70,42 @@ export type GatewayStatus = {
   nginxConf: string
   /** The nginx process state. */
   nginx: NginxProcessStatus
-  /** Gateway-configured services for the resolved project. */
+  /** Every running gateway service recorded in state.json. */
   services: GatewayServiceStatus[]
 }
 
-export type GatewayStatusOptions = {
-  /** Working directory used to resolve the project whose services are listed. */
-  cwd?: string
-}
-
 /**
- * Report the gateway's global state (enabled flag, nginx process, paths) plus
- * the gateway-configured services of the project resolved from `cwd`. This is
- * the shared data path behind `denvig gateway status` and `sdk.gateway.status()`.
+ * Report the gateway's global state (handler, nginx process, paths) plus every
+ * running gateway service recorded in `~/.denvig/state.json`. This reads the
+ * same resolved routes that `gateway configure` renders into nginx, so the two
+ * commands always describe the identical set of services.
  */
-export const getGatewayStatus = async (
-  options: GatewayStatusOptions = {},
-): Promise<GatewayStatus> => {
+export const getGatewayStatus = async (): Promise<GatewayStatus> => {
   const globalConfig = await getGlobalConfig()
   const gateway = globalConfig.gateway
-
-  const services: GatewayServiceStatus[] = []
-  const { project } = await resolveProjectContext({
-    cwd: options.cwd ?? process.cwd(),
-  })
 
   // Every service shares the single combined denvig config; read it once and
   // detect a service's presence by its upstream block.
   const nginxConfigPath = getDenvigNginxConfPath()
   const nginxConfigContent = await safeReadTextFile(nginxConfigPath)
 
-  if (project) {
-    const worktree = project.activeWorktree
-    const configured = worktree.config.services || {}
-    for (const [name, config] of Object.entries(configured)) {
-      const domain = config.http?.domain
-      if (!domain) continue
-
-      const secure = config.http?.secure ?? false
-      const certDir = secure ? await findCertForDomain(domain) : null
-      const sslPaths = certDir ? await resolveSslPaths(certDir) : null
-      const upstreamName = `denvig-${worktree.id}--${name}`
-
-      services.push({
-        name,
-        domain,
-        cnames: config.http?.cnames || [],
-        port: config.http?.port,
-        secure,
-        certFound: !!sslPaths,
-        certDir,
-        nginxConfigPath,
-        nginxConfigExists: nginxConfigContent?.includes(upstreamName) ?? false,
-      })
+  const routes = await resolveGatewayServices()
+  const services: GatewayServiceStatus[] = routes.map((route) => {
+    const upstreamName = `denvig-${route.projectId}--${route.serviceName}`
+    return {
+      name: route.serviceName,
+      projectSlug: route.projectSlug,
+      domain: route.domain,
+      cnames: route.cnames,
+      port: route.port,
+      secure: route.secure,
+      certStatus: route.certStatus,
+      certDir: route.certDir ?? null,
+      certMessage: route.certMessage,
+      nginxConfigPath,
+      nginxConfigExists: nginxConfigContent?.includes(upstreamName) ?? false,
     }
-  }
+  })
 
   return {
     handler: gateway.handler,

@@ -1,4 +1,5 @@
 import { Command } from '../../lib/command.ts'
+import { formatGatewayService } from '../../lib/formatters/gateway-service.ts'
 
 export const gatewayStatusCommand = new Command({
   name: 'gateway:status',
@@ -40,9 +41,9 @@ export const gatewayStatusCommand = new Command({
     console.log('')
 
     if (status.services.length === 0) {
-      console.log('No services configured with http.domain')
+      console.log('No running services are routed through the gateway')
       console.log('')
-      console.log('To configure a service for gateway, add http.domain:')
+      console.log('Start a service with an http.domain to add a route:')
       console.log('')
       console.log('  services:')
       console.log('    my-service:')
@@ -51,28 +52,25 @@ export const gatewayStatusCommand = new Command({
       console.log('        port: 3000')
       console.log('        domain: my-service.denvig.localhost')
       console.log('')
-      return { success: true, message: 'No gateway services configured' }
+      return { success: true, message: 'No gateway services running' }
     }
 
     console.log('Services:')
     console.log('')
 
     for (const service of status.services) {
-      const allDomains = [service.domain, ...service.cnames]
-      const certStatus = !service.secure ? '-' : service.certFound ? '✓' : '✗'
-      const certLabel = !service.secure
-        ? 'not enabled'
-        : service.certFound
-          ? 'found'
-          : 'missing'
-      const nginxStatus = service.nginxConfigExists ? '✓' : '✗'
-
-      console.log(`  ${service.name}:`)
-      console.log(`    Domains: ${allDomains.join(', ')}`)
-      console.log(`    Port:    ${service.port || '(not set)'}`)
-      console.log(`    Certs:   ${certStatus} ${certLabel}`)
       console.log(
-        `    Nginx:   ${nginxStatus} ${service.nginxConfigExists ? 'configured' : 'not generated'}`,
+        formatGatewayService({
+          projectSlug: service.projectSlug,
+          serviceName: service.name,
+          domains: [service.domain, ...service.cnames],
+          port: service.port,
+          certStatus: service.certStatus,
+          certDir: service.certDir,
+          certMessage: service.certMessage,
+          nginxOk: service.nginxConfigExists,
+          nginxLabel: service.nginxConfigExists ? 'configured' : 'missing',
+        }),
       )
       console.log('')
     }
