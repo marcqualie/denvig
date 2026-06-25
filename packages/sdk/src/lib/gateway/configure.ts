@@ -1,8 +1,5 @@
 import { getGlobalConfig } from '../config.ts'
-import { resolveProjectCheckouts } from '../projects.ts'
-import { createGlobalProject } from '../services/global.ts'
 import { getServiceStableLogPath } from '../services/paths.ts'
-import { readState } from '../services/state.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
   type NginxConfigOptions,
@@ -11,8 +8,7 @@ import {
   writeDenvigNginxConfig,
   writeNginxMainConfig,
 } from './nginx.ts'
-
-import type { Cert } from '../services/state.ts'
+import { resolveGatewayServices } from './routes.ts'
 
 export type ConfigureServiceResult = {
   projectSlug: string
@@ -36,26 +32,15 @@ export type ConfigureGatewayResult = {
   message?: string
 }
 
-type RouteGroup = {
-  projectId: string
-  serviceName: string
-  port: number
-  secure: boolean
-  /** Order: first entry is the primary domain, the rest are cnames. */
-  domains: string[]
-  /** Key into `state.certs` shared by all routes in this group, if any. */
-  certKey?: string
-}
-
 /**
  * Remove all denvig nginx configs and rebuild from the runtime gateway
  * routes recorded in `~/.denvig/state.json`.
  *
- * The state's `gatewayRoutes` map is the source of truth: each running
- * route generates an nginx server block that proxies the domain to the
- * service's allocated port. Routes for the same `(project, service)`
- * pair are merged into a single nginx config so cnames sit alongside
- * the primary domain in the same `server_name` directive.
+ * The state's `gatewayRoutes` map is the source of truth (resolved via
+ * `resolveGatewayServices`): each running route generates an nginx server
+ * block that proxies the domain to the service's allocated port. Routes for
+ * the same `(project, service)` pair are merged into a single nginx config so
+ * cnames sit alongside the primary domain in the same `server_name` directive.
  */
 export async function configureGateway(): Promise<ConfigureGatewayResult> {
   const globalConfig = await getGlobalConfig()
@@ -86,98 +71,37 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
     }
   }
 
-  // Resolve project metadata (slug + path) by ID. The route only stores
-  // the project ID, but the nginx template wants the slug and absolute
-  // path for comments and the document root. Routes are keyed by the
-  // checkout's id, so this maps every worktree back to its slug and path.
-  const projectsById = await resolveProjectCheckouts()
-  const globalProject = await createGlobalProject()
-  projectsById.set(globalProject.id, {
-    slug: globalProject.slug,
-    path: globalProject.path,
-  })
-
-  // Group routes by (projectId, serviceName) so cnames stay co-located.
-  const state = await readState()
-  const groups = new Map<string, RouteGroup>()
-  for (const [domain, route] of Object.entries(state.gatewayRoutes)) {
-    if (route.desiredStatus !== 'running') continue
-    const key = `${route.project}.${route.service}`
-    const existing = groups.get(key)
-    if (existing) {
-      existing.domains.push(domain)
-      // Routes inside a group should all reference the same cert, but
-      // tolerate one missing the key by preferring whichever does carry one.
-      if (!existing.certKey && route.cert) existing.certKey = route.cert
-    } else {
-      groups.set(key, {
-        projectId: route.project,
-        serviceName: route.service,
-        port: route.port,
-        secure: route.secure,
-        domains: [domain],
-        certKey: route.cert,
-      })
-    }
-  }
+  // state.json is the single source of truth — the same resolved routes that
+  // `gateway status` reports are rendered into nginx here.
+  const routes = await resolveGatewayServices()
 
   const services: ConfigureServiceResult[] = []
   const serverConfigs: NginxConfigOptions[] = []
-  for (const group of groups.values()) {
-    const projectMeta = projectsById.get(group.projectId)
-    if (!projectMeta) continue
-
-    const [primary, ...cnames] = group.domains
-    const secure = group.secure
-
-    let sslCertPath: string | undefined
-    let sslKeyPath: string | undefined
-    let certStatus: ConfigureServiceResult['certStatus'] = 'not_configured'
-    let resolvedCertDir: string | undefined
-    let certMessage: string | undefined
-
-    if (secure) {
-      const cert: Cert | undefined = group.certKey
-        ? state.certs[group.certKey]
-        : undefined
-      if (cert) {
-        sslCertPath = cert.certPath
-        sslKeyPath = cert.keyPath
-        certStatus = 'valid'
-        resolvedCertDir = cert.dir
-      } else {
-        certStatus = 'missing'
-        certMessage = group.certKey
-          ? `cert "${group.certKey}" referenced by route is not in state.certs`
-          : 'route has no cert reference; restart the service to refresh state.certs'
-      }
-    }
-
-    const result: ConfigureServiceResult = {
-      projectSlug: projectMeta.slug,
-      serviceName: group.serviceName,
-      domain: primary,
-      cnames,
-      port: group.port,
-      certStatus,
-      certDir: resolvedCertDir,
-      certMessage,
+  for (const route of routes) {
+    services.push({
+      projectSlug: route.projectSlug,
+      serviceName: route.serviceName,
+      domain: route.domain,
+      cnames: route.cnames,
+      port: route.port,
+      certStatus: route.certStatus,
+      certDir: route.certDir,
+      certMessage: route.certMessage,
       configStatus: 'written',
-    }
+    })
 
     serverConfigs.push({
-      projectId: group.projectId,
-      projectPath: projectMeta.path,
-      projectSlug: projectMeta.slug,
-      serviceName: group.serviceName,
-      port: group.port,
-      domain: primary,
-      cnames,
-      sslCertPath,
-      sslKeyPath,
-      logPath: getServiceStableLogPath(group.projectId, group.serviceName),
+      projectId: route.projectId,
+      projectPath: route.projectPath,
+      projectSlug: route.projectSlug,
+      serviceName: route.serviceName,
+      port: route.port,
+      domain: route.domain,
+      cnames: route.cnames,
+      sslCertPath: route.sslCertPath,
+      sslKeyPath: route.sslKeyPath,
+      logPath: getServiceStableLogPath(route.projectId, route.serviceName),
     })
-    services.push(result)
   }
 
   // Write every server block into the single combined denvig nginx config.

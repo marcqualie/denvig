@@ -1,4 +1,5 @@
 import { Command } from '../../lib/command.ts'
+import { formatGatewayService } from '../../lib/formatters/gateway-service.ts'
 
 export const gatewayConfigureCommand = new Command({
   name: 'gateway:configure',
@@ -61,33 +62,26 @@ export const gatewayConfigureCommand = new Command({
       }
 
       if (result.services.length === 0) {
-        console.log('No services with http.domain and http.port configured.')
+        console.log('No running services are routed through the gateway')
       } else {
-        console.log('Gateway Configuration:')
+        console.log('Services:')
         console.log('')
 
         for (const service of result.services) {
-          const certIcon = service.certStatus === 'valid' ? '✓' : '✗'
-          const configIcon = service.configStatus === 'written' ? '✓' : '✗'
-          const cnamesInfo =
-            service.cnames.length > 0
-              ? ` + ${service.cnames.length} cname${service.cnames.length > 1 ? 's' : ''}`
-              : ''
-
-          console.log(`  ${service.projectSlug}/${service.serviceName}:`)
           console.log(
-            `    Domain: ${service.domain}${cnamesInfo} -> localhost:${service.port}`,
-          )
-          const certDetail = service.certDir
-            ? ` (${service.certDir.split('/').pop()})`
-            : service.certMessage
-              ? ` (${service.certMessage})`
-              : ''
-          console.log(
-            `    Certs:  ${certIcon} ${service.certStatus}${certDetail}`,
-          )
-          console.log(
-            `    Nginx:  ${configIcon} ${service.configStatus}${service.configMessage ? ` (${service.configMessage})` : ''}`,
+            formatGatewayService({
+              projectSlug: service.projectSlug,
+              serviceName: service.serviceName,
+              domains: [service.domain, ...service.cnames],
+              port: service.port,
+              certStatus: service.certStatus,
+              certDir: service.certDir,
+              certMessage: service.certMessage,
+              nginxOk: service.configStatus === 'written',
+              nginxLabel:
+                service.configStatus === 'written' ? 'configured' : 'error',
+              nginxMessage: service.configMessage,
+            }),
           )
           console.log('')
         }
