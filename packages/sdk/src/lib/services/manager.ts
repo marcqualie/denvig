@@ -25,6 +25,7 @@ import {
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import { isGlobalSlug } from './global.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
+import { normalizeServiceLabel } from './paths.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
 import { allocateRandomPort, isPortInUse } from './ports.ts'
 import {
@@ -1141,10 +1142,7 @@ export class ServiceManager {
    * Replaces special characters with safe alternatives.
    */
   private normalizeForLabel(str: string): string {
-    return str
-      .replace(/\//g, '__') // Replace path separators with double underscore
-      .replace(/:/g, '-') // Replace colons with dashes
-      .replace(/[^a-zA-Z0-9_.-]/g, '_') // Replace other special chars with underscore
+    return normalizeServiceLabel(str)
   }
 
   /**

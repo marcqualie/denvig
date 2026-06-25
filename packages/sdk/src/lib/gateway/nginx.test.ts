@@ -1,7 +1,11 @@
-import { ok, strictEqual } from 'node:assert'
+import { ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { generateNginxConfig, getNginxConfigPath } from './nginx.ts'
+import {
+  generateDenvigNginxConfig,
+  generateNginxConfig,
+  getDenvigNginxConfPath,
+} from './nginx.ts'
 
 describe('nginx gateway', () => {
   describe('generateNginxConfig()', () => {
@@ -145,33 +149,79 @@ describe('nginx gateway', () => {
         ),
       )
     })
-  })
 
-  describe('getNginxConfigPath()', () => {
-    it('should return correct path format', () => {
-      const path = getNginxConfigPath(
-        'abc123',
-        'api',
-        '/opt/homebrew/etc/nginx/servers',
-      )
+    it('should include the log location comment when provided', () => {
+      const config = generateNginxConfig({
+        projectId: 'abc123',
+        projectPath: '/Users/test/project',
+        projectSlug: 'test/project',
+        serviceName: 'api',
+        port: 3000,
+        domain: 'api.denvig.localhost',
+        logPath: '/Users/test/.denvig/services/abc123.api/logs/latest.log',
+      })
 
-      strictEqual(
-        path,
-        '/opt/homebrew/etc/nginx/servers/denvig.abc123.api.conf',
+      ok(
+        config.includes(
+          '# log: /Users/test/.denvig/services/abc123.api/logs/latest.log',
+        ),
       )
     })
 
-    it('should handle service names with hyphens', () => {
-      const path = getNginxConfigPath(
-        'abc123',
-        'my-service',
-        '/opt/homebrew/etc/nginx/servers',
-      )
+    it('should omit the log comment when no logPath is provided', () => {
+      const config = generateNginxConfig({
+        projectId: 'abc123',
+        projectPath: '/Users/test/project',
+        projectSlug: 'test/project',
+        serviceName: 'api',
+        port: 3000,
+        domain: 'api.denvig.localhost',
+      })
 
-      strictEqual(
-        path,
-        '/opt/homebrew/etc/nginx/servers/denvig.abc123.my-service.conf',
-      )
+      ok(!config.includes('# log:'))
+    })
+  })
+
+  describe('getDenvigNginxConfPath()', () => {
+    it('should resolve to ~/.denvig/nginx.conf', () => {
+      ok(getDenvigNginxConfPath().endsWith('/.denvig/nginx.conf'))
+    })
+  })
+
+  describe('generateDenvigNginxConfig()', () => {
+    const base = {
+      projectId: 'abc123',
+      projectPath: '/Users/test/project',
+      projectSlug: 'test/project',
+      port: 3000,
+    }
+
+    it('should sort server blocks alphabetically by domain', () => {
+      const config = generateDenvigNginxConfig([
+        { ...base, serviceName: 'web', domain: 'web.denvig.localhost' },
+        { ...base, serviceName: 'api', domain: 'api.denvig.localhost' },
+      ])
+
+      const apiIndex = config.indexOf('# service: api')
+      const webIndex = config.indexOf('# service: web')
+      ok(apiIndex !== -1 && webIndex !== -1)
+      ok(apiIndex < webIndex, 'api block should come before web block')
+    })
+
+    it('should include a managed-by-denvig header', () => {
+      const config = generateDenvigNginxConfig([])
+
+      ok(config.includes('# Managed by denvig — do not edit manually'))
+    })
+
+    it('should contain every service block', () => {
+      const config = generateDenvigNginxConfig([
+        { ...base, serviceName: 'api', domain: 'api.denvig.localhost' },
+        { ...base, serviceName: 'web', domain: 'web.denvig.localhost' },
+      ])
+
+      ok(config.includes('upstream denvig-abc123--api'))
+      ok(config.includes('upstream denvig-abc123--web'))
     })
   })
 })

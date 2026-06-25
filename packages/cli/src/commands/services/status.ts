@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 import { pathExists } from '@denvig/sdk/fs'
-import { getGlobalConfig, getNginxConfigPath } from '@denvig/sdk/internal'
+import { getDenvigNginxConfPath } from '@denvig/sdk/internal'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
@@ -125,17 +125,12 @@ export const servicesStatusCommand = new Command({
       console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
     }
 
-    // Show nginx config path if the service has a domain
-    const globalConfig = await getGlobalConfig()
+    // Show the combined nginx config path if the service has a domain
     const serviceConfig = manager.getServiceConfig(serviceName)
     if (serviceConfig?.http?.domain) {
-      const nginxPath = getNginxConfigPath(
-        targetProject.id,
-        serviceName,
-        globalConfig.gateway.configsPath,
-      )
+      const nginxPath = getDenvigNginxConfPath()
       if (await pathExists(nginxPath)) {
-        console.log(`Nginx:   ${nginxPath}`)
+        console.log(`Nginx:   ${nginxPath.replace(homedir(), '~')}`)
       }
     }
 
