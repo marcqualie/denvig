@@ -1,12 +1,14 @@
 import { getGlobalConfig } from '../config.ts'
 import { resolveProjectCheckouts } from '../projects.ts'
 import { createGlobalProject } from '../services/global.ts'
+import { getServiceStableLogPath } from '../services/paths.ts'
 import { readState } from '../services/state.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
+  type NginxConfigOptions,
   reloadNginx,
   removeAllNginxConfigs,
-  writeNginxConfig,
+  writeDenvigNginxConfig,
   writeNginxMainConfig,
 } from './nginx.ts'
 
@@ -120,6 +122,7 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
   }
 
   const services: ConfigureServiceResult[] = []
+  const serverConfigs: NginxConfigOptions[] = []
   for (const group of groups.values()) {
     const projectMeta = projectsById.get(group.projectId)
     if (!projectMeta) continue
@@ -162,26 +165,28 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
       configStatus: 'written',
     }
 
-    const writeResult = await writeNginxConfig(
-      {
-        projectId: group.projectId,
-        projectPath: projectMeta.path,
-        projectSlug: projectMeta.slug,
-        serviceName: group.serviceName,
-        port: group.port,
-        domain: primary,
-        cnames,
-        sslCertPath,
-        sslKeyPath,
-      },
-      configsPath,
-    )
+    serverConfigs.push({
+      projectId: group.projectId,
+      projectPath: projectMeta.path,
+      projectSlug: projectMeta.slug,
+      serviceName: group.serviceName,
+      port: group.port,
+      domain: primary,
+      cnames,
+      sslCertPath,
+      sslKeyPath,
+      logPath: getServiceStableLogPath(group.projectId, group.serviceName),
+    })
+    services.push(result)
+  }
 
-    if (!writeResult.success) {
+  // Write every server block into the single combined denvig nginx config.
+  const writeResult = await writeDenvigNginxConfig(serverConfigs)
+  if (!writeResult.success) {
+    for (const result of services) {
       result.configStatus = 'error'
       result.configMessage = writeResult.message
     }
-    services.push(result)
   }
 
   // Reload nginx

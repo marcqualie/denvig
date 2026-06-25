@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The gateway now writes every service into a single `~/.denvig/nginx.conf` (sorted by domain, each block annotated with its service details and log location) instead of one hashed file per service, making the running config easier to inspect
+
 ## [0.7.2] - 2026-06-23
 
 ### Added

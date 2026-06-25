@@ -7,8 +7,11 @@ import {
   type ConfigureGatewayResult,
   configureGateway,
 } from '../lib/gateway/configure.ts'
-import { getNginxConfigPath, getNginxConfPath } from '../lib/gateway/nginx.ts'
-import { pathExists } from '../lib/safeReadFile.ts'
+import {
+  getDenvigNginxConfPath,
+  getNginxConfPath,
+} from '../lib/gateway/nginx.ts'
+import { safeReadTextFile } from '../lib/safeReadFile.ts'
 import {
   type ReconcileResult,
   reconcileServices,
@@ -89,6 +92,11 @@ export const getGatewayStatus = async (
     cwd: options.cwd ?? process.cwd(),
   })
 
+  // Every service shares the single combined denvig config; read it once and
+  // detect a service's presence by its upstream block.
+  const nginxConfigPath = getDenvigNginxConfPath()
+  const nginxConfigContent = await safeReadTextFile(nginxConfigPath)
+
   if (project) {
     const worktree = project.activeWorktree
     const configured = worktree.config.services || {}
@@ -99,11 +107,7 @@ export const getGatewayStatus = async (
       const secure = config.http?.secure ?? false
       const certDir = secure ? await findCertForDomain(domain) : null
       const sslPaths = certDir ? await resolveSslPaths(certDir) : null
-      const nginxConfigPath = getNginxConfigPath(
-        worktree.id,
-        name,
-        gateway.configsPath,
-      )
+      const upstreamName = `denvig-${worktree.id}--${name}`
 
       services.push({
         name,
@@ -114,7 +118,7 @@ export const getGatewayStatus = async (
         certFound: !!sslPaths,
         certDir,
         nginxConfigPath,
-        nginxConfigExists: await pathExists(nginxConfigPath),
+        nginxConfigExists: nginxConfigContent?.includes(upstreamName) ?? false,
       })
     }
   }
