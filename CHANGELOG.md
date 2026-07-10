@@ -5,6 +5,7 @@
 ### Changed
 
 - Updated 4 patch dependencies (@biomejs/biome, @types/node, rolldown, semver)
+- Updated 2 minor dev dependencies (rolldown-plugin-dts, turbo)
 - The gateway now writes every service into a single `~/.denvig/nginx.conf` (sorted by domain, each block annotated with its service details and log location) instead of one hashed file per service, making the running config easier to inspect
 - `denvig gateway` now lists every running service routed through the gateway across all projects, matching what `gateway configure` reports
 - `gateway` and `gateway configure` now display each service in the same format
