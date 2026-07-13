@@ -2,7 +2,6 @@
   "name": "@denvig/workspace",
   "version": "0.7.2",
   "private": true,
-  "packageManager": "pnpm@11.5.2",
   "license": "MIT",
   "description": "Workspace root for the denvig CLI and its packages",
   "type": "module",
@@ -25,7 +24,8 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "pnpm": ">=11.12"
   },
   "repository": {
     "type": "git",
