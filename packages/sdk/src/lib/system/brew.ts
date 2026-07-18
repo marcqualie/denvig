@@ -27,9 +27,14 @@ export const brewUpdate = (): Promise<boolean> => {
   return runInherit('brew', ['update'], { stdio: 'ignore' })
 }
 
-/** Run `brew upgrade` with inherited stdio. */
+/**
+ * Run `brew upgrade` with inherited stdio.
+ *
+ * Passes `--yes` so Homebrew skips its own confirmation prompt, since denvig
+ * already prompts before invoking the upgrade.
+ */
 export const brewUpgrade = (): Promise<boolean> => {
-  return runInherit('brew', ['upgrade'])
+  return runInherit('brew', ['upgrade', '--yes'])
 }
 
 /** Read outdated brew packages as parsed JSON, or null if the call fails. */
