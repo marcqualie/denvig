@@ -8,6 +8,7 @@
 - Updated 4 patch dependencies (@biomejs/biome, @types/node, rolldown, semver)
 - Updated 2 patch dev dependencies (rolldown-plugin-dts, turbo)
 - Updated 2 minor dev dependencies (rolldown-plugin-dts, turbo)
+- Updated 4 minor dev dependencies (@biomejs/biome, @types/node, rolldown, rolldown-plugin-dts)
 - Upgraded TypeScript to 7.0 (the native compiler) and `@types/node` to 26
 - The gateway now writes every service into a single `~/.denvig/nginx.conf` (sorted by domain, each block annotated with its service details and log location) instead of one hashed file per service, making the running config easier to inspect
 - `denvig gateway` now lists every running service routed through the gateway across all projects, matching what `gateway configure` reports
