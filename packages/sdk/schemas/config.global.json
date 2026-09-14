@@ -10,7 +10,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Paths or patterns where projects are located"
+      "description": "Paths or patterns where projects are located. Prefix a pattern with ! to exclude matching paths"
     },
     "quickActions": {
       "type": "array",
