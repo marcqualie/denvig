@@ -71,7 +71,24 @@ const expandPattern = async (pattern: string): Promise<string[]> => {
 }
 
 /**
+ * Check whether a path matches a pattern where each * matches a single
+ * directory level. Paths inside a matched directory also count as a match, so
+ * `~/src/acme` matches `~/src/acme/repo` as well.
+ */
+export const matchesPattern = (path: string, pattern: string): boolean => {
+  const patternParts = expandTilde(pattern).replace(/\/+$/, '').split('/')
+  const pathParts = path.replace(/\/+$/, '').split('/')
+  if (patternParts.length > pathParts.length) return false
+  return patternParts.every(
+    (part, index) => part === '*' || part === pathParts[index],
+  )
+}
+
+/**
  * List all projects based on projectPaths patterns.
+ *
+ * Patterns prefixed with `!` exclude any matching path that another pattern
+ * would otherwise include.
  *
  * @param options - Optional filters for project listing
  * @returns Array of ProjectInfo objects with slug and path
@@ -83,15 +100,24 @@ export const listProjects = async (
   const projectPaths = globalConfig.projectPaths
   const withConfig = options?.withConfig ?? false
 
-  // Expand every pattern in parallel.
-  const expanded = await Promise.all(projectPaths.map(expandPattern))
+  const includePatterns = projectPaths.filter(
+    (pattern) => !pattern.startsWith('!'),
+  )
+  const excludePatterns = projectPaths
+    .filter((pattern) => pattern.startsWith('!'))
+    .map((pattern) => pattern.slice(1))
 
-  // Deduplicate, preserving discovery order.
+  // Expand every pattern in parallel.
+  const expanded = await Promise.all(includePatterns.map(expandPattern))
+
+  // Deduplicate and drop excluded paths, preserving discovery order.
   const seenPaths = new Set<string>()
   const uniquePaths: string[] = []
   for (const projectPath of expanded.flat()) {
     if (seenPaths.has(projectPath)) continue
     seenPaths.add(projectPath)
+    if (excludePatterns.some((pattern) => matchesPattern(projectPath, pattern)))
+      continue
     uniquePaths.push(projectPath)
   }
 

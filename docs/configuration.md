@@ -18,13 +18,17 @@ Global configuration can be set via YAML files or environment variables.
 **default:** `['~/src/*/*', '~/.dotfiles']`
 **env:** `DENVIG_PROJECT_PATHS` (comma-separated list, e.g., `~/src/*/*,~/.dotfiles`)
 
-An array of paths or glob-like patterns where your projects live. Each `*` matches a single directory level (not recursive).
+An array of paths or glob-like patterns where your projects live. Each `*` matches a single directory level (not recursive). Prefix a pattern with `!` to exclude any path it matches, even when a broader pattern would include it.
 
 Development environments work best when there is a consistent location for all projects. Denvig works best on the concept of `[group]/[project]` so you can have a consistent structure for all your projects. Since most people use GitHub, this maps to `[owner]/[repo]`. You could subpath them based on hosting provider such as `~/src/github/[owner]/[repo]` or `~/src/gitlab/[owner]/[repo]` if you want to keep them separate.
 
 **Pattern Examples:**
 - `~/src/*/*` - Matches all directories two levels deep under `~/src`
 - `~/.dotfiles` - Matches a single specific directory
+- `!~/src/example-project/*` - Excludes every project owned by `example-project`
+- `!~/src/acme/legacy-app` - Excludes a single project
+
+Excluding a directory also excludes everything inside it, so `!~/src/example-project` has the same effect as `!~/src/example-project/*`.
 
 **Project Slugs:**
 
@@ -38,6 +42,7 @@ projectPaths:
   - ~/src/*/*
   - ~/work/*/*
   - ~/.dotfiles
+  - "!~/src/example-project/*"
 ```
 
 

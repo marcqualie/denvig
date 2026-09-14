@@ -138,7 +138,9 @@ export const GlobalConfigSchema = z.object({
     .array(z.string())
     .optional()
     .default(['~/src/*/*', '~/.dotfiles'])
-    .describe('Paths or patterns where projects are located'),
+    .describe(
+      'Paths or patterns where projects are located. Prefix a pattern with ! to exclude matching paths',
+    ),
   quickActions: z
     .array(z.string())
     .default(DEFAULT_QUICK_ACTIONS)

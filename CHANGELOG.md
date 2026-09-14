@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `projectPaths` entries can be prefixed with `!` to exclude projects (eg. `!~/src/example-project/*`)
+
 ### Changed
 
 - `denvig system update` no longer double-prompts before upgrading Homebrew packages
