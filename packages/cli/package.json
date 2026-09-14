@@ -45,13 +45,13 @@
     "@denvig/sdk": "workspace:*",
     "node-forge": "^1.4.0",
     "semver": "^7.8.5",
-    "yaml": "^2.9.0",
+    "yaml": "^2.9.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@denvig/tsconfig": "workspace:*",
     "@types/node-forge": "^1.3.14",
-    "@types/semver": "^7.7.1"
+    "@types/semver": "^7.8.0"
   },
   "engines": {
     "node": ">=22"
