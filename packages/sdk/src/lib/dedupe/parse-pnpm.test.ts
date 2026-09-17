@@ -97,3 +97,53 @@ packages:
   strictEqual(Object.keys(result.dependencies).length, 1)
   strictEqual(result.dependencies['@my/cli'], undefined)
 })
+
+it('parses lockfiles split into multiple YAML documents', () => {
+  const result = parsePnpmLockForDedupe(`---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.3.4
+        version: 12.3.4
+
+packages:
+
+  pnpm@12.3.4:
+    resolution: {integrity: sha512-test==}
+
+---
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
+  packages/cli:
+    dependencies:
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
+
+packages:
+  semver@7.7.2:
+    resolution: {integrity: sha512-test==}
+
+  semver@7.7.3:
+    resolution: {integrity: sha512-test==}
+`)
+
+  deepStrictEqual(result.dependencies.semver.versions, {
+    '7.7.2': ['^7.7.2'],
+    '7.7.3': ['^7.7.3'],
+  })
+  deepStrictEqual(result.dependencies.semver.optimisedVersions, {
+    '7.7.3': ['^7.7.2', '^7.7.3'],
+  })
+})

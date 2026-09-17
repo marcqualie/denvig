@@ -1,4 +1,4 @@
-import { parse as parseYAML } from 'yaml'
+import { parsePnpmLockfile } from '../pnpm-lockfile.ts'
 
 type PnpmDependencyEntry = {
   specifier: string
@@ -67,7 +67,7 @@ export const preparePnpmRemovals = (
   removals: Record<string, string[]>,
   optimisedVersions?: Record<string, Record<string, string[]>>,
 ): string => {
-  const lockfile = parseYAML(source) as PnpmLockfile
+  const lockfile = parsePnpmLockfile<PnpmLockfile>(source)
   let result = source
 
   // Build a map of version updates for importers

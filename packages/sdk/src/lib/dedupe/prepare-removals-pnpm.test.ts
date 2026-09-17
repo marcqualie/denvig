@@ -2,6 +2,7 @@ import { notStrictEqual, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 import { parse as parseYAML } from 'yaml'
 
+import { parsePnpmLockfile } from '../pnpm-lockfile.ts'
 import { preparePnpmRemovals } from './prepare-removals-pnpm.ts'
 
 describe('preparePnpmRemovals()', () => {
@@ -77,5 +78,68 @@ snapshots:
       parsed.importers['packages/yarn'].dependencies.semver.version,
       '7.7.3',
     )
+  })
+
+  it('rewrites versions in lockfiles split into multiple YAML documents', () => {
+    const source = `---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.3.4
+        version: 12.3.4
+
+packages:
+
+  pnpm@12.3.4:
+    resolution: {integrity: sha512-test==}
+
+---
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
+  packages/cli:
+    dependencies:
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
+
+packages:
+  semver@7.7.2:
+    resolution: {integrity: sha512-test==}
+
+  semver@7.7.3:
+    resolution: {integrity: sha512-test==}
+
+snapshots:
+  semver@7.7.2: {}
+  semver@7.7.3: {}
+`
+
+    const result = preparePnpmRemovals(
+      source,
+      { semver: ['7.7.2'] },
+      { semver: { '7.7.3': ['^7.7.2', '^7.7.3'] } },
+    )
+    const parsed = parsePnpmLockfile<{
+      importers: Record<
+        string,
+        { dependencies: Record<string, { version: string }> }
+      >
+      packages: Record<string, unknown>
+    }>(result)
+
+    strictEqual(parsed.packages['semver@7.7.2'], undefined)
+    notStrictEqual(parsed.packages['semver@7.7.3'], undefined)
+    notStrictEqual(parsed.packages['pnpm@12.3.4'], undefined)
+    strictEqual(parsed.importers['.'].dependencies.semver.version, '7.7.3')
   })
 })

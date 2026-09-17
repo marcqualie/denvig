@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises'
-import { parse } from 'yaml'
 
 import {
   analyzeDedupeFromParsed,
@@ -15,6 +14,7 @@ import {
   readPnpmCatalogs,
   resolveCatalogSpecifier,
 } from '../lib/pnpm-config.ts'
+import { parsePnpmLockfile } from '../lib/pnpm-lockfile.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
@@ -157,7 +157,7 @@ const plugin = definePlugin({
     // Parse the lockfile to get resolved versions
     const lockfilePath = `${project.path}/pnpm-lock.yaml`
     const lockfileContent = await readFile(lockfilePath, 'utf-8')
-    const lockfile = parse(lockfileContent) as PnpmLockfile
+    const lockfile = parsePnpmLockfile<PnpmLockfile>(lockfileContent)
 
     // Read catalogs from pnpm-workspace.yaml so we can resolve `catalog:` /
     // `catalog:<name>` specifiers in importer entries to their real version
