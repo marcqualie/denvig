@@ -1,5 +1,4 @@
-import { parse as parseYAML } from 'yaml'
-
+import { parsePnpmLockfile } from '../pnpm-lockfile.ts'
 import { optimiseVersions, type VersionMap } from './optimise.ts'
 
 type Dependency = {
@@ -65,7 +64,7 @@ const extractResolvedVersion = (version: string): string => {
  */
 export const parsePnpmLockForDedupe = (content: string): ParsedPnpmLock => {
   const dependencies: Record<string, Dependency> = {}
-  const lockfile = parseYAML(content) as PnpmLockfile
+  const lockfile = parsePnpmLockfile<PnpmLockfile>(content)
 
   if (!lockfile.importers) {
     return { dependencies }

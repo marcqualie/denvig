@@ -14,6 +14,11 @@ const catalogExamplePath = new URL(
   import.meta.url,
 ).pathname
 
+const multiDocExamplePath = new URL(
+  '../test/examples/pnpm-multi-doc',
+  import.meta.url,
+).pathname
+
 describe('pnpm plugin', () => {
   it('should have correct plugin name', () => {
     strictEqual(pnpmPlugin.name, 'pnpm')
@@ -210,6 +215,81 @@ describe('pnpm plugin', () => {
         'should include react from workspace packages',
       )
       ok(depNames.includes('denvig'), 'should include denvig from package2')
+    })
+  })
+
+  describe('multi document lockfiles', () => {
+    it('should parse lockfiles split into multiple YAML documents', async () => {
+      const project = createMockProjectFromPath(multiDocExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      ok(deps.length > 1, 'dependencies should be parsed from every document')
+    })
+
+    it('should read importer dependencies from the project document', async () => {
+      const project = createMockProjectFromPath(multiDocExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const zodDep = deps.find((d) => d.name === 'zod')
+      ok(zodDep, 'zod should be detected')
+      deepStrictEqual(zodDep.versions, [
+        {
+          resolved: '4.6.1',
+          specifier: '^4.6.1',
+          source: '.#dependencies',
+        },
+      ])
+
+      const tsupDep = deps.find((d) => d.name === 'tsup')
+      ok(tsupDep, 'tsup should be detected')
+      deepStrictEqual(tsupDep.versions, [
+        {
+          resolved: '8.5.1',
+          specifier: '^8.5.0',
+          source: '.#devDependencies',
+        },
+      ])
+    })
+
+    it('should include transitive dependencies from the project document', async () => {
+      const project = createMockProjectFromPath(multiDocExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const bundleRequireDep = deps.find((d) => d.name === 'bundle-require')
+      ok(bundleRequireDep, 'bundle-require should be detected from snapshots')
+      deepStrictEqual(bundleRequireDep.versions, [
+        {
+          resolved: '5.2.0',
+          specifier: '5.2.0',
+          source: 'pnpm-lock.yaml:tsup@8.5.1(yaml@2.9.0)',
+        },
+      ])
+    })
+
+    it('should not surface pnpm platform binaries as dependencies', async () => {
+      const project = createMockProjectFromPath(multiDocExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const exeDeps = deps.filter((d) => d.name.startsWith('@pnpm/exe.'))
+      deepStrictEqual(
+        exeDeps,
+        [],
+        'optional platform binaries should not be reported',
+      )
+    })
+
+    it('should still detect pnpm as a system dependency', async () => {
+      const project = createMockProjectFromPath(multiDocExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const pnpmDep = deps.find((d) => d.id === 'npm:pnpm')
+      ok(pnpmDep, 'pnpm system dependency should be detected')
+      strictEqual(pnpmDep.ecosystem, 'system')
     })
   })
 

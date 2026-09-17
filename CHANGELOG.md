@@ -29,6 +29,7 @@
 ### Fixed
 
 - `services logs` no longer shows an empty log after running an unrelated services command; a service's `latest.log` is now only rotated when the service is actually started or restarted, not on every reconcile
+- Dependency commands no longer fail on projects using pnpm 12's multi-document `pnpm-lock.yaml`
 
 ## [0.7.1] - 2026-06-20
 

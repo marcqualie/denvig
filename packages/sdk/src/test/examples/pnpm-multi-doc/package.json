@@ -1,0 +1,13 @@
+{
+  "name": "denvig-examples-pnpm-multi-doc",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@12.3.4",
+  "dependencies": {
+    "yaml": "^2.9.0",
+    "zod": "^4.6.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0"
+  }
+}
