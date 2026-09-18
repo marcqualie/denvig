@@ -34,6 +34,11 @@ re-exports it as `denvig/cli`; the existing `.` SDK export is preserved.
 - Avoid usage of `class` unless absolutely necessary. Prefer composition and functions.
 - Always use `type` over `interface` unless you need declaration merging.
 - After making big changes run `pnpm run test` to ensure all tests pass.
+- The published packages are libraries consumed by other apps, so runtime dependencies must keep flexible
+  version ranges rather than tracking only the newest release. When upgrading dependencies (including via the
+  `denvig-upgrade-npm-dependencies` skill), widen the range in `package.json` to cover every version we support
+  (eg. `>=4.5.0 <4.7.0`) and let the lockfile resolve to the newest version within that range. Consumers on an
+  older minor should still be able to install without ending up with a duplicate copy of the dependency.
 - Run `bin/denvig-dev version` and verify it works to ensure your changes have not broken the CLI.
 - Update the `[Unreleased]` section of CHANGELOG.md before committing changes to git. Create this section if it's missing.
   - Entries are a quick TL;DR for humans skimming the changelog — keep them to one short sentence each.
