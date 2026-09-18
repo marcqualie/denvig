@@ -9,6 +9,7 @@
 ### Changed
 
 - `denvig system update` no longer double-prompts before upgrading Homebrew packages
+- Upgraded zod to 4.6, and widened the supported range to 4.5–4.6 for SDK consumers
 - Updated 4 patch dependencies (@biomejs/biome, @types/node, rolldown, semver)
 - Updated 2 patch dev dependencies (rolldown-plugin-dts, turbo)
 - Updated 2 minor dev dependencies (rolldown-plugin-dts, turbo)

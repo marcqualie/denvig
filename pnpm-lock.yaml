@@ -42,8 +42,8 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
       zod:
-        specifier: ^4.4.3
-        version: 4.4.3
+        specifier: '>=4.5.0 <4.7.0'
+        version: 4.6.5
     devDependencies:
       '@denvig/tsconfig':
         specifier: workspace:*
@@ -80,8 +80,8 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
       zod:
-        specifier: ^4.4.3
-        version: 4.4.3
+        specifier: '>=4.5.0 <4.7.0'
+        version: 4.6.5
     devDependencies:
       '@denvig/tsconfig':
         specifier: workspace:*
@@ -635,8 +635,8 @@ packages:
   yuku-parser@0.9.5:
     resolution: {integrity: sha512-IBnAdNVMswWbJcM7woPluOudectJzFjJ1N8jVRxP9Uq4CIv5hZdBIcdmtRbFDYF/Ph2j2gVup4YJ4N9mh0jYFA==}
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
 snapshots:
 
@@ -1016,4 +1016,4 @@ snapshots:
       '@yuku-parser/binding-win32-arm64': 0.9.5
       '@yuku-parser/binding-win32-x64': 0.9.5
 
-  zod@4.4.3: {}
+  zod@4.6.5: {}
