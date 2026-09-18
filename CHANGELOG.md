@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-09-18
+
 ### Added
 
 - `projectPaths` entries can be prefixed with `!` to exclude projects (eg. `!~/src/example-project/*`)

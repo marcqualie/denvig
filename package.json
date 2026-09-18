@@ -1,6 +1,6 @@
 {
   "name": "@denvig/workspace",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "packageManager": "pnpm@11.11.0",
   "license": "MIT",
