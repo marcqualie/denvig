@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated 3 patch dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts)
+
 ## [0.7.3] - 2026-09-18
 
 ### Added
