@@ -47,6 +47,11 @@ export const ServiceConfigSnapshotSchema = z.object({
   startOnBoot: z.boolean().optional(),
 })
 
+export const ForegroundRunSchema = z.object({
+  pid: z.number().int().positive(),
+  startedAt: z.string(),
+})
+
 export const ServiceStateEntrySchema = z.object({
   cwd: z.string(),
   port: z.number().int().positive().optional(),
@@ -66,6 +71,12 @@ export const ServiceStateEntrySchema = z.object({
   project: ProjectSnapshotSchema.optional(),
   serviceName: z.string().optional(),
   config: ServiceConfigSnapshotSchema.optional(),
+  /**
+   * Set while the service is attached to a terminal via `services run`
+   * rather than managed by launchd. `pid` is the denvig process that owns
+   * the run; it is only considered active while that process is alive.
+   */
+  foreground: ForegroundRunSchema.optional(),
 })
 
 /**
@@ -107,6 +118,7 @@ export const DenvigStateSchema = z.object({
 
 export type ProjectSnapshot = z.infer<typeof ProjectSnapshotSchema>
 export type ServiceConfigSnapshot = z.infer<typeof ServiceConfigSnapshotSchema>
+export type ForegroundRun = z.infer<typeof ForegroundRunSchema>
 export type ServiceStateEntry = z.infer<typeof ServiceStateEntrySchema>
 export type GatewayRoute = z.infer<typeof GatewayRouteSchema>
 export type Cert = z.infer<typeof CertSchema>
@@ -160,7 +172,7 @@ export const getServiceState = async (
  * Merge new fields into a service's state entry. Creates the entry if
  * missing. Passing an explicit `port: undefined` clears a previously
  * recorded port (used when a service no longer needs one); omitting the
- * key preserves it.
+ * key preserves it. `foreground` follows the same rule.
  */
 export const updateServiceState = async (
   projectId: string,
@@ -178,11 +190,15 @@ export const updateServiceState = async (
     project: entry.project ?? existing?.project,
     serviceName: entry.serviceName ?? existing?.serviceName ?? serviceName,
     config: entry.config ?? existing?.config,
+    foreground: 'foreground' in entry ? entry.foreground : existing?.foreground,
   }
   await writeState(state)
 }
 
-/** Mark a service stopped while preserving its port allocation. */
+/**
+ * Mark a service stopped while preserving its port allocation. Any
+ * foreground run marker is cleared.
+ */
 export const markServiceStopped = async (
   projectId: string,
   serviceName: string,
@@ -191,7 +207,8 @@ export const markServiceStopped = async (
   const key = serviceStateKey(projectId, serviceName)
   const existing = state.services[key]
   if (!existing) return
-  state.services[key] = { ...existing, desiredStatus: 'stopped' }
+  const { foreground: _foreground, ...rest } = existing
+  state.services[key] = { ...rest, desiredStatus: 'stopped' }
   await writeState(state)
 }
 

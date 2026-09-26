@@ -2,6 +2,7 @@ import { Command } from '../../lib/command.ts'
 import { servicesListCommand } from './list.ts'
 import { logsCommand } from './logs.ts'
 import { servicesRestartCommand } from './restart.ts'
+import { servicesRunCommand } from './run.ts'
 import { servicesStartCommand } from './start.ts'
 import { servicesStatusCommand } from './status.ts'
 import { servicesStopCommand } from './stop.ts'
@@ -19,6 +20,7 @@ export const servicesCommand = new Command({
     start: servicesStartCommand,
     stop: servicesStopCommand,
     restart: servicesRestartCommand,
+    run: servicesRunCommand,
     status: servicesStatusCommand,
     logs: logsCommand,
     teardown: servicesTeardownCommand,

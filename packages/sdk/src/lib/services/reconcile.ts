@@ -2,11 +2,14 @@ import { unlink } from 'node:fs/promises'
 
 import { configureGateway } from '../gateway/configure.ts'
 import { resolveProjectCheckouts } from '../projects.ts'
+import { isProcessAlive } from './foreground.ts'
 import { createGlobalProject } from './global.ts'
 import launchctl from './launchctl.ts'
 import { ServiceManager, type ServiceManagerProject } from './manager.ts'
 import {
+  markServiceStopped,
   readState,
+  releaseGatewayRoutesForService,
   removeGatewayRoutesForService,
   removeServiceState,
   type ServiceStateEntry,
@@ -112,6 +115,10 @@ const projectFromStateEntry = (
  *    content actually changed).
  * 3. launchctl has a `denvig.*` service that state doesn't know about,
  *    or marks as `desiredStatus: stopped` → bootout it.
+ *
+ * Services attached to a terminal via `services run` are owned by that
+ * process, not launchd: they are skipped while it is alive, and marked
+ * stopped (releasing their routes) once it has exited without cleaning up.
  */
 export const reconcileServices = async (): Promise<ReconcileResult> => {
   const state = await readState()
@@ -155,12 +162,12 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
   const knownProjectIds = new Set(checkouts.keys())
   knownProjectIds.add((await createGlobalProject()).id)
 
-  let prunedOrphan = false
+  let routesChanged = false
   for (const [key, entry] of Object.entries(state.services)) {
     if (!entry.project || !entry.serviceName) continue
     if (knownProjectIds.has(entry.project.id)) continue
 
-    prunedOrphan = true
+    routesChanged = true
     const project = projectFromStateEntry(entry)
     let label: string | null
     if (project) {
@@ -190,7 +197,7 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
   // covers routes left behind without a matching service entry.
   for (const [, route] of Object.entries(state.gatewayRoutes)) {
     if (knownProjectIds.has(route.project)) continue
-    prunedOrphan = true
+    routesChanged = true
     await removeGatewayRoutesForService(route.project, route.service)
   }
 
@@ -210,6 +217,27 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
     const manager = new ServiceManager(project)
     const label = manager.getServiceLabel(entry.serviceName)
     protectedLabels.add(label)
+    if (entry.foreground) {
+      if (isProcessAlive(entry.foreground.pid)) {
+        result.actions.push({
+          type: 'skipped',
+          project: project.slug,
+          service: entry.serviceName,
+          reason: 'running in the foreground',
+        })
+      } else {
+        await markServiceStopped(project.id, entry.serviceName)
+        await releaseGatewayRoutesForService(project.id, entry.serviceName)
+        routesChanged = true
+        result.actions.push({
+          type: 'stopped',
+          project: project.slug,
+          service: entry.serviceName,
+          reason: 'foreground process exited',
+        })
+      }
+      continue
+    }
     try {
       const start = await manager.startService(entry.serviceName, {
         // Non-http services never need a port — drop any stale allocation
@@ -297,9 +325,10 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
     }
   }
 
-  // Regenerate nginx after pruning orphans so the domain the real service
-  // reclaimed in pass 1 is rendered (and the orphan's stale config dropped).
-  if (prunedOrphan) {
+  // Regenerate nginx after pruning orphans or dead foreground runs so the
+  // domain the real service reclaimed in pass 1 is rendered (and the stale
+  // config dropped).
+  if (routesChanged) {
     await configureGateway()
   }
 
