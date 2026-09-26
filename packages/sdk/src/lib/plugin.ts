@@ -8,7 +8,9 @@ import type { Worktree } from './project/worktree'
  * Options for outdatedDependencies method
  */
 export type OutdatedDependenciesOptions = {
-  /** Use cache for registry requests (default: true) */
+  /**
+   * Use cache for registry requests (default: true)
+   */
   cache?: boolean
   /**
    * How many levels of the dependency tree to include.
@@ -22,7 +24,9 @@ export type OutdatedDependenciesOptions = {
  * Options for deduplicateDependencies method
  */
 export type DeduplicateDependenciesOptions = {
-  /** Only analyze without applying changes (default: false) */
+  /**
+   * Only analyze without applying changes (default: false)
+   */
   dryRun?: boolean
 }
 

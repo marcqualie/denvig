@@ -6,7 +6,9 @@ const SUDO_PATH = '/etc/pam.d/sudo'
 
 const PAM_TID_PATTERN = /^\s*auth\s+sufficient\s+pam_tid\.so/m
 
-/** Whether `pam_tid.so` is configured for sudo (i.e. Touch ID is enabled). */
+/**
+ * Whether `pam_tid.so` is configured for sudo (i.e. Touch ID is enabled).
+ */
 export const isSudoTouchIdEnabled = async (): Promise<boolean> => {
   for (const path of [SUDO_LOCAL_PATH, SUDO_PATH]) {
     const content = await safeReadTextFile(path)

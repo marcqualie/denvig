@@ -1,4 +1,6 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any */
+/**
+ * biome-ignore-all lint/suspicious/noExplicitAny: The print function is overridden for mocking, easier to use any
+ */
 import { deepStrictEqual, match, ok, strictEqual } from 'node:assert'
 import {
   mkdirSync,
@@ -25,7 +27,9 @@ import {
   updateServiceState,
 } from './state.ts'
 
-/** Bind an ephemeral TCP port and return it with a release callback. */
+/**
+ * Bind an ephemeral TCP port and return it with a release callback.
+ */
 const occupyPort = async (): Promise<{
   port: number
   release: () => Promise<void>
@@ -693,7 +697,9 @@ describe('ServiceManager', () => {
       http: { domain: 'hello.denvig.me' },
     }
 
-    /** Project whose `hello` service naturally owns hello.denvig.me. */
+    /**
+     * Project whose `hello` service naturally owns hello.denvig.me.
+     */
     const createOriginalProject = () => {
       const project = createMockInternalProject({
         slug: 'github:owner/repo',
@@ -703,7 +709,9 @@ describe('ServiceManager', () => {
       return project
     }
 
-    /** Sibling worktree checkout declaring the same service + domain. */
+    /**
+     * Sibling worktree checkout declaring the same service + domain.
+     */
     const createWorktreeProject = () => {
       const project = createMockInternalProject({
         slug: 'github:owner/repo',
@@ -713,7 +721,9 @@ describe('ServiceManager', () => {
       return project
     }
 
-    /** Record the original project's service as running and owning the domain. */
+    /**
+     * Record the original project's service as running and owning the domain.
+     */
     const seedRunningOriginal = async (project: ServiceManagerProject) => {
       await updateServiceState(project.id, 'hello', {
         cwd: project.path,
@@ -1311,7 +1321,9 @@ describe('ServiceManager', () => {
       rmSync(tmpHome, { recursive: true, force: true })
     })
 
-    /** A PID that is never alive (above the macOS/Linux PID ceiling). */
+    /**
+     * A PID that is never alive (above the macOS/Linux PID ceiling).
+     */
     const DEAD_PID = 99_999_999
 
     const createProject = () => {

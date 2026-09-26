@@ -28,13 +28,21 @@ import type {
  * project-owns-worktrees refactor.
  */
 export class Worktree {
-  /** Absolute path of this checkout. */
+  /**
+   * Absolute path of this checkout.
+   */
   readonly path: string
-  /** Branch checked out here. The primary checkout always reports `main`. */
+  /**
+   * Branch checked out here. The primary checkout always reports `main`.
+   */
   readonly branch: string
-  /** True when this is the project's primary checkout. */
+  /**
+   * True when this is the project's primary checkout.
+   */
   readonly isPrimary: boolean
-  /** All identifiers for this checkout. See `projectRefs()` for the format. */
+  /**
+   * All identifiers for this checkout. See `projectRefs()` for the format.
+   */
   readonly refs: string[]
   readonly slug: string
   readonly id: string
@@ -63,7 +71,9 @@ export class Worktree {
     }
   }
 
-  /** Retrieve a worktree by looking up its config and root files. */
+  /**
+   * Retrieve a worktree by looking up its config and root files.
+   */
   static async retrieve(
     path: string,
     branch: string,
@@ -80,7 +90,9 @@ export class Worktree {
     return this.config.name ?? this.path.split('/').pop() ?? 'unknown'
   }
 
-  /** List of files in the root of this checkout. */
+  /**
+   * List of files in the root of this checkout.
+   */
   get rootFiles(): string[] {
     return this._rootFilesCache ?? []
   }
@@ -144,17 +156,23 @@ export class Worktree {
     )
   }
 
-  /** All actions that can be run for this checkout. */
+  /**
+   * All actions that can be run for this checkout.
+   */
   get actions() {
     return detectActions(this)
   }
 
-  /** All services defined in this checkout's configuration. */
+  /**
+   * All services defined in this checkout's configuration.
+   */
   get services() {
     return this.config.services || {}
   }
 
-  /** Find all files recursively with a given name in this checkout. */
+  /**
+   * Find all files recursively with a given name in this checkout.
+   */
   async findFilesByName(fileName: string): Promise<string[]> {
     const results: string[] = []
 

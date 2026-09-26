@@ -8,7 +8,9 @@ type Flags = {
 }
 
 export type CliStartResolution = {
-  /** Port to start the service on; `undefined` means no PORT env. */
+  /**
+   * Port to start the service on; `undefined` means no PORT env.
+   */
   port: number | undefined
 }
 

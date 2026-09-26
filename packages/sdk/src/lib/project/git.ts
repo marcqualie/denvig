@@ -74,17 +74,23 @@ export const getGitHubSlug = async (
   }
 }
 
-/** Clone a git repository into the target directory. */
+/**
+ * Clone a git repository into the target directory.
+ */
 export const gitClone = (url: string, target: string): Promise<boolean> => {
   return runInherit('git', ['clone', url, target])
 }
 
-/** Run `git pull` in the given directory. */
+/**
+ * Run `git pull` in the given directory.
+ */
 export const gitPull = (cwd: string): Promise<boolean> => {
   return runInherit('git', ['pull'], { cwd })
 }
 
-/** Check if a git working tree has uncommitted changes. */
+/**
+ * Check if a git working tree has uncommitted changes.
+ */
 export const isWorkingTreeDirty = async (cwd: string): Promise<boolean> => {
   try {
     const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
@@ -132,9 +138,13 @@ export const extractGitHubSlug = (normalised: string | null): string | null => {
 }
 
 export type GitWorktree = {
-  /** Real path of the primary worktree (shared across all sibling worktrees). */
+  /**
+   * Real path of the primary worktree (shared across all sibling worktrees).
+   */
   primaryPath: string
-  /** Branch name for the current worktree (`main` for the primary checkout). */
+  /**
+   * Branch name for the current worktree (`main` for the primary checkout).
+   */
   branch: string
 }
 
@@ -182,9 +192,13 @@ export const findDetachedWorktreeRoot = (path: string): string | null => {
 }
 
 export type ProjectWorktree = {
-  /** Absolute path of the detached worktree's checkout. */
+  /**
+   * Absolute path of the detached worktree's checkout.
+   */
   path: string
-  /** Branch checked out in the detached worktree. */
+  /**
+   * Branch checked out in the detached worktree.
+   */
   branch: string
 }
 
@@ -230,11 +244,17 @@ export const detectProjectWorktrees = (path: string): ProjectWorktree[] => {
 }
 
 export type GitInfo = {
-  /** Path to the primary worktree's `.git` directory. */
+  /**
+   * Path to the primary worktree's `.git` directory.
+   */
   primaryGitDir: string
-  /** Remote URLs keyed by remote name, parsed from `.git/config`. */
+  /**
+   * Remote URLs keyed by remote name, parsed from `.git/config`.
+   */
   remotes: Record<string, string>
-  /** Worktree details for the current path. */
+  /**
+   * Worktree details for the current path.
+   */
   worktree: GitWorktree
 }
 
@@ -296,7 +316,9 @@ export const readGitInfo = (absolutePath: string): GitInfo | null => {
   }
 }
 
-/** Read `<gitdir>/HEAD` and return the branch name, or null. */
+/**
+ * Read `<gitdir>/HEAD` and return the branch name, or null.
+ */
 const readHeadBranch = (gitDir: string): string | null => {
   try {
     const head = readFileSync(`${gitDir}/HEAD`, 'utf-8').trim()

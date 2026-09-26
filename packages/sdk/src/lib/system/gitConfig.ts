@@ -19,7 +19,9 @@ export type GitIdentity = {
   email: string
 }
 
-/** Read `user.name` and `user.email` from the global git config. */
+/**
+ * Read `user.name` and `user.email` from the global git config.
+ */
 export const getGitIdentity = async (): Promise<GitIdentity | null> => {
   const [name, email] = await Promise.all([
     readGlobalGitConfig('user.name'),
@@ -29,12 +31,16 @@ export const getGitIdentity = async (): Promise<GitIdentity | null> => {
   return { name, email }
 }
 
-/** Whether `user.name` and `user.email` are both set in global git config. */
+/**
+ * Whether `user.name` and `user.email` are both set in global git config.
+ */
 export const isGitConfigured = async (): Promise<boolean> => {
   return (await getGitIdentity()) !== null
 }
 
-/** Set `user.name` and `user.email` in global git config. */
+/**
+ * Set `user.name` and `user.email` in global git config.
+ */
 export const configureGit = async (
   name: string,
   email: string,

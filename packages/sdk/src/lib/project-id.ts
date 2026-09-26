@@ -5,11 +5,17 @@ import { listProjects } from './projects.ts'
  * Parsed result of a project identifier.
  */
 export type ParsedProjectId = {
-  /** Type of identifier: 'id', 'github', 'local', or 'path' */
+  /**
+   * Type of identifier: 'id', 'github', 'local', or 'path'
+   */
   type: 'id' | 'github' | 'local' | 'path'
-  /** The value portion after the prefix (or the full value for unprefixed) */
+  /**
+   * The value portion after the prefix (or the full value for unprefixed)
+   */
   value: string
-  /** Optional service name if the identifier includes /serviceName suffix */
+  /**
+   * Optional service name if the identifier includes /serviceName suffix
+   */
   serviceName?: string
 }
 

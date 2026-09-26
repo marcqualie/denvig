@@ -39,7 +39,9 @@ import type {
 import type { DenvigConfig } from './resources/config.ts'
 import type { ResourceContext } from './resources/context.ts'
 
-/** A detected project plus its slug, or nulls when none could be resolved. */
+/**
+ * A detected project plus its slug, or nulls when none could be resolved.
+ */
 export type DetectProjectResult = {
   project: DenvigProject | null
   projectPath: string | null
@@ -97,7 +99,9 @@ export class DenvigSDK {
     this.ctx = { client: options.client, cwd: options.cwd ?? process.cwd() }
   }
 
-  /** The version denvig was compiled with. */
+  /**
+   * The version denvig was compiled with.
+   */
   version(): string {
     return getDenvigVersion()
   }
@@ -161,41 +165,59 @@ export class DenvigSDK {
   }
 
   certs = {
-    /** List managed TLS certificates, optionally filtered by domain. */
+    /**
+     * List managed TLS certificates, optionally filtered by domain.
+     */
     list: (options?: ListCertificatesOptions): Promise<DenvigCertificate[]> =>
       track(this.ctx, 'certs.list', null, () => listCertificates(options)),
 
-    /** Look up a managed certificate by `domain` or directory `name`. */
+    /**
+     * Look up a managed certificate by `domain` or directory `name`.
+     */
     retrieve: (ref: CertificateRef): Promise<CertificateLocation | null> =>
       track(this.ctx, 'certs.retrieve', null, () => retrieveCertificate(ref)),
 
-    /** Issue a certificate for a domain, signed by the local CA. */
+    /**
+     * Issue a certificate for a domain, signed by the local CA.
+     */
     create: (
       options: CreateCertificateOptions,
     ): Promise<CreateCertificateResult> =>
       track(this.ctx, 'certs.create', null, () => createCertificate(options)),
 
-    /** Remove a managed certificate by `domain` or directory `name`. */
+    /**
+     * Remove a managed certificate by `domain` or directory `name`.
+     */
     remove: (ref: CertificateRef): Promise<RemoveCertificateResult> =>
       track(this.ctx, 'certs.remove', null, () => removeCertificate(ref)),
 
-    /** Import an existing key/certificate pair into the managed certs. */
+    /**
+     * Import an existing key/certificate pair into the managed certs.
+     */
     import: (
       options: ImportCertificateOptions,
     ): Promise<ImportCertificateResult> =>
       track(this.ctx, 'certs.import', null, () => importCertificate(options)),
 
-    /** The local Certificate Authority that signs locally-issued certs. */
+    /**
+     * The local Certificate Authority that signs locally-issued certs.
+     */
     ca: {
-      /** Report whether the local CA is configured and its details. */
+      /**
+       * Report whether the local CA is configured and its details.
+       */
       status: (): Promise<CaStatus> =>
         track(this.ctx, 'certs.ca.status', null, () => getCaStatus()),
 
-      /** Generate the local CA if missing and install it to the keychain. */
+      /**
+       * Generate the local CA if missing and install it to the keychain.
+       */
       configure: (): Promise<ConfigureCaResult> =>
         track(this.ctx, 'certs.ca.configure', null, () => configureCa()),
 
-      /** Remove the local CA from the system keychain. */
+      /**
+       * Remove the local CA from the system keychain.
+       */
       remove: (): Promise<{ path: string }> =>
         track(this.ctx, 'certs.ca.remove', null, () => removeCa()),
     },
@@ -209,7 +231,9 @@ export class DenvigSDK {
     status: (): Promise<GatewayStatus> =>
       track(this.ctx, 'gateway.status', null, () => getGatewayStatus()),
 
-    /** Reconcile services and rebuild every nginx config from runtime state. */
+    /**
+     * Reconcile services and rebuild every nginx config from runtime state.
+     */
     configure: (): Promise<ConfigureGatewayOutput> =>
       track(this.ctx, 'gateway.configure', null, () => configureGatewayAll()),
   }

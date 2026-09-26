@@ -2,7 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
-/** Directory where gateway HTML files are written at runtime. */
+/**
+ * Directory where gateway HTML files are written at runtime.
+ */
 export function getGatewayHtmlDir(): string {
   return resolve(homedir(), '.denvig', 'gateway', 'html')
 }

@@ -32,7 +32,9 @@ const printStatus = (name: string, enabled: boolean) => {
   console.log(`${mark} ${name}: ${label}`)
 }
 
-/** Returns true if the step needed user interaction. */
+/**
+ * Returns true if the step needed user interaction.
+ */
 const runStep = async (step: Step): Promise<boolean> => {
   const enabled = await step.check()
   printStatus(step.name, enabled)
@@ -140,7 +142,9 @@ const STEPS: Step[] = [
   },
 ]
 
-/** Walk through every system configure step interactively. */
+/**
+ * Walk through every system configure step interactively.
+ */
 export const runSystemConfigure = async (): Promise<void> => {
   const runners: Array<() => Promise<boolean>> = [
     ...STEPS.map((step) => () => runStep(step)),

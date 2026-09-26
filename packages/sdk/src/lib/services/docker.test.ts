@@ -7,7 +7,9 @@ import {
   DEFAULT_DOCKER_IMAGE,
 } from './docker.ts'
 
-/** A single project bind-mount spec used by most cases. */
+/**
+ * A single project bind-mount spec used by most cases.
+ */
 const projectVolume = (host = '/Users/me/project') => [
   `${host}:${CONTAINER_PROJECT_DIR}`,
 ]

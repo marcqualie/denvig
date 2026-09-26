@@ -1,10 +1,14 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
-/** Cache duration in milliseconds */
+/**
+ * Cache duration in milliseconds
+ */
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
-/** Cache directory for npm package info */
+/**
+ * Cache directory for npm package info
+ */
 const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/npm`
   await mkdir(cacheDir, { recursive: true })
@@ -41,7 +45,9 @@ export const sanitizePackageName = (packageName: string): string => {
   return safe
 }
 
-/** Get cache file path for a package */
+/**
+ * Get cache file path for a package
+ */
 export const getCacheFilePath = async (
   packageName: string,
 ): Promise<string> => {
@@ -49,7 +55,9 @@ export const getCacheFilePath = async (
   return `${await getCacheDir()}/${safeFileName}.json`
 }
 
-/** Check if cache file is still valid (less than 30 minutes old) */
+/**
+ * Check if cache file is still valid (less than 30 minutes old)
+ */
 const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
     const stats = await stat(filePath)
@@ -66,7 +74,9 @@ export type NpmPackageInfo = {
   versionDates?: Record<string, string>
 }
 
-/** Read cached package info */
+/**
+ * Read cached package info
+ */
 const readCache = async (
   packageName: string,
 ): Promise<NpmPackageInfo | null> => {
@@ -85,7 +95,9 @@ const readCache = async (
   }
 }
 
-/** Write package info to cache */
+/**
+ * Write package info to cache
+ */
 const writeCache = async (
   packageName: string,
   data: NpmPackageInfo,

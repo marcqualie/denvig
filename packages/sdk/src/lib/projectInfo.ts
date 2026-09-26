@@ -19,9 +19,13 @@ export type ProjectInfo = {
 }
 
 export type GetProjectInfoOptions = {
-  /** Pre-fetched launchctl list to avoid repeated shell calls */
+  /**
+   * Pre-fetched launchctl list to avoid repeated shell calls
+   */
   launchctlList?: LaunchctlListItem[]
-  /** Include service status in the response (requires launchctl calls) */
+  /**
+   * Include service status in the response (requires launchctl calls)
+   */
   includeServiceStatus?: boolean
 }
 

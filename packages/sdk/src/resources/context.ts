@@ -6,9 +6,13 @@ import { getDenvigVersion } from '../lib/version.ts'
  * the calling client in the usage log (`via: sdk:<client>`).
  */
 export type ResourceContext = {
-  /** Identifier for the integration using the SDK (e.g. `cli`, `raycast`). */
+  /**
+   * Identifier for the integration using the SDK (e.g. `cli`, `raycast`).
+   */
   client: string
-  /** Working directory used to resolve projects and as the log entry path. */
+  /**
+   * Working directory used to resolve projects and as the log entry path.
+   */
   cwd: string
 }
 

@@ -48,49 +48,77 @@ import type { ProjectConfigSchema } from '../schemas/config.ts'
 import type { ResourceContext } from './context.ts'
 
 export type ActionRetrieveOptions = {
-  /** Target a sibling git worktree by branch name (`main` = primary). */
+  /**
+   * Target a sibling git worktree by branch name (`main` = primary).
+   */
   worktree?: string
-  /** Restrict resolution to a single ecosystem (e.g. `npm`). */
+  /**
+   * Restrict resolution to a single ecosystem (e.g. `npm`).
+   */
   ecosystem?: string
 }
 
 export type ServiceRetrieveOptions = {
-  /** Target a sibling git worktree by branch name (`main` = primary). */
+  /**
+   * Target a sibling git worktree by branch name (`main` = primary).
+   */
   worktree?: string
 }
 
 export type DependenciesTreeOptions = {
-  /** Include transitive dependencies up to this depth (`0` = direct only). */
+  /**
+   * Include transitive dependencies up to this depth (`0` = direct only).
+   */
   depth?: number
-  /** Restrict the tree to a single ecosystem (e.g. `npm`). */
+  /**
+   * Restrict the tree to a single ecosystem (e.g. `npm`).
+   */
   ecosystem?: string
 }
 
 export type DependenciesOutdatedOptions = {
-  /** Filter to a specific ecosystem (e.g. `npm`, `rubygems`). */
+  /**
+   * Filter to a specific ecosystem (e.g. `npm`, `rubygems`).
+   */
   ecosystem?: string
-  /** Filter by semver level. */
+  /**
+   * Filter by semver level.
+   */
   semver?: SemverLevel
-  /** Resolve dependencies in a sibling worktree by branch name. */
+  /**
+   * Resolve dependencies in a sibling worktree by branch name.
+   */
   worktree?: string
-  /** Only show updates released longer ago than this duration. */
+  /**
+   * Only show updates released longer ago than this duration.
+   */
   releaseLatency?: string
-  /** Skip cache and fetch fresh data from the registry. */
+  /**
+   * Skip cache and fetch fresh data from the registry.
+   */
   noCache?: boolean
 }
 
 export type ResourceIdentifierOptions = {
-  /** Workspace within the project (defaults to `root`). */
+  /**
+   * Workspace within the project (defaults to `root`).
+   */
   workspace?: string
-  /** Resource reference, e.g. `service/api` or `action/build`. */
+  /**
+   * Resource reference, e.g. `service/api` or `action/build`.
+   */
   resource: `action/${string}` | `service/${string}`
 }
 
-/** A resolved service target: its manager plus the worktree it lives in. */
+/**
+ * A resolved service target: its manager plus the worktree it lives in.
+ */
 export type DenvigServiceContext = {
   manager: ServiceManager
   serviceName: string
-  /** The checkout (or global project) the service belongs to. */
+  /**
+   * The checkout (or global project) the service belongs to.
+   */
   target: ServiceManagerProject
 }
 
@@ -129,12 +157,16 @@ export class DenvigProject {
     return this.internal.refs
   }
 
-  /** The checkout this project instance is currently acting on. */
+  /**
+   * The checkout this project instance is currently acting on.
+   */
   get activeWorktree(): DenvigWorktree {
     return new DenvigWorktree(this.internal.activeWorktree)
   }
 
-  /** The primary checkout (`main`). */
+  /**
+   * The primary checkout (`main`).
+   */
   get primaryWorktree(): DenvigWorktree {
     return new DenvigWorktree(this.internal.primaryWorktree)
   }
@@ -154,33 +186,43 @@ export class DenvigProject {
     return new DenvigWorktree(worktree)
   }
 
-  /** Build the project's info summary, including aggregate service status. */
+  /**
+   * Build the project's info summary, including aggregate service status.
+   */
   info(options?: GetProjectInfoOptions): Promise<ProjectInfo> {
     return track(this.ctx, 'projects.info', this.internal.slug, () =>
       getProjectInfo(this.internal, options),
     )
   }
 
-  /** List the available plugins and the actions each resolves. */
+  /**
+   * List the available plugins and the actions each resolves.
+   */
   plugins(): Promise<Record<string, PluginInfo>> {
     return track(this.ctx, 'plugins.list', this.internal.slug, () =>
       listPlugins(this.internal.activeWorktree),
     )
   }
 
-  /** Tear down all of the active checkout's services. */
+  /**
+   * Tear down all of the active checkout's services.
+   */
   teardown(options?: { removeLogs?: boolean }): Promise<ProjectTeardownResult> {
     return track(this.ctx, 'projects.teardown', this.internal.slug, () =>
       teardownProject(this.internal, options),
     )
   }
 
-  /** Construct the canonical ID for a resource within this project. */
+  /**
+   * Construct the canonical ID for a resource within this project.
+   */
   resourceId(options: ResourceIdentifierOptions): string {
     return constructDenvigResourceId({ project: this.internal, ...options })
   }
 
-  /** Construct the canonical ID and hash for a resource within this project. */
+  /**
+   * Construct the canonical ID and hash for a resource within this project.
+   */
   resourceHash(
     options: ResourceIdentifierOptions,
   ): ReturnType<typeof generateDenvigResourceHash> {
@@ -212,7 +254,9 @@ export class DenvigProject {
       options?: ServiceRetrieveOptions,
     ): Promise<DenvigService> =>
       new DenvigService(this.internal, name, options?.worktree, this.ctx),
-    /** Collect services for a scope into rendered rows. */
+    /**
+     * Collect services for a scope into rendered rows.
+     */
     list: (options?: ListServicesOptions): Promise<ServiceRow[]> =>
       track(this.ctx, 'services.list', this.internal.slug, () =>
         collectServiceRows(

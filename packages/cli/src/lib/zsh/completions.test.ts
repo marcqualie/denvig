@@ -6,7 +6,9 @@ import { zshCompletionsFor } from './completions.ts'
 
 import type { GenericCommand } from '../command.ts'
 
-/** Minimal mock commands tree for testing */
+/**
+ * Minimal mock commands tree for testing
+ */
 const mockCommands: Record<string, GenericCommand> = {
   services: new Command({
     name: 'services',

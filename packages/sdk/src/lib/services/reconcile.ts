@@ -23,7 +23,9 @@ export type ReconcileAction =
       project: string
       service: string
       reason: string
-      /** Unified-style plist diff explaining the config change. */
+      /**
+       * Unified-style plist diff explaining the config change.
+       */
       diff?: string[]
     }
   | { type: 'skipped'; project: string; service: string; reason: string }

@@ -5,10 +5,14 @@
 
 import type { GenericCommand } from './command.ts'
 
-/** Commands that should be hidden from completions */
+/**
+ * Commands that should be hidden from completions
+ */
 export const HIDDEN_COMMANDS = ['internals'] as const
 
-/** Derive root command names from a commands map */
+/**
+ * Derive root command names from a commands map
+ */
 export function getRootCommands(
   commands: Record<string, GenericCommand>,
 ): string[] {
@@ -19,7 +23,9 @@ export function getRootCommands(
   )
 }
 
-/** Derive subcommands map from a commands tree */
+/**
+ * Derive subcommands map from a commands tree
+ */
 export function getSubcommands(
   commands: Record<string, GenericCommand>,
 ): Record<string, string[]> {

@@ -23,7 +23,9 @@ export class DenvigValidationError extends DenvigError {
  * Thrown when an operation fails at runtime (e.g. a service refuses to start).
  */
 export class DenvigOperationError extends DenvigError {
-  /** Optional machine-readable details (service name, project slug, …). */
+  /**
+   * Optional machine-readable details (service name, project slug, …).
+   */
   readonly details?: Record<string, unknown>
 
   constructor(message: string, details?: Record<string, unknown>) {
