@@ -18,22 +18,15 @@ describe('parseUsesReference()', () => {
     })
   })
 
-  it('uses the version comment for commit SHA pins', () => {
+  it('keeps the commit SHA as the specifier for pinned references', () => {
     deepStrictEqual(
       parseUsesReference(
-        'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
-        'v7.0.1',
+        'actions/checkout@3D3C42E5AAC5BA805825DA76410C181273BA90B1',
       ),
-      { name: 'actions/checkout', specifier: '7.0.1' },
-    )
-  })
-
-  it('ignores commit SHA pins without a version comment', () => {
-    strictEqual(
-      parseUsesReference(
-        'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
-      ),
-      null,
+      {
+        name: 'actions/checkout',
+        specifier: '3d3c42e5aac5ba805825da76410c181273ba90b1',
+      },
     )
   })
 
@@ -60,7 +53,7 @@ jobs:
   test:
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
       - uses: "actions/setup-node@v6"
       - uses: ./.github/actions/local
       # - uses: actions/cache@v4
@@ -68,7 +61,10 @@ jobs:
 
     deepStrictEqual(result, [
       { name: 'owner/workflows', specifier: '1.2' },
-      { name: 'actions/checkout', specifier: '7.0.1' },
+      {
+        name: 'actions/checkout',
+        specifier: '3d3c42e5aac5ba805825da76410c181273ba90b1',
+      },
       { name: 'actions/setup-node', specifier: '6' },
     ])
   })

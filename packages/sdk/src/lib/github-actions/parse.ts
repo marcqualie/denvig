@@ -6,13 +6,15 @@ import type { Worktree } from '../project/worktree.ts'
 export type ActionReference = {
   /** Repository that publishes the action releases (e.g. `actions/checkout`). */
   name: string
-  /** Semver range the reference resolves within (e.g. `6`, `7.0.1`). */
+  /**
+   * Semver range the reference resolves within (e.g. `6`, `7.0.1`), or the
+   * full commit SHA for pinned references.
+   */
   specifier: string
 }
 
-const USES_PATTERN =
-  /^\s*(?:-\s*)?uses:\s*(['"]?)([^\s'"#]+)\1\s*(?:#\s*(.*))?$/
-const SHA_PATTERN = /^[0-9a-f]{40}$/i
+const USES_PATTERN = /^\s*(?:-\s*)?uses:\s*(['"]?)([^\s'"#]+)\1/
+export const SHA_PATTERN = /^[0-9a-f]{40}$/i
 const VERSION_PATTERN = /^v?(\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?)$/
 
 /**
@@ -26,12 +28,10 @@ const toSpecifier = (tag: string): string | null => {
 /**
  * Parse a single `uses:` value into an action reference. Local actions,
  * docker images and branch refs are ignored as they have no release versions.
- * Commit SHA pins use the version from the trailing comment (`# v7.0.1`).
+ * Commit SHA pins keep the SHA as their specifier so the version can be
+ * looked up from the repository tags; trailing comments are not trusted.
  */
-export const parseUsesReference = (
-  uses: string,
-  comment?: string,
-): ActionReference | null => {
+export const parseUsesReference = (uses: string): ActionReference | null => {
   if (uses.startsWith('./') || uses.startsWith('docker://')) return null
 
   const at = uses.lastIndexOf('@')
@@ -41,8 +41,7 @@ export const parseUsesReference = (
   if (!owner || !repo) return null
 
   const ref = uses.slice(at + 1)
-  const tag = SHA_PATTERN.test(ref) ? comment?.trim().split(/\s+/)[0] : ref
-  const specifier = tag ? toSpecifier(tag) : null
+  const specifier = SHA_PATTERN.test(ref) ? ref.toLowerCase() : toSpecifier(ref)
   if (!specifier) return null
 
   return { name: `${owner}/${repo}`, specifier }
@@ -54,7 +53,7 @@ export const parseWorkflow = (content: string): ActionReference[] => {
   for (const line of content.split('\n')) {
     const match = line.match(USES_PATTERN)
     if (!match) continue
-    const reference = parseUsesReference(match[2], match[3])
+    const reference = parseUsesReference(match[2])
     if (reference) references.push(reference)
   }
   return references
