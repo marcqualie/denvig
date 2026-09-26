@@ -1,9 +1,18 @@
 import { defineConfig } from 'rolldown'
 import { dts } from 'rolldown-plugin-dts'
 
-const externalDeps = ['node-forge', 'semver', 'yaml', 'zod']
+const matchesDeps = (deps: string[], id: string) =>
+  deps.some((dep) => id === dep || id.startsWith(`${dep}/`))
+
 const isExternal = (id: string) =>
-  externalDeps.some((dep) => id === dep || id.startsWith(`${dep}/`))
+  matchesDeps(['node-forge', 'semver', 'yaml', 'zod'], id)
+
+/**
+ * The CLI binary bundles zod, yaml and semver so startup doesn't have to load
+ * hundreds of separate files from `node_modules`. `node-forge` stays external
+ * as it is only needed by a few commands.
+ */
+const isExternalForCli = (id: string) => matchesDeps(['node-forge'], id)
 
 /**
  * The binary bundles `@denvig/sdk` from source so it is self-contained, but the
@@ -28,7 +37,7 @@ export default defineConfig([
     input: 'src/cli.ts',
     platform: 'node',
     resolve,
-    external: isExternal,
+    external: isExternalForCli,
     output: {
       file: 'dist/cli.cjs',
       format: 'cjs',

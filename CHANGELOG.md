@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Faster CLI startup by bundling common libs
 - Updated 3 patch dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts)
 
 ## [0.7.3] - 2026-09-18
