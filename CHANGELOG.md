@@ -5,6 +5,7 @@
 ### Added
 
 - `denvig services run <name>` runs a service in the foreground with live output until Ctrl+C
+- GitHub Actions are now an `actions` ecosystem for `denvig deps list` and `denvig outdated`, using GitHub releases
 
 ### Changed
 

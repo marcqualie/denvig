@@ -1,5 +1,6 @@
 import { DenvigValidationError } from '../lib/errors.ts'
 import { parseDuration } from '../lib/formatters/duration.ts'
+import { fetchGitHubActionInfo } from '../lib/github-actions/info.ts'
 import { fetchJsrPackageInfo } from '../lib/jsr/info.ts'
 import { fetchNpmPackageInfo } from '../lib/npm/info.ts'
 import { readPnpmReleaseAgeConfig } from '../lib/pnpm-config.ts'
@@ -39,6 +40,10 @@ const REGISTRY_FETCHERS: Record<
   string,
   (name: string, noCache?: boolean) => Promise<DependencyInfo | null>
 > = {
+  actions: async (name, noCache) => {
+    const info = await fetchGitHubActionInfo(name, noCache)
+    return info ? { ecosystem: 'actions', name, ...info } : null
+  },
   npm: async (name, noCache) => {
     const info = await fetchNpmPackageInfo(name, noCache)
     return info ? { ecosystem: 'npm', name, ...info } : null
@@ -101,7 +106,7 @@ export type OutdatedDependenciesOptions = {
   cache?: boolean
   /** Filter by semver level (patch | minor | major). */
   semver?: SemverLevel
-  /** Filter to a specific ecosystem (e.g. npm, rubygems, pypi). */
+  /** Filter to a specific ecosystem (e.g. npm, rubygems, pypi, actions). */
   ecosystem?: string
   /**
    * Only show updates released longer ago than this duration (e.g. "3h",

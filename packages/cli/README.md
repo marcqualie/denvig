@@ -141,6 +141,7 @@ can be supported by using the per project configs.
 - [ ] Deno
 - [x] Ruby (rubygems)
 - [x] Python (uv)
+- [x] GitHub Actions
 
 
 
