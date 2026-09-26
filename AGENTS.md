@@ -54,7 +54,7 @@ re-exports it as `denvig/cli`; the existing `.` SDK export is preserved.
 
 ## Code Style
 
-- Use JSDoc comments (`/** ... */`) for documentation, not decorative comment blocks.
+- Use JSDoc comments for documentation, not decorative comment blocks. They must always span multiple lines (enforced by a Biome plugin).
 - Do not use `// ===` or similar ASCII art section dividers.
 - Keep comments minimal and meaningful - code should be self-documenting where possible.
 
