@@ -9,8 +9,8 @@ quickActions:
 
 services:
   hello:
-    command: |
-      node -e "require('http').createServer((req, res) => { res.writeHead(200, {'Content-Type': 'text/plain'}); res.end('Hello World\n'); }).listen(process.env.PORT, () => console.log(`Server running at http://localhost:${process.env.PORT}/`))"
+    cwd: apps/example-hello
+    command: node index.js
     http:
       port: 8080
       secure: true
@@ -19,11 +19,11 @@ services:
         - hello.denvig.localhost
   hello-linux:
     runtime: docker
-    image: node:22-alpine
+    image: node:26-alpine
     container:
       mountProject: true
-    command: |
-      node -e "require('http').createServer((req, res) => { res.writeHead(200, {'Content-Type': 'text/plain'}); res.end('Hello from denvig container at ' + process.cwd() + '\n'); }).listen(process.env.PORT, () => console.log('hello-linux listening on ' + process.env.PORT + ' in ' + process.cwd()))"
+    cwd: apps/example-hello
+    command: node index.js
     http:
       port: 8081
   redis:
