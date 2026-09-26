@@ -19,7 +19,7 @@ services:
         - hello.denvig.localhost
   hello-linux:
     runtime: docker
-    image: node:22-alpine
+    image: node:26-alpine
     container:
       mountProject: true
     cwd: apps/example-hello
