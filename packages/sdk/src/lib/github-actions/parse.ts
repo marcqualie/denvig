@@ -4,7 +4,9 @@ import type { ProjectDependencySchema } from '../dependencies.ts'
 import type { Worktree } from '../project/worktree.ts'
 
 export type ActionReference = {
-  /** Repository that publishes the action releases (e.g. `actions/checkout`). */
+  /**
+   * Repository that publishes the action releases (e.g. `actions/checkout`).
+   */
   name: string
   /**
    * Semver range the reference resolves within (e.g. `6`, `7.0.1`), or the
@@ -47,7 +49,9 @@ export const parseUsesReference = (uses: string): ActionReference | null => {
   return { name: `${owner}/${repo}`, specifier }
 }
 
-/** Extract all versioned action references from a workflow or action file. */
+/**
+ * Extract all versioned action references from a workflow or action file.
+ */
 export const parseWorkflow = (content: string): ActionReference[] => {
   const references: ActionReference[] = []
   for (const line of content.split('\n')) {

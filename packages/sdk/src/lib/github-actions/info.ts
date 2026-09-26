@@ -8,20 +8,28 @@ import { sanitizePackageName } from '../npm/info.ts'
 
 const execFileAsync = promisify(execFile)
 
-/** Cache duration in milliseconds */
+/**
+ * Cache duration in milliseconds
+ */
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
-/** Timeout for listing remote tags */
+/**
+ * Timeout for listing remote tags
+ */
 const LS_REMOTE_TIMEOUT_MS = 30 * 1000
 
-/** Cache directory for GitHub Actions release info */
+/**
+ * Cache directory for GitHub Actions release info
+ */
 const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/actions`
   await mkdir(cacheDir, { recursive: true })
   return cacheDir
 }
 
-/** Get cache file path for an action repository */
+/**
+ * Get cache file path for an action repository
+ */
 const getCacheFilePath = async (
   name: string,
   kind: string,
@@ -29,7 +37,9 @@ const getCacheFilePath = async (
   return `${await getCacheDir()}/${sanitizePackageName(name)}.${kind}.json`
 }
 
-/** Check if cache file is still valid */
+/**
+ * Check if cache file is still valid
+ */
 const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
     const stats = await stat(filePath)
@@ -52,7 +62,9 @@ type GitHubRelease = {
   published_at: string | null
 }
 
-/** Read cached data for an action repository */
+/**
+ * Read cached data for an action repository
+ */
 const readCache = async <T>(name: string, kind: string): Promise<T | null> => {
   const filePath = await getCacheFilePath(name, kind)
   if (!(await isCacheValid(filePath))) return null
@@ -63,7 +75,9 @@ const readCache = async <T>(name: string, kind: string): Promise<T | null> => {
   }
 }
 
-/** Write data for an action repository to cache */
+/**
+ * Write data for an action repository to cache
+ */
 const writeCache = async (
   name: string,
   kind: string,

@@ -106,7 +106,9 @@ export type OutdatedDependenciesOptions = {
   cache?: boolean
   /** Filter by semver level (patch | minor | major). */
   semver?: SemverLevel
-  /** Filter to a specific ecosystem (e.g. npm, rubygems, pypi, actions). */
+  /**
+   * Filter to a specific ecosystem (e.g. npm, rubygems, pypi, actions).
+   */
   ecosystem?: string
   /**
    * Only show updates released longer ago than this duration (e.g. "3h",
