@@ -17,7 +17,8 @@ export const depsListCommand = new Command({
     },
     {
       name: 'ecosystem',
-      description: 'Filter to a specific ecosystem (e.g., npm, rubygems, pypi)',
+      description:
+        'Filter to a specific ecosystem (e.g., npm, rubygems, pypi, actions)',
       required: false,
       type: 'string',
       defaultValue: undefined,
