@@ -1,18 +1,26 @@
 import { spawn } from 'node:child_process'
 
 export type RunActionOptions = {
-  /** Extra arguments appended to every command. */
+  /**
+   * Extra arguments appended to every command.
+   */
   args?: string[]
-  /** Worktree slug, exported to the spawned process as `DENVIG_PROJECT`. */
+  /**
+   * Worktree slug, exported to the spawned process as `DENVIG_PROJECT`.
+   */
   projectSlug: string
-  /** Working directory the commands run in. */
+  /**
+   * Working directory the commands run in.
+   */
   cwd: string
   /**
    * Force interactive (TTY-preserving) execution. Defaults to whether the
    * parent process has a TTY on both stdin and stdout.
    */
   interactive?: boolean
-  /** Sink for the `$ <command>` echo lines. Defaults to `console.log`. */
+  /**
+   * Sink for the `$ <command>` echo lines. Defaults to `console.log`.
+   */
   onCommand?: (line: string) => void
 }
 

@@ -13,7 +13,9 @@ const cliPackageRoot = resolve(
   '../../..',
 )
 
-/** The from-source CLI entry point that tests execute. */
+/**
+ * The from-source CLI entry point that tests execute.
+ */
 const cliEntry = resolve(cliPackageRoot, 'src/cli.ts')
 
 /**

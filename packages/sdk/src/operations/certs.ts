@@ -35,26 +35,44 @@ import { DenvigValidationError } from '../lib/errors.ts'
 
 export type CertificateStatus = 'valid' | 'expired' | 'untrusted'
 
-/** A managed TLS certificate under `~/.denvig/certs`. */
+/**
+ * A managed TLS certificate under `~/.denvig/certs`.
+ */
 export type DenvigCertificate = {
-  /** The certificate directory name. */
+  /**
+   * The certificate directory name.
+   */
   name: string
-  /** Domains the certificate is valid for (falls back to the directory name). */
+  /**
+   * Domains the certificate is valid for (falls back to the directory name).
+   */
   domains: string[]
-  /** Issuer common name, when available. */
+  /**
+   * Issuer common name, when available.
+   */
   issuer: string | null
-  /** Expiry as an ISO 8601 timestamp. */
+  /**
+   * Expiry as an ISO 8601 timestamp.
+   */
   expires: string
-  /** `expired` when past expiry, `untrusted` for an untrusted local CA cert. */
+  /**
+   * `expired` when past expiry, `untrusted` for an untrusted local CA cert.
+   */
   status: CertificateStatus
-  /** Whether the certificate was signed by the local denvig CA. */
+  /**
+   * Whether the certificate was signed by the local denvig CA.
+   */
   signedByLocalCa: boolean
-  /** Whether the local CA is currently trusted in the system keychain. */
+  /**
+   * Whether the local CA is currently trusted in the system keychain.
+   */
   caTrusted: boolean
 }
 
 export type ListCertificatesOptions = {
-  /** Only include certificates valid for this domain. */
+  /**
+   * Only include certificates valid for this domain.
+   */
   domain?: string
 }
 
@@ -136,20 +154,32 @@ export const listCertificates = async (
   return certs
 }
 
-/** A managed certificate's location on disk. */
+/**
+ * A managed certificate's location on disk.
+ */
 export type CertificateLocation = {
-  /** The certificate directory name. */
+  /**
+   * The certificate directory name.
+   */
   name: string
-  /** Absolute path of the certificate directory. */
+  /**
+   * Absolute path of the certificate directory.
+   */
   path: string
-  /** Files within the certificate directory. */
+  /**
+   * Files within the certificate directory.
+   */
   files: string[]
 }
 
 export type CertificateRef = {
-  /** Resolve by domain (mapped to its certificate directory). */
+  /**
+   * Resolve by domain (mapped to its certificate directory).
+   */
   domain?: string
-  /** Resolve by certificate directory name. */
+  /**
+   * Resolve by certificate directory name.
+   */
   name?: string
 }
 
@@ -161,7 +191,9 @@ const resolveCertDir = (ref: CertificateRef): string => {
   )
 }
 
-/** Look up a managed certificate by domain or directory name. */
+/**
+ * Look up a managed certificate by domain or directory name.
+ */
 export const retrieveCertificate = async (
   ref: CertificateRef,
 ): Promise<CertificateLocation | null> => {
@@ -171,9 +203,13 @@ export const retrieveCertificate = async (
 }
 
 export type CreateCertificateOptions = {
-  /** Domain to issue a certificate for (e.g. `hello.denvig.me`, `*.denvig.me`). */
+  /**
+   * Domain to issue a certificate for (e.g. `hello.denvig.me`, `*.denvig.me`).
+   */
   domain: string
-  /** Overwrite an existing certificate for the domain. */
+  /**
+   * Overwrite an existing certificate for the domain.
+   */
   force?: boolean
 }
 
@@ -222,7 +258,9 @@ export type RemoveCertificateResult = {
   files: string[]
 }
 
-/** Remove a managed certificate by domain or directory name. */
+/**
+ * Remove a managed certificate by domain or directory name.
+ */
 export const removeCertificate = async (
   ref: CertificateRef,
 ): Promise<RemoveCertificateResult> => {
@@ -237,11 +275,17 @@ export const removeCertificate = async (
 }
 
 export type ImportCertificateOptions = {
-  /** Path to the private key PEM file. */
+  /**
+   * Path to the private key PEM file.
+   */
   keyPath: string
-  /** Path to the certificate (fullchain) PEM file. */
+  /**
+   * Path to the certificate (fullchain) PEM file.
+   */
   certPath: string
-  /** Override the certificate directory name (defaults to the detected domain). */
+  /**
+   * Override the certificate directory name (defaults to the detected domain).
+   */
   name?: string
 }
 
@@ -252,7 +296,9 @@ export type ImportCertificateResult = {
   fullchain: string
 }
 
-/** Import an existing key/certificate pair into the managed certs directory. */
+/**
+ * Import an existing key/certificate pair into the managed certs directory.
+ */
 export const importCertificate = async (
   options: ImportCertificateOptions,
 ): Promise<ImportCertificateResult> => {
@@ -291,13 +337,21 @@ export const importCertificate = async (
   return { domain, name: basename(certDir), privkey, fullchain }
 }
 
-/** Status of the local Certificate Authority. */
+/**
+ * Status of the local Certificate Authority.
+ */
 export type CaStatus = {
-  /** Whether the CA certificate and key exist on disk. */
+  /**
+   * Whether the CA certificate and key exist on disk.
+   */
   initialized: boolean
-  /** Whether the CA is trusted in the system keychain. */
+  /**
+   * Whether the CA is trusted in the system keychain.
+   */
   trusted: boolean
-  /** Absolute path of the CA certificate. */
+  /**
+   * Absolute path of the CA certificate.
+   */
   path: string
   subject?: string
   issuer?: string
@@ -307,7 +361,9 @@ export type CaStatus = {
   fingerprint256?: string
 }
 
-/** Report whether the local CA is configured, and its certificate details. */
+/**
+ * Report whether the local CA is configured, and its certificate details.
+ */
 export const getCaStatus = async (): Promise<CaStatus> => {
   const path = getCaCertPath()
   if (!(await isCaInitialized())) {
@@ -330,9 +386,13 @@ export const getCaStatus = async (): Promise<CaStatus> => {
 }
 
 export type ConfigureCaResult = {
-  /** Whether a new CA was generated (false when an existing CA was reused). */
+  /**
+   * Whether a new CA was generated (false when an existing CA was reused).
+   */
   created: boolean
-  /** Absolute path of the CA certificate. */
+  /**
+   * Absolute path of the CA certificate.
+   */
   path: string
 }
 
@@ -353,7 +413,9 @@ export const configureCa = async (): Promise<ConfigureCaResult> => {
   return { created: true, path }
 }
 
-/** Remove the local CA from the system keychain. */
+/**
+ * Remove the local CA from the system keychain.
+ */
 export const removeCa = async (): Promise<{ path: string }> => {
   const path = getCaCertPath()
   if (!(await isCaInitialized())) {

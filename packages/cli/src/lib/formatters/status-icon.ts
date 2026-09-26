@@ -1,6 +1,8 @@
 import { COLORS } from './table.ts'
 
-/** Runtime status values rendered across the various list/info commands. */
+/**
+ * Runtime status values rendered across the various list/info commands.
+ */
 export type StatusIconState = 'running' | 'error' | 'stopped' | 'none'
 
 /**

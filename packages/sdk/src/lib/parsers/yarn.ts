@@ -1,10 +1,16 @@
-/** Resolved version - 1.2.3 */
+/**
+ * Resolved version - 1.2.3
+ */
 type Version = string
 
-/** Version or range to be resolved - ^1.2.3 */
+/**
+ * Version or range to be resolved - ^1.2.3
+ */
 type Specifier = string
 
-/** Source of the dependency constraint (package.json path or lockfile reference) */
+/**
+ * Source of the dependency constraint (package.json path or lockfile reference)
+ */
 type Source = string
 
 /**

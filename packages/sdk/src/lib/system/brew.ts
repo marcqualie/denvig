@@ -22,7 +22,9 @@ export type BrewOutdatedJson = {
   casks?: BrewOutdatedCask[]
 }
 
-/** Run `brew update` silently. Resolves to exit success. */
+/**
+ * Run `brew update` silently. Resolves to exit success.
+ */
 export const brewUpdate = (): Promise<boolean> => {
   return runInherit('brew', ['update'], { stdio: 'ignore' })
 }
@@ -37,7 +39,9 @@ export const brewUpgrade = (): Promise<boolean> => {
   return runInherit('brew', ['upgrade', '--yes'])
 }
 
-/** Read outdated brew packages as parsed JSON, or null if the call fails. */
+/**
+ * Read outdated brew packages as parsed JSON, or null if the call fails.
+ */
 export const getBrewOutdated = async (): Promise<BrewOutdatedJson | null> => {
   try {
     const { stdout } = await execFileAsync('brew', ['outdated', '--json=v2'])

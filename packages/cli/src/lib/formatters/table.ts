@@ -98,13 +98,21 @@ const getTreePrefix = (meta: TreeMeta): string => {
  * Column definition for the table formatter.
  */
 export type ColumnDefinition<T> = {
-  /** Header text to display */
+  /**
+   * Header text to display
+   */
   header: string
-  /** Function to extract the value from a row (can include ANSI colors) */
+  /**
+   * Function to extract the value from a row (can include ANSI colors)
+   */
   accessor: (row: T) => string
-  /** Optional function to format/colorize the value */
+  /**
+   * Optional function to format/colorize the value
+   */
   format?: (value: string, row: T) => string
-  /** Whether this column is visible (default: true) */
+  /**
+   * Whether this column is visible (default: true)
+   */
   visible?: boolean
 }
 
@@ -112,13 +120,21 @@ export type ColumnDefinition<T> = {
  * Tree options for rendering hierarchical data.
  */
 export type TreeOptions<T> = {
-  /** Get the depth of a row (0 = root level) */
+  /**
+   * Get the depth of a row (0 = root level)
+   */
   getDepth: (row: T) => number
-  /** Get whether this row is the last sibling at its level */
+  /**
+   * Get whether this row is the last sibling at its level
+   */
   getIsLast: (row: T) => boolean
-  /** Get whether this row has children */
+  /**
+   * Get whether this row has children
+   */
   getHasChildren: (row: T) => boolean
-  /** Get the parent path (array of isLast values for ancestors) */
+  /**
+   * Get the parent path (array of isLast values for ancestors)
+   */
   getParentPath: (row: T) => boolean[]
 }
 
@@ -126,11 +142,17 @@ export type TreeOptions<T> = {
  * Options for the table formatter.
  */
 export type TableOptions<T> = {
-  /** Column definitions */
+  /**
+   * Column definitions
+   */
   columns: ColumnDefinition<T>[]
-  /** Data rows to display */
+  /**
+   * Data rows to display
+   */
   data: T[]
-  /** Optional tree rendering options - enables tree prefixes on first column */
+  /**
+   * Optional tree rendering options - enables tree prefixes on first column
+   */
   tree?: TreeOptions<T>
 }
 

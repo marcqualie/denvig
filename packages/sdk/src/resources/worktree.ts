@@ -23,7 +23,9 @@ export class DenvigWorktree {
     this._internal = internal
   }
 
-  /** The underlying internal worktree. Not part of the public contract. */
+  /**
+   * The underlying internal worktree. Not part of the public contract.
+   */
   get internal(): InternalWorktree {
     return this._internal
   }
@@ -52,34 +54,46 @@ export class DenvigWorktree {
     return this._internal.isPrimary
   }
 
-  /** This checkout's resolved configuration (with source paths). */
+  /**
+   * This checkout's resolved configuration (with source paths).
+   */
   get config(): ConfigWithSourcePaths<ProjectConfigSchema> {
     return this._internal.config
   }
 
-  /** Services defined in this checkout's configuration. */
+  /**
+   * Services defined in this checkout's configuration.
+   */
   get services(): NonNullable<ProjectConfigSchema['services']> {
     return this._internal.services
   }
 
-  /** All actions runnable for this checkout, keyed by name. */
+  /**
+   * All actions runnable for this checkout, keyed by name.
+   */
   get actions(): Promise<Record<string, string[]>> {
     return this._internal.actions
   }
 
-  /** Detect all dependencies for this checkout. */
+  /**
+   * Detect all dependencies for this checkout.
+   */
   dependencies(): Promise<ProjectDependencySchema[]> {
     return this._internal.dependencies()
   }
 
-  /** Resolve outdated dependencies for this checkout. */
+  /**
+   * Resolve outdated dependencies for this checkout.
+   */
   outdatedDependencies(
     options?: OutdatedDependenciesOptions,
   ): Promise<OutdatedDependencySchema[]> {
     return this._internal.outdatedDependencies(options)
   }
 
-  /** Deduplicate this checkout's lockfile dependencies. */
+  /**
+   * Deduplicate this checkout's lockfile dependencies.
+   */
   deduplicateDependencies(
     options?: DeduplicateDependenciesOptions,
   ): Promise<DeduplicateResult[]> {

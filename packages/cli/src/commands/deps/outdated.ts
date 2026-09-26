@@ -38,7 +38,9 @@ const getVersionColor = (current: string, target: string): string => {
   return COLORS.white
 }
 
-/** Get a URL for a specific package version based on ecosystem. */
+/**
+ * Get a URL for a specific package version based on ecosystem.
+ */
 const getVersionUrl = (
   name: string,
   version: string,

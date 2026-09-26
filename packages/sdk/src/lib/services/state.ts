@@ -132,13 +132,17 @@ const emptyState = (): DenvigState => ({
   certs: {},
 })
 
-/** Stable key used to address a service in the state file. */
+/**
+ * Stable key used to address a service in the state file.
+ */
 export const serviceStateKey = (
   projectId: string,
   serviceName: string,
 ): string => `id:${projectId}:${serviceName}`
 
-/** Read the state file. Returns an empty state when missing or unparseable. */
+/**
+ * Read the state file. Returns an empty state when missing or unparseable.
+ */
 export const readState = async (): Promise<DenvigState> => {
   try {
     const content = await readFile(stateFilePath(), 'utf-8')
@@ -150,7 +154,9 @@ export const readState = async (): Promise<DenvigState> => {
   }
 }
 
-/** Atomically write the state file. */
+/**
+ * Atomically write the state file.
+ */
 export const writeState = async (state: DenvigState): Promise<void> => {
   const path = stateFilePath()
   await mkdir(dirname(path), { recursive: true })
@@ -159,7 +165,9 @@ export const writeState = async (state: DenvigState): Promise<void> => {
   await rename(tmp, path)
 }
 
-/** Get the state entry for a single service, or null when missing. */
+/**
+ * Get the state entry for a single service, or null when missing.
+ */
 export const getServiceState = async (
   projectId: string,
   serviceName: string,
@@ -212,7 +220,9 @@ export const markServiceStopped = async (
   await writeState(state)
 }
 
-/** Remove a service's state entry entirely (used on teardown). */
+/**
+ * Remove a service's state entry entirely (used on teardown).
+ */
 export const removeServiceState = async (
   projectId: string,
   serviceName: string,
@@ -239,7 +249,9 @@ export const reservedPorts = (state: DenvigState): Set<number> => {
   return ports
 }
 
-/** Get the gateway route for a domain, or null when none is recorded. */
+/**
+ * Get the gateway route for a domain, or null when none is recorded.
+ */
 export const getGatewayRoute = async (
   domain: string,
 ): Promise<GatewayRoute | null> => {
@@ -247,7 +259,9 @@ export const getGatewayRoute = async (
   return state.gatewayRoutes[domain] ?? null
 }
 
-/** Write a gateway route, replacing any existing entry for the domain. */
+/**
+ * Write a gateway route, replacing any existing entry for the domain.
+ */
 export const setGatewayRoute = async (
   domain: string,
   route: GatewayRoute,
@@ -257,7 +271,9 @@ export const setGatewayRoute = async (
   await writeState(state)
 }
 
-/** Remove the gateway route for a single domain. */
+/**
+ * Remove the gateway route for a single domain.
+ */
 export const removeGatewayRoute = async (domain: string): Promise<void> => {
   const state = await readState()
   if (!(domain in state.gatewayRoutes)) return
@@ -328,7 +344,9 @@ export const markGatewayRoutesStoppedForService = async (
   if (changed) await writeState(state)
 }
 
-/** Remove every gateway route entry owned by a given service. */
+/**
+ * Remove every gateway route entry owned by a given service.
+ */
 export const removeGatewayRoutesForService = async (
   projectId: string,
   serviceName: string,
@@ -344,13 +362,17 @@ export const removeGatewayRoutesForService = async (
   if (changed) await writeState(state)
 }
 
-/** Get a cert entry by its key (cert directory basename), or null when absent. */
+/**
+ * Get a cert entry by its key (cert directory basename), or null when absent.
+ */
 export const getCert = async (key: string): Promise<Cert | null> => {
   const state = await readState()
   return state.certs[key] ?? null
 }
 
-/** Write or replace a cert entry keyed by `key` (typically the cert dir basename). */
+/**
+ * Write or replace a cert entry keyed by `key` (typically the cert dir basename).
+ */
 export const setCert = async (key: string, cert: Cert): Promise<void> => {
   const state = await readState()
   state.certs[key] = cert

@@ -30,12 +30,16 @@ export class DenvigAction {
     return this._name
   }
 
-  /** The resolved shell command(s) this action runs, in order. */
+  /**
+   * The resolved shell command(s) this action runs, in order.
+   */
   get commands(): string[] {
     return this._commands
   }
 
-  /** Run the action's commands, streaming output to the parent process. */
+  /**
+   * Run the action's commands, streaming output to the parent process.
+   */
   async run(options?: { args?: string[] }): Promise<{ success: boolean }> {
     return track(this.ctx, 'actions.run', this.worktree.slug, () =>
       runActionCommands(this._commands, {

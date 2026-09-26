@@ -2,7 +2,9 @@ import { createServer } from 'node:net'
 
 import { readState, reservedPorts } from './state.ts'
 
-/** Inclusive default port range used for random allocations. */
+/**
+ * Inclusive default port range used for random allocations.
+ */
 export const DEFAULT_PORT_RANGE: PortRange = { min: 8000, max: 9999 }
 
 export type PortRange = {

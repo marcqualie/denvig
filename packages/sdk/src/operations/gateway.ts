@@ -16,7 +16,9 @@ import {
   reconcileServices,
 } from '../lib/services/reconcile.ts'
 
-/** The nginx process state as reported by `brew services`. */
+/**
+ * The nginx process state as reported by `brew services`.
+ */
 export type NginxProcessStatus = {
   running: boolean
   pid: number | null
@@ -41,36 +43,58 @@ const getNginxProcessStatus = (): NginxProcessStatus => {
   }
 }
 
-/** Gateway status for a single running route, as recorded in state.json. */
+/**
+ * Gateway status for a single running route, as recorded in state.json.
+ */
 export type GatewayServiceStatus = {
   name: string
-  /** Slug of the project (checkout) that owns the route. */
+  /**
+   * Slug of the project (checkout) that owns the route.
+   */
   projectSlug: string
   domain: string
   cnames: string[]
   port: number
   secure: boolean
-  /** Cert resolution for a secure route; `not_configured` when not secure. */
+  /**
+   * Cert resolution for a secure route; `not_configured` when not secure.
+   */
   certStatus: 'valid' | 'missing' | 'not_configured'
-  /** The certificate directory backing the domain, if any. */
+  /**
+   * The certificate directory backing the domain, if any.
+   */
   certDir: string | null
-  /** Explanation when `certStatus` is `missing`. */
+  /**
+   * Explanation when `certStatus` is `missing`.
+   */
   certMessage?: string
-  /** The nginx config path for this service. */
+  /**
+   * The nginx config path for this service.
+   */
   nginxConfigPath: string
   nginxConfigExists: boolean
 }
 
 export type GatewayStatus = {
-  /** The gateway handler (currently always `nginx`). */
+  /**
+   * The gateway handler (currently always `nginx`).
+   */
   handler: string
-  /** Directory nginx server configs are written to. */
+  /**
+   * Directory nginx server configs are written to.
+   */
   configsPath: string
-  /** Path of the generated nginx include file. */
+  /**
+   * Path of the generated nginx include file.
+   */
   nginxConf: string
-  /** The nginx process state. */
+  /**
+   * The nginx process state.
+   */
   nginx: NginxProcessStatus
-  /** Every running gateway service recorded in state.json. */
+  /**
+   * Every running gateway service recorded in state.json.
+   */
   services: GatewayServiceStatus[]
 }
 
@@ -118,7 +142,9 @@ export const getGatewayStatus = async (): Promise<GatewayStatus> => {
 
 export type ConfigureGatewayOutput = {
   reconcile: ReconcileResult
-  /** The gateway rebuild result. */
+  /**
+   * The gateway rebuild result.
+   */
   gateway: ConfigureGatewayResult
 }
 

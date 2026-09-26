@@ -1,16 +1,24 @@
-/** Normalized view of one gateway service, rendered the same everywhere. */
+/**
+ * Normalized view of one gateway service, rendered the same everywhere.
+ */
 export type GatewayServiceView = {
   projectSlug: string
   serviceName: string
-  /** Primary domain first, then any cnames. */
+  /**
+   * Primary domain first, then any cnames.
+   */
   domains: string[]
   port: number
   certStatus: 'valid' | 'missing' | 'not_configured'
   certDir?: string | null
   certMessage?: string
-  /** Whether the service's server block is present in / written to nginx. */
+  /**
+   * Whether the service's server block is present in / written to nginx.
+   */
   nginxOk: boolean
-  /** Short nginx state label, e.g. `configured`, `missing`, `error`. */
+  /**
+   * Short nginx state label, e.g. `configured`, `missing`, `error`.
+   */
   nginxLabel: string
   nginxMessage?: string
 }

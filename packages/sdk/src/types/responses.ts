@@ -87,9 +87,13 @@ export type ServiceResponse = {
    * sibling worktree) and `url` falls back to the localhost form already.
    */
   localUrl: string | null
-  /** Effective port the service is configured to listen on. */
+  /**
+   * Effective port the service is configured to listen on.
+   */
   port: number | null
-  /** Port declared in the service config, if any. */
+  /**
+   * Port declared in the service config, if any.
+   */
   configPort: number | null
   command: string
   cwd: string
