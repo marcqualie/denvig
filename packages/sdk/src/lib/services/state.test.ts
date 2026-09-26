@@ -107,6 +107,25 @@ describe('service state', () => {
     assert.strictEqual(entry?.desiredStatus, 'stopped')
   })
 
+  it('clears the foreground run marker when marking a service stopped', async () => {
+    await updateServiceState('abc123', 'api', {
+      cwd: '/tmp/proj',
+      port: 8080,
+      desiredStatus: 'running',
+      foreground: { pid: 1234, startedAt: '2026-09-26T12:00:00.000Z' },
+    })
+    assert.strictEqual(
+      (await getServiceState('abc123', 'api'))?.foreground?.pid,
+      1234,
+    )
+
+    await markServiceStopped('abc123', 'api')
+
+    const entry = await getServiceState('abc123', 'api')
+    assert.strictEqual(entry?.desiredStatus, 'stopped')
+    assert.strictEqual(entry?.foreground, undefined)
+  })
+
   it('removes a service entry on teardown', async () => {
     await updateServiceState('abc123', 'api', {
       cwd: '/tmp/proj',

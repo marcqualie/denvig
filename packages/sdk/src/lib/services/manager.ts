@@ -23,12 +23,14 @@ import {
   DEFAULT_DOCKER_IMAGE,
 } from './docker.ts'
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
+import { activeForegroundRun } from './foreground.ts'
 import { isGlobalSlug } from './global.ts'
 import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { normalizeServiceLabel } from './paths.ts'
 import { generatePlist, generateServiceScript } from './plist.ts'
 import { allocateRandomPort, isPortInUse } from './ports.ts'
 import {
+  type ForegroundRun,
   getGatewayRoute,
   getServiceState,
   markServiceStopped,
@@ -455,63 +457,17 @@ export class ServiceManager {
   }
 
   /**
-   * Start a specific service.
-   *
-   * @param options.port - Pre-resolved port to use for this service. When
-   *   omitted, the manager resolves the port itself, auto-allocating a
-   *   random port if the config port is busy.
-   * @param options.domains - Explicit domains to route to this start,
-   *   replacing the domains declared in the service config. Each domain is
-   *   claimed unconditionally — any existing route is taken over and handed
-   *   back to a running owner when this service stops. When omitted, the
-   *   configured domains are used. Pass an empty array to start the service
-   *   without claiming any domain (it runs on its port only and does not take
-   *   over an existing route).
-   * @param options.reviveIfNotRunning - When the service is already
-   *   bootstrapped with an unchanged plist but isn't currently running,
-   *   bootout and bootstrap again to kick it (`true`, the default — what an
-   *   explicit `start` wants). The reconciler passes `false`: a bootstrapped
-   *   service's liveness is launchd's job (`KeepAlive` respawns it, one-shot
-   *   services are meant to stay exited), so re-bootstrapping an unchanged
-   *   plist is needless churn that fights launchd.
+   * Resolve the environment and command needed to launch a service on the
+   * given host port.
    */
-  async startService(
+  private async buildLaunchSpec(
     name: string,
-    options?: {
-      port?: number
-      portResolved?: boolean
-      domains?: string[]
-      reviveIfNotRunning?: boolean
-    },
-  ): Promise<ServiceResult> {
-    const config = this.getServiceConfig(name)
-    if (!config) {
-      return {
-        name,
-        success: false,
-        message: `Service "${name}" not found in configuration`,
-      }
-    }
-
-    // Resolve effective port unless the caller has already done so. The
-    // default behaviour silently falls back to a random port on conflict,
-    // matching the user-chosen non-interactive default.
-    let effectivePort = options?.port
-    if (!options?.portResolved) {
-      const resolved = await this.resolveServicePort(name)
-      if (!resolved.success) {
-        return { name, success: false, message: resolved.message }
-      }
-      if (resolved.conflict && resolved.source === 'none') {
-        return {
-          name,
-          success: false,
-          message: `Port ${resolved.configPort} is in use and no free port could be allocated`,
-        }
-      }
-      effectivePort = resolved.port
-    }
-
+    config: ServiceConfig,
+    effectivePort: number | undefined,
+  ): Promise<
+    | { ok: true; env: Record<string, string>; command: string }
+    | { ok: false; message: string }
+  > {
     // Docker services bind to the container port inside the container, while
     // the host port is published to the host via `-p hostPort:containerPort`.
     // Host services bind directly to the resolved port.
@@ -525,16 +481,11 @@ export class ServiceManager {
       port: boundPort,
     })
     if (!envResult.success) {
-      return {
-        name,
-        success: false,
-        message: envResult.message,
-      }
+      return { ok: false, message: envResult.message }
     }
-    const label = this.getServiceLabel(name)
 
-    // Resolve the actual command launchd runs. For docker services this is a
-    // generated `docker run` invocation; the snapshot keeps the original
+    // Resolve the actual command to run. For docker services this is a
+    // generated `docker run` invocation; the state snapshot keeps the original
     // command plus runtime/image so the reconciler can rebuild it identically.
     const runResult = this.buildRunCommand(name, config, {
       hostPort: effectivePort,
@@ -542,24 +493,29 @@ export class ServiceManager {
       envKeys: Object.keys(envResult.env),
     })
     if (!runResult.ok) {
-      return { name, success: false, message: runResult.message }
+      return runResult
     }
-    const runCommand = runResult.command
+    return { ok: true, env: envResult.env, command: runResult.command }
+  }
 
-    const printInfo = await launchctl.print(label)
-    const isBootstrapped = printInfo !== null
-    // "Live" means the service has an active PID. A bootstrapped service
-    // can still be dead (crashed and not yet restarted, exited cleanly,
-    // etc.) — in which case we want to bootout and bootstrap again rather
-    // than declaring it "already running".
-    const isLive =
-      printInfo !== null &&
-      printInfo.pid !== undefined &&
-      printInfo.state === 'running'
-
-    // Record the desired state and a snapshot of the config before launching
-    // so the gateway, list output and the reconciler all see a single
-    // source of truth instead of re-deriving it from .denvig.yml each time.
+  /**
+   * Record the desired state and a snapshot of the config before launching
+   * so the gateway, list output and the reconciler all see a single source
+   * of truth instead of re-deriving it from .denvig.yml each time.
+   *
+   * @param options.foreground - Marks the start as a foreground run owned by
+   *   the given process rather than a launchd-managed one.
+   */
+  private async recordServiceStart(
+    name: string,
+    config: ServiceConfig,
+    options: {
+      port: number | undefined
+      domains?: string[]
+      foreground?: ForegroundRun
+    },
+  ): Promise<void> {
+    const effectivePort = options.port
     // The domain set is either the caller-provided override (the CLI's
     // `--domains` flag / SDK `domains` option) or, when omitted, the domains
     // declared in the service config.
@@ -569,10 +525,11 @@ export class ServiceManager {
     // A provided array is honoured verbatim, including an empty one: `[]`
     // means "claim nothing" (run on the port only, don't take over a route).
     // Only an omitted `domains` falls back to the configured domains.
-    const domains = options?.domains ?? configuredDomains
+    const domains = options.domains ?? configuredDomains
     await updateServiceState(this.project.id, name, {
       cwd: this.resolveServiceCwd(config),
       port: effectivePort,
+      foreground: options.foreground,
       domains,
       desiredStatus: 'running',
       project: {
@@ -633,6 +590,91 @@ export class ServiceManager {
         })
       }
     }
+  }
+
+  /**
+   * Start a specific service.
+   *
+   * @param options.port - Pre-resolved port to use for this service. When
+   *   omitted, the manager resolves the port itself, auto-allocating a
+   *   random port if the config port is busy.
+   * @param options.domains - Explicit domains to route to this start,
+   *   replacing the domains declared in the service config. Each domain is
+   *   claimed unconditionally — any existing route is taken over and handed
+   *   back to a running owner when this service stops. When omitted, the
+   *   configured domains are used. Pass an empty array to start the service
+   *   without claiming any domain (it runs on its port only and does not take
+   *   over an existing route).
+   * @param options.reviveIfNotRunning - When the service is already
+   *   bootstrapped with an unchanged plist but isn't currently running,
+   *   bootout and bootstrap again to kick it (`true`, the default — what an
+   *   explicit `start` wants). The reconciler passes `false`: a bootstrapped
+   *   service's liveness is launchd's job (`KeepAlive` respawns it, one-shot
+   *   services are meant to stay exited), so re-bootstrapping an unchanged
+   *   plist is needless churn that fights launchd.
+   */
+  async startService(
+    name: string,
+    options?: {
+      port?: number
+      portResolved?: boolean
+      domains?: string[]
+      reviveIfNotRunning?: boolean
+    },
+  ): Promise<ServiceResult> {
+    const config = this.getServiceConfig(name)
+    if (!config) {
+      return {
+        name,
+        success: false,
+        message: `Service "${name}" not found in configuration`,
+      }
+    }
+
+    const foregroundBlock = await this.foregroundConflict(name)
+    if (foregroundBlock) return foregroundBlock
+
+    // Resolve effective port unless the caller has already done so. The
+    // default behaviour silently falls back to a random port on conflict,
+    // matching the user-chosen non-interactive default.
+    let effectivePort = options?.port
+    if (!options?.portResolved) {
+      const resolved = await this.resolveServicePort(name)
+      if (!resolved.success) {
+        return { name, success: false, message: resolved.message }
+      }
+      if (resolved.conflict && resolved.source === 'none') {
+        return {
+          name,
+          success: false,
+          message: `Port ${resolved.configPort} is in use and no free port could be allocated`,
+        }
+      }
+      effectivePort = resolved.port
+    }
+
+    const spec = await this.buildLaunchSpec(name, config, effectivePort)
+    if (!spec.ok) {
+      return { name, success: false, message: spec.message }
+    }
+    const { env, command: runCommand } = spec
+    const label = this.getServiceLabel(name)
+
+    const printInfo = await launchctl.print(label)
+    const isBootstrapped = printInfo !== null
+    // "Live" means the service has an active PID. A bootstrapped service
+    // can still be dead (crashed and not yet restarted, exited cleanly,
+    // etc.) — in which case we want to bootout and bootstrap again rather
+    // than declaring it "already running".
+    const isLive =
+      printInfo !== null &&
+      printInfo.pid !== undefined &&
+      printInfo.state === 'running'
+
+    await this.recordServiceStart(name, config, {
+      port: effectivePort,
+      domains: options?.domains,
+    })
 
     // Ensure denvig directories exist
     await this.ensureDenvigDirectories()
@@ -683,7 +725,7 @@ export class ServiceManager {
       label,
       programPath: scriptPath,
       workingDirectory,
-      environmentVariables: envResult.env,
+      environmentVariables: env,
       standardOutPath: this.getStableLogPath(name),
       keepAlive: config.keepAlive ?? true,
       runAtLoad: config.startOnBoot ?? false,
@@ -828,6 +870,9 @@ export class ServiceManager {
       }
     }
 
+    const foregroundBlock = await this.foregroundConflict(name)
+    if (foregroundBlock) return foregroundBlock
+
     const label = this.getServiceLabel(name)
     const isBootstrapped = await this.isServiceBootstrapped(name)
 
@@ -922,6 +967,9 @@ export class ServiceManager {
       }
     }
 
+    const foregroundBlock = await this.foregroundConflict(name)
+    if (foregroundBlock) return foregroundBlock
+
     const isBootstrapped = await this.isServiceBootstrapped(name)
 
     // Stop the service if bootstrapped. Routes are kept registered so the
@@ -936,6 +984,110 @@ export class ServiceManager {
 
     // Start the service
     return await this.startService(name, options)
+  }
+
+  /**
+   * The live foreground run for a service (see `services run`), or null when
+   * the service isn't attached to a terminal.
+   */
+  async getForegroundRun(name: string): Promise<ForegroundRun | null> {
+    return activeForegroundRun(await getServiceState(this.project.id, name))
+  }
+
+  /**
+   * A failed result when the service is running in the foreground. A
+   * foreground run is owned by its terminal, so launchd lifecycle commands
+   * must not start a second copy or tear it down underneath it.
+   */
+  private async foregroundConflict(
+    name: string,
+  ): Promise<ServiceResult | null> {
+    const foreground = await this.getForegroundRun(name)
+    if (!foreground) return null
+    return {
+      name,
+      success: false,
+      message: `Service "${name}" is running in the foreground (pid ${foreground.pid}); press Ctrl+C in that terminal to stop it first`,
+    }
+  }
+
+  /**
+   * Prepare a service to run in the foreground of the current process
+   * instead of under launchd. Records the run in state (so the gateway routes
+   * its domains and the reconciler leaves it alone) and returns what the
+   * caller should spawn. The caller must call `finishForegroundRun` once the
+   * process exits.
+   *
+   * Fails when the service is already running, either under launchd or in
+   * another foreground session.
+   *
+   * @param options.port - Pre-resolved port to run the service on.
+   * @param options.domains - Domains to route to this run; see `startService`.
+   */
+  async prepareForegroundRun(
+    name: string,
+    options: { port: number | undefined; domains?: string[] },
+  ): Promise<
+    | {
+        success: true
+        command: string
+        cwd: string
+        env: Record<string, string>
+      }
+    | { success: false; message: string }
+  > {
+    const config = this.getServiceConfig(name)
+    if (!config) {
+      return {
+        success: false,
+        message: `Service "${name}" not found in configuration`,
+      }
+    }
+
+    const foregroundBlock = await this.foregroundConflict(name)
+    if (foregroundBlock) {
+      return { success: false, message: foregroundBlock.message }
+    }
+
+    const label = this.getServiceLabel(name)
+    const printInfo = await launchctl.print(label)
+    if (printInfo?.pid !== undefined && printInfo.state === 'running') {
+      return {
+        success: false,
+        message: `Service "${name}" is already running in the background (pid ${printInfo.pid})`,
+      }
+    }
+    // A bootstrapped-but-idle agent could be respawned by launchd
+    // (`KeepAlive`) mid-run and fight over the port, so unload it first.
+    if (printInfo) {
+      await launchctl.bootout(label)
+    }
+
+    const spec = await this.buildLaunchSpec(name, config, options.port)
+    if (!spec.ok) {
+      return { success: false, message: spec.message }
+    }
+
+    const cwd = this.resolveServiceCwd(config)
+    await mkdir(cwd, { recursive: true })
+
+    await this.recordServiceStart(name, config, {
+      port: options.port,
+      domains: options.domains,
+      foreground: { pid: process.pid, startedAt: new Date().toISOString() },
+    })
+
+    return { success: true, command: spec.command, cwd, env: spec.env }
+  }
+
+  /**
+   * Clean up after a foreground run exits: mark the service stopped, release
+   * its gateway routes and regenerate the gateway config.
+   */
+  async finishForegroundRun(name: string): Promise<void> {
+    await markServiceStopped(this.project.id, name)
+    await releaseGatewayRoutesForService(this.project.id, name)
+    await this.reconfigureGateway()
   }
 
   /**
@@ -1465,6 +1617,15 @@ export class ServiceManager {
             }
           }
         }
+      }
+    }
+
+    // A foreground run isn't known to launchd, so fall back to state.
+    if (status !== 'running') {
+      const foreground = await this.getForegroundRun(name)
+      if (foreground) {
+        status = 'running'
+        pid = foreground.pid
       }
     }
 

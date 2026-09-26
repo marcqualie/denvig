@@ -2,7 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- `denvig services run <name>` runs a service in the foreground with live output until Ctrl+C
+
 ### Changed
+
+- `denvig services start/stop/restart` refuse to act on a service running in the foreground
 
 - Faster CLI startup by bundling common libs
 - Updated 3 patch dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts)

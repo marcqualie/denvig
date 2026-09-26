@@ -1294,4 +1294,189 @@ describe('ServiceManager', () => {
       ok(script.includes('-p 443:443'))
     })
   })
+
+  describe('foreground runs', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-foreground-`)
+      process.env.HOME = tmpHome
+      mkdirSync(`${tmpHome}/Library/LaunchAgents`, { recursive: true })
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    /** A PID that is never alive (above the macOS/Linux PID ceiling). */
+    const DEAD_PID = 99_999_999
+
+    const createProject = () => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/repo`,
+      })
+      project.config.services = {
+        dev: {
+          command: 'pnpm dev',
+          env: { FOO: 'bar' },
+          http: { port: 4321, domain: 'dev.denvig.me' },
+        },
+      }
+      return project
+    }
+
+    const seedForeground = async (
+      project: ServiceManagerProject,
+      pid: number,
+    ) => {
+      await updateServiceState(project.id, 'dev', {
+        cwd: project.path,
+        port: 4321,
+        domains: [],
+        desiredStatus: 'running',
+        foreground: { pid, startedAt: new Date().toISOString() },
+      })
+    }
+
+    it('records the run in state, routes its domain and returns the spawn spec', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      t.mock.method(launchctl, 'print', async () => null)
+
+      const prepared = await manager.prepareForegroundRun('dev', {
+        port: 4321,
+      })
+
+      ok(prepared.success)
+      strictEqual(prepared.command, 'pnpm dev')
+      strictEqual(prepared.cwd, project.path)
+      strictEqual(prepared.env.PORT, '4321')
+      strictEqual(prepared.env.FOO, 'bar')
+      const entry = await getServiceState(project.id, 'dev')
+      strictEqual(entry?.desiredStatus, 'running')
+      strictEqual(entry?.foreground?.pid, process.pid)
+      const route = await getGatewayRoute('dev.denvig.me')
+      strictEqual(route?.port, 4321)
+      strictEqual(route?.desiredStatus, 'running')
+    })
+
+    it('refuses to run when the service is already running under launchd', async (t) => {
+      const manager = new ServiceManager(createProject())
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        pid: 123,
+        state: 'running',
+        status: 'running',
+      }))
+
+      const prepared = await manager.prepareForegroundRun('dev', {
+        port: 4321,
+      })
+
+      ok(!prepared.success)
+      match(prepared.message, /already running in the background/)
+    })
+
+    it('boots out an idle launchd agent before running', async (t) => {
+      const manager = new ServiceManager(createProject())
+      t.mock.method(launchctl, 'print', async () => ({
+        label: 'test',
+        state: 'not running',
+        status: 'not running',
+      }))
+      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+
+      const prepared = await manager.prepareForegroundRun('dev', {
+        port: 4321,
+      })
+
+      ok(prepared.success)
+      strictEqual(bootoutMock.mock.callCount(), 1)
+    })
+
+    it('refuses to run when another foreground run is live', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      t.mock.method(launchctl, 'print', async () => null)
+      await seedForeground(project, process.pid)
+
+      const prepared = await manager.prepareForegroundRun('dev', {
+        port: 4321,
+      })
+
+      ok(!prepared.success)
+      match(prepared.message, /running in the foreground/)
+    })
+
+    it('blocks start, restart and stop while a foreground run is live', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      const bootstrapMock = t.mock.method(launchctl, 'bootstrap', async () => ({
+        success: true,
+        output: '',
+      }))
+      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      await seedForeground(project, process.pid)
+
+      for (const result of [
+        await manager.startService('dev'),
+        await manager.restartService('dev'),
+        await manager.stopService('dev'),
+      ]) {
+        ok(!result.success)
+        match(result.message, new RegExp(`foreground \\(pid ${process.pid}\\)`))
+      }
+      strictEqual(bootstrapMock.mock.callCount(), 0)
+      strictEqual(bootoutMock.mock.callCount(), 0)
+    })
+
+    it('ignores a foreground run whose process has exited', async () => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      await seedForeground(project, DEAD_PID)
+
+      strictEqual(await manager.getForegroundRun('dev'), null)
+    })
+
+    it('reports a live foreground run as running', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      t.mock.method(launchctl, 'print', async () => null)
+      await seedForeground(project, process.pid)
+
+      const response = await manager.getServiceResponse('dev')
+
+      strictEqual(response?.status, 'running')
+      strictEqual(response?.pid, process.pid)
+    })
+
+    it('marks the service stopped and releases its routes when the run finishes', async (t) => {
+      const project = createProject()
+      const manager = new ServiceManager(project)
+      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
+      await manager.prepareForegroundRun('dev', { port: 4321 })
+
+      await manager.finishForegroundRun('dev')
+
+      const entry = await getServiceState(project.id, 'dev')
+      strictEqual(entry?.desiredStatus, 'stopped')
+      strictEqual(entry?.foreground, undefined)
+      strictEqual(entry?.port, 4321)
+      strictEqual(
+        (await getGatewayRoute('dev.denvig.me'))?.desiredStatus,
+        'stopped',
+      )
+    })
+  })
 })

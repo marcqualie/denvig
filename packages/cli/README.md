@@ -77,6 +77,7 @@ denvig services                 # List all services and their status
 denvig services start api       # Start a service
 denvig services stop api        # Stop a service
 denvig services restart api     # Restart a service
+denvig services run api         # Run a service in the foreground (Ctrl+C to stop)
 denvig services status api      # Check status of a service
 denvig services logs api        # View service logs
 denvig services logs api -n 50  # View last 50 lines
