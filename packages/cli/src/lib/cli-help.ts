@@ -1,6 +1,8 @@
 import type { GenericCommand } from './command.ts'
 
-/** Global flags that are available for all commands */
+/**
+ * Global flags that are available for all commands
+ */
 export const globalFlags = [
   {
     name: 'project',
@@ -23,7 +25,9 @@ export type GlobalFlag = (typeof globalFlags)[number]
 
 type CommandsMap = Record<string, GenericCommand>
 
-/** Commands to hide from root help */
+/**
+ * Commands to hide from root help
+ */
 const hiddenCommands = new Set([
   'internals:resource-hash',
   'internals:resource-id',

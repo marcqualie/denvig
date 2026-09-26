@@ -17,7 +17,9 @@ export type GatewayServiceRoute = {
   serviceName: string
   port: number
   secure: boolean
-  /** Primary domain (first claimed); cnames follow in `cnames`. */
+  /**
+   * Primary domain (first claimed); cnames follow in `cnames`.
+   */
   domain: string
   cnames: string[]
   certStatus: 'valid' | 'missing' | 'not_configured'
@@ -32,9 +34,13 @@ type RouteGroup = {
   serviceName: string
   port: number
   secure: boolean
-  /** Order: first entry is the primary domain, the rest are cnames. */
+  /**
+   * Order: first entry is the primary domain, the rest are cnames.
+   */
   domains: string[]
-  /** Key into `state.certs` shared by all routes in this group, if any. */
+  /**
+   * Key into `state.certs` shared by all routes in this group, if any.
+   */
   certKey?: string
 }
 

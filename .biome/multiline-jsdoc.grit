@@ -1,0 +1,11 @@
+language js
+
+// Comments are trivia and can't be matched structurally, so match the file
+// text instead. Only the first offending comment in a file is reported.
+file($body) where {
+  $body <: r"(?s).*?(/\*\*[^\n]*?\*/).*"($comment),
+  register_diagnostic(
+    span = $body,
+    message = `JSDoc comments must span multiple lines, found: $comment`
+  )
+}

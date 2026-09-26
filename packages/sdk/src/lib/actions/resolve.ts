@@ -3,10 +3,14 @@ import plugins from '../plugins.ts'
 
 import type { Worktree } from '../project/worktree.ts'
 
-/** An action tagged with the source that produced it. */
+/**
+ * An action tagged with the source that produced it.
+ */
 export type ResolvedAction = {
   name: string
-  /** `project` for `.denvig.yml` actions, otherwise the plugin ecosystem. */
+  /**
+   * `project` for `.denvig.yml` actions, otherwise the plugin ecosystem.
+   */
   ecosystem: string
   commands: string[]
 }

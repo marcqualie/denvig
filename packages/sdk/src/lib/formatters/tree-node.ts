@@ -6,8 +6,12 @@ export type TreeNode = {
   name: string
   version: string
   children: TreeNode[]
-  /** Optional ANSI color applied to the entire `name version` body. */
+  /**
+   * Optional ANSI color applied to the entire `name version` body.
+   */
   color?: string
-  /** Optional preformatted suffix appended after the version. */
+  /**
+   * Optional preformatted suffix appended after the version.
+   */
   suffix?: string
 }

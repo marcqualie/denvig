@@ -1,6 +1,8 @@
 import { createInterface } from 'node:readline'
 
-/** Prompt the user for a yes/no confirmation. Returns true if they answer "y". */
+/**
+ * Prompt the user for a yes/no confirmation. Returns true if they answer "y".
+ */
 export const confirm = (prompt: string): Promise<boolean> => {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
   return new Promise((resolve) => {
@@ -11,7 +13,9 @@ export const confirm = (prompt: string): Promise<boolean> => {
   })
 }
 
-/** Prompt the user for a free-text answer. Returns the trimmed input. */
+/**
+ * Prompt the user for a free-text answer. Returns the trimmed input.
+ */
 export const prompt = (question: string): Promise<string> => {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
   return new Promise((resolve) => {

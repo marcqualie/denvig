@@ -12,12 +12,16 @@ import { runDenvig } from './denvig.ts'
 
 export const DOTFILES_PATH = path.join(homedir(), '.dotfiles')
 
-/** Whether the `~/.dotfiles` directory exists. */
+/**
+ * Whether the `~/.dotfiles` directory exists.
+ */
 export const areDotfilesInstalled = (): Promise<boolean> => {
   return isDirectory(DOTFILES_PATH)
 }
 
-/** Build the canonical dotfiles repo URL for a GitHub username. */
+/**
+ * Build the canonical dotfiles repo URL for a GitHub username.
+ */
 export const dotfilesUrlForUsername = (username: string): string => {
   return `https://github.com/${username}/dotfiles`
 }

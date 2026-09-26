@@ -16,26 +16,42 @@ import type { Worktree } from '../lib/project/worktree.ts'
 
 export type SemverLevel = 'patch' | 'minor' | 'major'
 
-/** Registry information about a single dependency, across ecosystems. */
+/**
+ * Registry information about a single dependency, across ecosystems.
+ */
 export type DependencyInfo = {
-  /** Ecosystem the dependency belongs to (e.g. `npm`, `rubygems`). */
+  /**
+   * Ecosystem the dependency belongs to (e.g. `npm`, `rubygems`).
+   */
   ecosystem: string
-  /** Package name within the ecosystem. */
+  /**
+   * Package name within the ecosystem.
+   */
   name: string
-  /** Latest version published to the registry, or `null` if unknown. */
+  /**
+   * Latest version published to the registry, or `null` if unknown.
+   */
   latest: string | null
-  /** All known versions, newest-last where the registry preserves order. */
+  /**
+   * All known versions, newest-last where the registry preserves order.
+   */
   versions: string[]
-  /** ISO publish dates keyed by version, when the registry provides them. */
+  /**
+   * ISO publish dates keyed by version, when the registry provides them.
+   */
   versionDates?: Record<string, string>
 }
 
 export type DependencyInfoOptions = {
-  /** Skip the on-disk cache and fetch fresh data from the registry. */
+  /**
+   * Skip the on-disk cache and fetch fresh data from the registry.
+   */
   noCache?: boolean
 }
 
-/** Map an ecosystem to its registry fetcher. */
+/**
+ * Map an ecosystem to its registry fetcher.
+ */
 const REGISTRY_FETCHERS: Record<
   string,
   (name: string, noCache?: boolean) => Promise<DependencyInfo | null>
@@ -97,14 +113,20 @@ export const dependencyInfo = async (
 }
 
 export type ListDependenciesOptions = {
-  /** Skip cache and fetch fresh data from the registry. */
+  /**
+   * Skip cache and fetch fresh data from the registry.
+   */
   cache?: boolean
 }
 
 export type OutdatedDependenciesOptions = {
-  /** Skip cache and fetch fresh data from the registry. */
+  /**
+   * Skip cache and fetch fresh data from the registry.
+   */
   cache?: boolean
-  /** Filter by semver level (patch | minor | major). */
+  /**
+   * Filter by semver level (patch | minor | major).
+   */
   semver?: SemverLevel
   /**
    * Filter to a specific ecosystem (e.g. npm, rubygems, pypi, actions).

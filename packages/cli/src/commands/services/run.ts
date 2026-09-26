@@ -9,7 +9,9 @@ import { serviceCompletions } from '../../lib/zsh/service-completions.ts'
 type ForegroundExit = {
   code: number | null
   signal: NodeJS.Signals | null
-  /** True when the run was ended by the user (Ctrl+C) or a stop signal. */
+  /**
+   * True when the run was ended by the user (Ctrl+C) or a stop signal.
+   */
   interrupted: boolean
 }
 

@@ -3,29 +3,41 @@
  */
 export const DEFAULT_DOCKER_IMAGE = 'alpine:3.23'
 
-/** Container path the whole project (the primary checkout) is mounted at. */
+/**
+ * Container path the whole project (the primary checkout) is mounted at.
+ */
 export const CONTAINER_PROJECT_DIR = '/denvig/project'
 
 export type DockerRunOptions = {
-  /** Container name, used so restarts can replace the previous container. */
+  /**
+   * Container name, used so restarts can replace the previous container.
+   */
   containerName: string
-  /** Image to run. */
+  /**
+   * Image to run.
+   */
   image: string
   /**
    * Bind-mount specs rendered as `-v` (e.g. `/host/path:/container/path` or
    * `/host:/container:ro`). Host paths should already be absolute.
    */
   volumes?: string[]
-  /** Working directory inside the container. Omit to use the image default. */
+  /**
+   * Working directory inside the container. Omit to use the image default.
+   */
   workdir?: string
   /**
    * Extra published-port specs rendered as `-p` (e.g. `8025:8025`). Used for
    * docker services that expose ports directly rather than via the gateway.
    */
   ports?: string[]
-  /** Host port to expose. Omit when the service has no http port. */
+  /**
+   * Host port to expose. Omit when the service has no http port.
+   */
   hostPort?: number
-  /** Container port the host port maps to. Defaults to the host port. */
+  /**
+   * Container port the host port maps to. Defaults to the host port.
+   */
   containerPort?: number
   /**
    * Names of environment variables to forward into the container. The values
@@ -33,7 +45,9 @@ export type DockerRunOptions = {
    * so no escaping of values is needed here.
    */
   envKeys?: string[]
-  /** Command/args run inside the container, overriding the image default. */
+  /**
+   * Command/args run inside the container, overriding the image default.
+   */
   command?: string
 }
 

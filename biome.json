@@ -20,6 +20,7 @@
     "indentWidth": 2,
     "indentStyle": "space"
   },
+  "plugins": ["./.biome/multiline-jsdoc.grit"],
   "linter": {
     "enabled": true,
     "rules": {

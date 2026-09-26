@@ -1,9 +1,13 @@
 import { satisfies } from 'semver'
 
-/** Resolved version - 1.2.3 */
+/**
+ * Resolved version - 1.2.3
+ */
 type Version = string
 
-/** Version or range to be resolved - ^1.2.3 */
+/**
+ * Version or range to be resolved - ^1.2.3
+ */
 type TargetVersion = string
 
 /**

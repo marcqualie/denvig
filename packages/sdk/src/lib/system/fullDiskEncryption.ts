@@ -5,7 +5,9 @@ import { runInherit } from './process.ts'
 
 const execFileAsync = promisify(execFile)
 
-/** Whether macOS FileVault is currently turned on. */
+/**
+ * Whether macOS FileVault is currently turned on.
+ */
 export const isFullDiskEncryptionEnabled = async (): Promise<boolean> => {
   try {
     const { stdout } = await execFileAsync('fdesetup', ['status'])
@@ -15,7 +17,9 @@ export const isFullDiskEncryptionEnabled = async (): Promise<boolean> => {
   }
 }
 
-/** Run `sudo fdesetup enable` interactively. */
+/**
+ * Run `sudo fdesetup enable` interactively.
+ */
 export const enableFullDiskEncryption = (): Promise<boolean> => {
   return runInherit('sudo', ['fdesetup', 'enable'])
 }

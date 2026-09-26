@@ -5,7 +5,9 @@ import { resolveProjectId } from './project-id.ts'
 import { listProjects } from './projects.ts'
 
 export type ResolveProjectContextOptions = {
-  /** Directory to detect the project from when no `project` is given. */
+  /**
+   * Directory to detect the project from when no `project` is given.
+   */
   cwd: string
   /**
    * Explicit project identifier or path (e.g. `github:marcqualie/denvig` or an
@@ -15,11 +17,17 @@ export type ResolveProjectContextOptions = {
 }
 
 export type ProjectContext = {
-  /** The resolved project, or `null` when none could be detected. */
+  /**
+   * The resolved project, or `null` when none could be detected.
+   */
   project: DenvigProject | null
-  /** Absolute path the project was rooted at, or `null`. */
+  /**
+   * Absolute path the project was rooted at, or `null`.
+   */
   projectPath: string | null
-  /** GitHub-style slug for the project, or `null`. */
+  /**
+   * GitHub-style slug for the project, or `null`.
+   */
   slug: string | null
 }
 

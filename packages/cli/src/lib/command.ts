@@ -52,7 +52,9 @@ type ParsedArgs<
   K extends ArgDefinitions[number]['name'] = string,
 > = Record<K, string | number>
 
-/** Global flags available to all commands */
+/**
+ * Global flags available to all commands
+ */
 type GlobalFlags = {
   project?: string
   json?: boolean
@@ -65,10 +67,14 @@ type CommandHandler<
   ArgDefinitions extends ArgDefinition[],
   FlagDefinitions extends FlagDefinition[],
 > = (context: {
-  /** The SDK instance, pre-configured with the CLI client and cwd. */
+  /**
+   * The SDK instance, pre-configured with the CLI client and cwd.
+   */
   sdk: DenvigSDK
   project: DenvigProject
-  /** The active checkout for this command (cwd's worktree, or `--worktree`). */
+  /**
+   * The active checkout for this command (cwd's worktree, or `--worktree`).
+   */
   worktree: DenvigWorktree
   args: ParsedArgs<ArgDefinitions>
   flags: ParsedFlags<FlagDefinitions>

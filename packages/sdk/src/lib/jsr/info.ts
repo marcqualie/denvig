@@ -3,23 +3,31 @@ import { homedir } from 'node:os'
 
 import { sanitizePackageName } from '../npm/info.ts'
 
-/** Cache duration in milliseconds */
+/**
+ * Cache duration in milliseconds
+ */
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
-/** Cache directory for JSR package info */
+/**
+ * Cache directory for JSR package info
+ */
 const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/jsr`
   await mkdir(cacheDir, { recursive: true })
   return cacheDir
 }
 
-/** Get cache file path for a package */
+/**
+ * Get cache file path for a package
+ */
 const getCacheFilePath = async (packageName: string): Promise<string> => {
   const safeFileName = sanitizePackageName(packageName)
   return `${await getCacheDir()}/${safeFileName}.json`
 }
 
-/** Check if cache file is still valid */
+/**
+ * Check if cache file is still valid
+ */
 const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
     const stats = await stat(filePath)
@@ -36,7 +44,9 @@ export type JsrPackageInfo = {
   versionDates?: Record<string, string>
 }
 
-/** Read cached package info */
+/**
+ * Read cached package info
+ */
 const readCache = async (
   packageName: string,
 ): Promise<JsrPackageInfo | null> => {
@@ -52,7 +62,9 @@ const readCache = async (
   }
 }
 
-/** Write package info to cache */
+/**
+ * Write package info to cache
+ */
 const writeCache = async (
   packageName: string,
   data: JsrPackageInfo,

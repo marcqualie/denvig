@@ -21,7 +21,9 @@ type CertEntry = {
   status: string
 }
 
-/** Render the SDK certificate status into the CLI's display string. */
+/**
+ * Render the SDK certificate status into the CLI's display string.
+ */
 const displayStatus = (cert: DenvigCertificate): string => {
   if (cert.status === 'expired') return 'expired'
   if (cert.signedByLocalCa) {

@@ -4,7 +4,9 @@ import { parse } from 'yaml'
 import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
 import { safeReadTextFile } from './safeReadFile.ts'
 
-/** Global config file location */
+/**
+ * Global config file location
+ */
 const GLOBAL_CONFIG_PATH = resolve(`${process.env.HOME}/.denvig/config.yml`)
 
 const DEFAULT_GLOBAL_CONFIG = {

@@ -3,7 +3,9 @@ import { describe, it } from 'node:test'
 
 import { activeForegroundRun, isProcessAlive } from './foreground.ts'
 
-/** A PID that is never alive (above the macOS/Linux PID ceiling). */
+/**
+ * A PID that is never alive (above the macOS/Linux PID ceiling).
+ */
 const DEAD_PID = 99_999_999
 
 describe('isProcessAlive()', () => {

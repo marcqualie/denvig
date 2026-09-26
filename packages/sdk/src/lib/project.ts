@@ -20,11 +20,17 @@ export function shortProjectId(id: string): string {
  * specific one.
  */
 export class DenvigProject {
-  /** The primary checkout (`main`). Defines the project's identity. */
+  /**
+   * The primary checkout (`main`). Defines the project's identity.
+   */
   readonly primaryWorktree: Worktree
-  /** Every checkout: the primary plus all detached worktrees. */
+  /**
+   * Every checkout: the primary plus all detached worktrees.
+   */
   readonly worktrees: Worktree[]
-  /** The checkout this project instance is acting on. */
+  /**
+   * The checkout this project instance is acting on.
+   */
   activeWorktree: Worktree
 
   private constructor(primaryWorktree: Worktree, worktrees: Worktree[]) {
@@ -65,13 +71,17 @@ export class DenvigProject {
     return project
   }
 
-  /** Select a worktree by branch. `main` resolves to the primary checkout. */
+  /**
+   * Select a worktree by branch. `main` resolves to the primary checkout.
+   */
   worktree(branch: string): Worktree | null {
     if (branch === 'main') return this.primaryWorktree
     return this.worktrees.find((wt) => wt.branch === branch) ?? null
   }
 
-  /** Project identity, rooted at the primary checkout. */
+  /**
+   * Project identity, rooted at the primary checkout.
+   */
   get id(): string {
     return this.primaryWorktree.id
   }
@@ -92,7 +102,9 @@ export class DenvigProject {
     return this.primaryWorktree.name
   }
 
-  /** Absolute path of the primary checkout. */
+  /**
+   * Absolute path of the primary checkout.
+   */
   get path(): string {
     return this.primaryWorktree.path
   }

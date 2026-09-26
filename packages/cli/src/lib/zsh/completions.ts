@@ -12,7 +12,9 @@ type CompletionContext = {
   commands: Record<string, GenericCommand>
 }
 
-/** Subcommand names that should be suggested, hiding internal ones (e.g. `__complete__`). */
+/**
+ * Subcommand names that should be suggested, hiding internal ones (e.g. `__complete__`).
+ */
 const visibleSubcommands = (command: GenericCommand): string[] =>
   Object.keys(command.subcommands).filter((name) => !name.startsWith('__'))
 

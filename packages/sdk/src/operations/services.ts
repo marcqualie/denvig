@@ -15,9 +15,13 @@ import type { Worktree } from '../lib/project/worktree.ts'
 export type ServiceRuntimeStatus = 'running' | 'stopped' | 'error'
 
 export type ListServicesOptions = {
-  /** List services across all projects and global services. */
+  /**
+   * List services across all projects and global services.
+   */
   all?: boolean
-  /** List only global services. */
+  /**
+   * List only global services.
+   */
   global?: boolean
   /**
    * Nest each project's worktree services beneath it. Defaults to `true`;
@@ -25,7 +29,9 @@ export type ListServicesOptions = {
    * single worktree or the global scope disables nesting on its own.
    */
   worktrees?: boolean
-  /** Target a sibling git worktree by branch name (use "main" for primary). */
+  /**
+   * Target a sibling git worktree by branch name (use "main" for primary).
+   */
   worktree?: string
   /**
    * Filter by runtime status. Accepts a status, a list of statuses, or a
@@ -34,12 +40,18 @@ export type ListServicesOptions = {
   status?: string | string[]
 }
 
-/** A rendered row: a service plus where it sits in the project/worktree tree. */
+/**
+ * A rendered row: a service plus where it sits in the project/worktree tree.
+ */
 export type ServiceRow = {
   service: ServiceResponse
-  /** 0 for a project's own services, 1 for a worktree's. */
+  /**
+   * 0 for a project's own services, 1 for a worktree's.
+   */
   depth: 0 | 1
-  /** Project column text: project slug at depth 0, branch at depth 1. */
+  /**
+   * Project column text: project slug at depth 0, branch at depth 1.
+   */
   label: string
 }
 
@@ -254,9 +266,13 @@ export const listServices = async (
 }
 
 export type ServiceOperationOptions = {
-  /** Target a sibling git worktree by branch name (use "main" for primary). */
+  /**
+   * Target a sibling git worktree by branch name (use "main" for primary).
+   */
   worktree?: string
-  /** Include recent log lines in the response. */
+  /**
+   * Include recent log lines in the response.
+   */
   includeLogs?: boolean
 }
 

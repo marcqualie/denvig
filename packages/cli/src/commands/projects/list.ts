@@ -12,17 +12,25 @@ import type {
 
 type ProjectInfoJSON = Omit<ProjectInfo, 'serviceStatus'>
 
-/** A row in the rendered list: a project, or one of its worktrees. */
+/**
+ * A row in the rendered list: a project, or one of its worktrees.
+ */
 type ProjectRow = {
   status: ProjectServiceStatus
-  /** Project name for the primary row, branch name for worktree rows. */
+  /**
+   * Project name for the primary row, branch name for worktree rows.
+   */
   label: string
   path: string
-  /** 0 for a project, 1 for one of its worktrees. */
+  /**
+   * 0 for a project, 1 for one of its worktrees.
+   */
   depth: number
 }
 
-/** Service status for a single worktree, reusing the shared info builder. */
+/**
+ * Service status for a single worktree, reusing the shared info builder.
+ */
 const worktreeStatus = async (
   project: DenvigProject,
   branch: string,

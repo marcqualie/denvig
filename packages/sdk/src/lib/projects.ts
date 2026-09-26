@@ -11,7 +11,9 @@ export type ProjectInfo = {
 }
 
 export type ListProjectsOptions = {
-  /** Only include projects with a .denvig.yml configuration file */
+  /**
+   * Only include projects with a .denvig.yml configuration file
+   */
   withConfig?: boolean
 }
 
@@ -138,7 +140,9 @@ export const listProjects = async (
   return projects.sort((a, b) => a.slug.localeCompare(b.slug))
 }
 
-/** Slug and path of a single resolvable checkout. */
+/**
+ * Slug and path of a single resolvable checkout.
+ */
 export type CheckoutMeta = {
   slug: string
   path: string

@@ -1,10 +1,14 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
-/** Cache duration in milliseconds */
+/**
+ * Cache duration in milliseconds
+ */
 const CACHE_DURATION_MS = 60 * 60 * 1000
 
-/** Cache directory for rubygems package info */
+/**
+ * Cache directory for rubygems package info
+ */
 const getCacheDir = async (): Promise<string> => {
   const cacheDir = `${homedir()}/.cache/denvig/dependencies/rubygems`
   await mkdir(cacheDir, { recursive: true })
@@ -36,13 +40,17 @@ export const sanitizeGemName = (gemName: string): string => {
   return safe
 }
 
-/** Get cache file path for a gem */
+/**
+ * Get cache file path for a gem
+ */
 export const getCacheFilePath = async (gemName: string): Promise<string> => {
   const safeFileName = sanitizeGemName(gemName)
   return `${await getCacheDir()}/${safeFileName}.json`
 }
 
-/** Check if cache file is still valid (less than 30 minutes old) */
+/**
+ * Check if cache file is still valid (less than 30 minutes old)
+ */
 const isCacheValid = async (filePath: string): Promise<boolean> => {
   try {
     const stats = await stat(filePath)
@@ -59,7 +67,9 @@ export type RubygemInfo = {
   versionDates?: Record<string, string>
 }
 
-/** Read cached gem info */
+/**
+ * Read cached gem info
+ */
 const readCache = async (gemName: string): Promise<RubygemInfo | null> => {
   const filePath = await getCacheFilePath(gemName)
   if (!(await isCacheValid(filePath))) {
@@ -75,7 +85,9 @@ const readCache = async (gemName: string): Promise<RubygemInfo | null> => {
   }
 }
 
-/** Write gem info to cache */
+/**
+ * Write gem info to cache
+ */
 const writeCache = async (
   gemName: string,
   data: RubygemInfo,

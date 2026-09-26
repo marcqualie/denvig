@@ -54,7 +54,9 @@ export class DenvigService {
     return this.serviceName
   }
 
-  /** Start the service and return its resulting status. */
+  /**
+   * Start the service and return its resulting status.
+   */
   async start(options: ServiceStartOptions = {}): Promise<ServiceResponse> {
     return track(this.ctx, 'services.start', this.project.slug, () =>
       startService(this.project, this.serviceName, {
@@ -65,7 +67,9 @@ export class DenvigService {
     )
   }
 
-  /** Stop the service and return its resulting status. */
+  /**
+   * Stop the service and return its resulting status.
+   */
   async stop(): Promise<ServiceResponse> {
     return track(this.ctx, 'services.stop', this.project.slug, () =>
       stopService(this.project, this.serviceName, {
@@ -74,7 +78,9 @@ export class DenvigService {
     )
   }
 
-  /** Get the service's current status, including recent log lines. */
+  /**
+   * Get the service's current status, including recent log lines.
+   */
   async status(): Promise<ServiceResponse> {
     return track(this.ctx, 'services.status', this.project.slug, () =>
       getService(this.project, this.serviceName, {

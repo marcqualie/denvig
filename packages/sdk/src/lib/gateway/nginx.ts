@@ -18,7 +18,9 @@ export type NginxConfigOptions = {
   cnames?: string[]
   sslCertPath?: string
   sslKeyPath?: string
-  /** Stable log file for the service, surfaced as a comment for debugging. */
+  /**
+   * Stable log file for the service, surfaced as a comment for debugging.
+   */
   logPath?: string
 }
 

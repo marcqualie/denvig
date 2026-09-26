@@ -5,7 +5,9 @@ import { runInherit } from './process.ts'
 
 const execFileAsync = promisify(execFile)
 
-/** Whether the Xcode Command Line Tools are installed. */
+/**
+ * Whether the Xcode Command Line Tools are installed.
+ */
 export const isXcodeCliInstalled = async (): Promise<boolean> => {
   try {
     await execFileAsync('xcode-select', ['-p'])
