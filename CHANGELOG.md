@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-09-27
+
 ### Added
 
 - `denvig services run <name>` runs a service in the foreground with live output until Ctrl+C
