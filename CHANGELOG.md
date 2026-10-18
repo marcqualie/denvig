@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated 6 minor and patch dependencies
+
 ## [0.7.4] - 2026-09-27
 
 ### Added
