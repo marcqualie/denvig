@@ -6,6 +6,10 @@
 
 - Updated 6 minor and patch dependencies
 
+### Fixed
+
+- `denvig outdated` no longer hangs for up to 30s per SHA-pinned GitHub Action when git rewrites GitHub URLs to SSH
+
 ## [0.7.4] - 2026-09-27
 
 ### Added
