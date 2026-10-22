@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `DENVIG_DEBUG=deps` writes a trace of every dependency lookup that can be opened in https://ui.perfetto.dev
+
 ### Changed
 
 - Updated 6 minor and patch dependencies

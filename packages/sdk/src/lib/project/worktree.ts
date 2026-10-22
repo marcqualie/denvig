@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 
 import { detectActions } from '../actions/actions.ts'
 import { type ConfigWithSourcePaths, getProjectConfig } from '../config.ts'
+import { appendTraceEvent } from '../debug-trace.ts'
 import {
   detectDependencies,
   type OutdatedDependencySchema,
@@ -130,11 +131,18 @@ export class Worktree {
     options?: OutdatedDependenciesOptions,
   ): Promise<OutdatedDependencySchema[]> {
     const pluginResults = await Promise.all(
-      Object.values(plugins).map((plugin) =>
-        plugin.outdatedDependencies
-          ? plugin.outdatedDependencies(this, options)
-          : Promise.resolve([]),
-      ),
+      Object.values(plugins).map(async (plugin) => {
+        if (!plugin.outdatedDependencies) return []
+        const start = performance.now()
+        const outdated = await plugin.outdatedDependencies(this, options)
+        appendTraceEvent('deps', {
+          name: `plugin ${plugin.name}`,
+          category: 'plugin',
+          start,
+          args: { path: this.path, outdated: outdated.length },
+        })
+        return outdated
+      }),
     )
 
     return pluginResults.flat()

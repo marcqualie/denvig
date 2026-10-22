@@ -1,5 +1,8 @@
 import { DenvigValidationError } from '@denvig/sdk'
-import { countCertsExpiringWithin } from '@denvig/sdk/internal'
+import {
+  countCertsExpiringWithin,
+  getActiveDebugTracePath,
+} from '@denvig/sdk/internal'
 import { getSemverLevel } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
@@ -16,6 +19,22 @@ const printExpiringCertsWarning = (): void => {
   console.log(
     `${COLORS.yellow}${count} ${noun} due to expire. Run denvig certs for details.${COLORS.reset}`,
   )
+}
+
+/**
+ * Print where the debug trace was written when DENVIG_DEBUG is enabled.
+ * Uses stderr for JSON output so stdout stays parseable.
+ */
+const printDebugTracePath = (json: boolean): void => {
+  const path = getActiveDebugTracePath()
+  if (!path) return
+  const message = `Debug trace written to ${path} (open in https://ui.perfetto.dev)`
+  if (json) {
+    console.error(message)
+    return
+  }
+  console.log('')
+  console.log(`${COLORS.grey}${message}${COLORS.reset}`)
 }
 
 /**
@@ -138,6 +157,7 @@ export const depsOutdatedCommand = new Command({
         console.log(message)
         printExpiringCertsWarning()
       }
+      printDebugTracePath(Boolean(flags.json))
       let message = 'All dependencies are up to date!'
       if (ecosystemFilter && semverFilter) {
         message = `No ${semverFilter}-level updates available for ecosystem "${ecosystemFilter}".`
@@ -152,6 +172,7 @@ export const depsOutdatedCommand = new Command({
     // JSON output (entries are already filtered and sorted by the operation)
     if (flags.json) {
       console.log(JSON.stringify(sortedEntries))
+      printDebugTracePath(true)
       return { success: true, message: 'Outdated dependencies listed.' }
     }
 
@@ -263,6 +284,7 @@ export const depsOutdatedCommand = new Command({
     }
 
     printExpiringCertsWarning()
+    printDebugTracePath(false)
 
     return { success: true, message: 'Outdated dependencies listed.' }
   },

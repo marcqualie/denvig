@@ -4,6 +4,11 @@ import { homedir, tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import semver from 'semver'
 
+import {
+  fetchRegistryJson,
+  logCachedLookup,
+  timeNetworkLookup,
+} from '../deps/lookup.ts'
 import { sanitizePackageName } from '../npm/info.ts'
 
 const execFileAsync = promisify(execFile)
@@ -135,7 +140,10 @@ export const fetchGitHubActionInfo = async (
 ): Promise<GitHubActionInfo | null> => {
   if (!noCache) {
     const cached = await readCache<GitHubActionInfo>(name, 'releases')
-    if (cached) return cached
+    if (cached) {
+      logCachedLookup({ ecosystem: 'actions', name })
+      return cached
+    }
   }
 
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
@@ -146,13 +154,17 @@ export const fetchGitHubActionInfo = async (
   if (token) headers.Authorization = `Bearer ${token}`
 
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${name}/releases?per_page=100`,
+    const releases = await fetchRegistryJson<GitHubRelease[]>(
+      {
+        ecosystem: 'actions',
+        name,
+        url: `https://api.github.com/repos/${name}/releases?per_page=100`,
+      },
       { headers },
     )
-    if (!response.ok) return null
+    if (!releases) return null
 
-    const result = parseReleases((await response.json()) as GitHubRelease[])
+    const result = parseReleases(releases)
     if (!result) return null
 
     await writeCache(name, 'releases', result)
@@ -219,11 +231,18 @@ export const fetchGitHubActionTagCommits = async (
 ): Promise<Record<string, string> | null> => {
   if (!noCache) {
     const cached = await readCache<Record<string, string>>(name, 'tags')
-    if (cached) return cached
+    if (cached) {
+      logCachedLookup({ ecosystem: 'actions', name })
+      return cached
+    }
   }
 
   try {
-    const stdout = await listRemoteTags(`https://github.com/${name}.git`)
+    const url = `https://github.com/${name}.git`
+    const stdout = await timeNetworkLookup(
+      { ecosystem: 'actions', name, url },
+      () => listRemoteTags(url),
+    )
     const result = parseTagCommits(stdout)
     await writeCache(name, 'tags', result)
     return result

@@ -1,6 +1,8 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
+import { fetchRegistryJson, logCachedLookup } from '../deps/lookup.ts'
+
 /**
  * Cache duration in milliseconds
  */
@@ -112,23 +114,28 @@ export const fetchRubygemInfo = async (
   if (!noCache) {
     const cached = await readCache(gemName)
     if (cached) {
+      logCachedLookup({ ecosystem: 'rubygems', name: gemName })
       return cached
     }
   }
 
   try {
     // Fetch all versions from the versions API
-    const response = await fetch(
-      `https://rubygems.org/api/v1/versions/${encodeURIComponent(gemName)}.json`,
+    const data = await fetchRegistryJson<
+      Array<{
+        number: string
+        prerelease: boolean
+        created_at?: string
+      }>
+    >(
+      {
+        ecosystem: 'rubygems',
+        name: gemName,
+        url: `https://rubygems.org/api/v1/versions/${encodeURIComponent(gemName)}.json`,
+      },
       { headers: { Accept: 'application/json' } },
     )
-    if (!response.ok) return null
-
-    const data = (await response.json()) as Array<{
-      number: string
-      prerelease: boolean
-      created_at?: string
-    }>
+    if (!data) return null
 
     // Extract version numbers, filtering out prereleases for the versions list
     const allVersions = data.map((v) => v.number)

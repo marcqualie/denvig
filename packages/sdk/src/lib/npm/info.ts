@@ -1,6 +1,8 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
+import { fetchRegistryJson, logCachedLookup } from '../deps/lookup.ts'
+
 /**
  * Cache duration in milliseconds
  */
@@ -121,22 +123,25 @@ export const fetchNpmPackageInfo = async (
   if (!noCache) {
     const cached = await readCache(packageName)
     if (cached) {
+      logCachedLookup({ ecosystem: 'npm', name: packageName })
       return cached
     }
   }
 
   try {
-    const response = await fetch(
-      `https://registry.npmjs.com/${encodeURIComponent(packageName)}`,
-      { headers: { Accept: 'application/json' } },
-    )
-    if (!response.ok) return null
-
-    const data = (await response.json()) as {
+    const data = await fetchRegistryJson<{
       versions: Record<string, unknown>
       'dist-tags': { latest: string }
       time?: Record<string, string>
-    }
+    }>(
+      {
+        ecosystem: 'npm',
+        name: packageName,
+        url: `https://registry.npmjs.com/${encodeURIComponent(packageName)}`,
+      },
+      { headers: { Accept: 'application/json' } },
+    )
+    if (!data) return null
 
     const versions = Object.keys(data.versions)
     const latest = data['dist-tags']?.latest || versions[versions.length - 1]
