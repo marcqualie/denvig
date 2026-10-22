@@ -1,17 +1,10 @@
-import { execFile } from 'node:child_process'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
-import { promisify } from 'node:util'
 import semver from 'semver'
 
-import {
-  fetchRegistryJson,
-  logCachedLookup,
-  timeNetworkLookup,
-} from '../deps/lookup.ts'
+import { fetchRegistryJson, logCachedLookup } from '../deps/lookup.ts'
 import { sanitizePackageName } from '../npm/info.ts'
-
-const execFileAsync = promisify(execFile)
+import { execCommand } from '../system/process.ts'
 
 /**
  * Cache duration in milliseconds
@@ -155,11 +148,7 @@ export const fetchGitHubActionInfo = async (
 
   try {
     const releases = await fetchRegistryJson<GitHubRelease[]>(
-      {
-        ecosystem: 'actions',
-        name,
-        url: `https://api.github.com/repos/${name}/releases?per_page=100`,
-      },
+      `https://api.github.com/repos/${name}/releases?per_page=100`,
       { headers },
     )
     if (!releases) return null
@@ -207,7 +196,7 @@ export const parseTagCommits = (output: string): Record<string, string> => {
  * local repo config doesn't apply either.
  */
 export const listRemoteTags = async (url: string): Promise<string> => {
-  const { stdout } = await execFileAsync('git', ['ls-remote', '--tags', url], {
+  const { stdout } = await execCommand('git', ['ls-remote', '--tags', url], {
     cwd: tmpdir(),
     timeout: LS_REMOTE_TIMEOUT_MS,
     env: {
@@ -238,11 +227,7 @@ export const fetchGitHubActionTagCommits = async (
   }
 
   try {
-    const url = `https://github.com/${name}.git`
-    const stdout = await timeNetworkLookup(
-      { ecosystem: 'actions', name, url },
-      () => listRemoteTags(url),
-    )
+    const stdout = await listRemoteTags(`https://github.com/${name}.git`)
     const result = parseTagCommits(stdout)
     await writeCache(name, 'tags', result)
     return result

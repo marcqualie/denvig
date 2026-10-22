@@ -133,14 +133,9 @@ export const fetchNpmPackageInfo = async (
       versions: Record<string, unknown>
       'dist-tags': { latest: string }
       time?: Record<string, string>
-    }>(
-      {
-        ecosystem: 'npm',
-        name: packageName,
-        url: `https://registry.npmjs.com/${encodeURIComponent(packageName)}`,
-      },
-      { headers: { Accept: 'application/json' } },
-    )
+    }>(`https://registry.npmjs.com/${encodeURIComponent(packageName)}`, {
+      headers: { Accept: 'application/json' },
+    })
     if (!data) return null
 
     const versions = Object.keys(data.versions)

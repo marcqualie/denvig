@@ -98,14 +98,9 @@ export const fetchJsrPackageInfo = async (
     const data = await fetchRegistryJson<{
       latest: string
       versions: Record<string, { yanked?: boolean; createdAt?: string }>
-    }>(
-      {
-        ecosystem: 'jsr',
-        name: packageName,
-        url: `https://jsr.io/${packageName}/meta.json`,
-      },
-      { headers: { Accept: 'application/json' } },
-    )
+    }>(`https://jsr.io/${packageName}/meta.json`, {
+      headers: { Accept: 'application/json' },
+    })
     if (!data) return null
 
     const versions = Object.entries(data.versions)

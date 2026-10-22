@@ -135,7 +135,9 @@ export class Worktree {
         if (!plugin.outdatedDependencies) return []
         const start = performance.now()
         const outdated = await plugin.outdatedDependencies(this, options)
-        appendTraceEvent('deps', {
+        appendTraceEvent({
+          group: 'denvig',
+          scope: 'deps',
           name: `plugin ${plugin.name}`,
           category: 'plugin',
           start,

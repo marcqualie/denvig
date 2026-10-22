@@ -133,14 +133,9 @@ export const fetchPyPIPackageInfo = async (
     const data = await fetchRegistryJson<{
       releases: Record<string, Array<{ upload_time_iso_8601?: string }>>
       info: { version: string }
-    }>(
-      {
-        ecosystem: 'pypi',
-        name: normalizedName,
-        url: `https://pypi.org/pypi/${encodeURIComponent(normalizedName)}/json`,
-      },
-      { headers: { Accept: 'application/json' } },
-    )
+    }>(`https://pypi.org/pypi/${encodeURIComponent(normalizedName)}/json`, {
+      headers: { Accept: 'application/json' },
+    })
     if (!data) return null
 
     // Get all versions, filtering out those with no files (yanked or empty)

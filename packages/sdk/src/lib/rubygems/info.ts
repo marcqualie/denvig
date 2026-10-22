@@ -128,11 +128,7 @@ export const fetchRubygemInfo = async (
         created_at?: string
       }>
     >(
-      {
-        ecosystem: 'rubygems',
-        name: gemName,
-        url: `https://rubygems.org/api/v1/versions/${encodeURIComponent(gemName)}.json`,
-      },
+      `https://rubygems.org/api/v1/versions/${encodeURIComponent(gemName)}.json`,
       { headers: { Accept: 'application/json' } },
     )
     if (!data) return null

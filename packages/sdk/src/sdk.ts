@@ -1,5 +1,6 @@
 import { getGlobalConfig } from './lib/config.ts'
 import { resolveProjectContext } from './lib/context.ts'
+import { enableFetchTracing } from './lib/debug-trace.ts'
 import { DenvigValidationError } from './lib/errors.ts'
 import { DenvigProject as InternalProject } from './lib/project.ts'
 import { listProjects } from './lib/projects.ts'
@@ -97,6 +98,7 @@ export class DenvigSDK {
       )
     }
     this.ctx = { client: options.client, cwd: options.cwd ?? process.cwd() }
+    enableFetchTracing()
   }
 
   /**

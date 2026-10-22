@@ -4,7 +4,7 @@
 
 ### Added
 
-- `DENVIG_DEBUG=deps` writes a trace of every dependency lookup that can be opened in https://ui.perfetto.dev
+- `DENVIG_DEBUG=deps` writes a trace of dependency checks, network requests and git commands that can be opened in https://ui.perfetto.dev
 
 ### Changed
 
