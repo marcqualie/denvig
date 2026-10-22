@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import semver from 'semver'
 
@@ -188,6 +188,27 @@ export const parseTagCommits = (output: string): Record<string, string> => {
 }
 
 /**
+ * List the tags of a public remote repository with `git ls-remote`. The
+ * user's global and system git config is ignored so URL rewrites such as
+ * `url.git@github.com:.insteadOf` can't switch it to SSH, where it may hang
+ * waiting on an SSH agent or key prompt. It runs outside any repository so
+ * local repo config doesn't apply either.
+ */
+export const listRemoteTags = async (url: string): Promise<string> => {
+  const { stdout } = await execFileAsync('git', ['ls-remote', '--tags', url], {
+    cwd: tmpdir(),
+    timeout: LS_REMOTE_TIMEOUT_MS,
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: '0',
+      GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_CONFIG_NOSYSTEM: '1',
+    },
+  })
+  return stdout
+}
+
+/**
  * Fetch a map of commit SHA to semver version for an action repository's
  * tags, used to resolve SHA-pinned references. Uses `git ls-remote` so it
  * does not count towards the GitHub API rate limit.
@@ -202,14 +223,7 @@ export const fetchGitHubActionTagCommits = async (
   }
 
   try {
-    const { stdout } = await execFileAsync(
-      'git',
-      ['ls-remote', '--tags', `https://github.com/${name}.git`],
-      {
-        timeout: LS_REMOTE_TIMEOUT_MS,
-        env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-      },
-    )
+    const stdout = await listRemoteTags(`https://github.com/${name}.git`)
     const result = parseTagCommits(stdout)
     await writeCache(name, 'tags', result)
     return result
