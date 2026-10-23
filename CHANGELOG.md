@@ -8,7 +8,7 @@
 
 ### Changed
 
-- Updated 6 minor and patch dependencies
+- Updated 9 minor and patch dependencies
 
 ### Fixed
 
