@@ -204,12 +204,16 @@ export async function print(
 }
 
 /**
- * List all services matching a pattern.
+ * List all services whose label starts with a prefix.
  *
- * @param pattern - Optional pattern to filter services
+ * Matching is anchored to the start of the label so unrelated agents that
+ * merely contain the prefix (eg. `application.com.denvig.desktop.*`) are
+ * never treated as denvig-managed services.
+ *
+ * @param prefix - Optional label prefix to filter services
  * @returns Array of service items
  */
-export async function list(pattern?: string): Promise<LaunchctlListItem[]> {
+export async function list(prefix?: string): Promise<LaunchctlListItem[]> {
   try {
     const { stdout } = await execAsync('launchctl list')
     const lines = stdout.trim().split('\n').slice(1) // Skip header
@@ -227,8 +231,8 @@ export async function list(pattern?: string): Promise<LaunchctlListItem[]> {
       })
       .filter((item): item is LaunchctlListItem => item !== null)
 
-    if (pattern) {
-      return items.filter((item) => item.label.includes(pattern))
+    if (prefix) {
+      return items.filter((item) => item.label.startsWith(prefix))
     }
 
     return items

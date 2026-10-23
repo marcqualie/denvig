@@ -30,11 +30,18 @@ describe('launchctl', () => {
       ok(Array.isArray(services))
     })
 
-    it('should filter services by pattern', async () => {
+    it('should filter services by label prefix', async () => {
       const services = await list('com.apple')
       ok(Array.isArray(services))
       services.forEach((service) => {
-        ok(service.label.includes('com.apple'))
+        ok(service.label.startsWith('com.apple'))
+      })
+    })
+
+    it('should not match labels that only contain the prefix', async () => {
+      const services = await list('apple.')
+      services.forEach((service) => {
+        ok(service.label.startsWith('apple.'))
       })
     })
 

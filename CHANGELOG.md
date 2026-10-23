@@ -13,6 +13,7 @@
 ### Fixed
 
 - `denvig outdated` no longer hangs for up to 30s per SHA-pinned GitHub Action when git rewrites GitHub URLs to SSH
+- Service commands no longer stop unrelated launchd agents whose label merely contains `denvig.` (eg. Denvig Desktop)
 
 ## [0.7.4] - 2026-09-27
 
