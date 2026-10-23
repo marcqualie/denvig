@@ -1,6 +1,7 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
+import { fetchRegistryJson, logCachedLookup } from '../deps/lookup.ts'
 import { sanitizePackageName } from '../npm/info.ts'
 
 /**
@@ -88,20 +89,19 @@ export const fetchJsrPackageInfo = async (
   if (!noCache) {
     const cached = await readCache(packageName)
     if (cached) {
+      logCachedLookup({ ecosystem: 'jsr', name: packageName })
       return cached
     }
   }
 
   try {
-    const response = await fetch(`https://jsr.io/${packageName}/meta.json`, {
-      headers: { Accept: 'application/json' },
-    })
-    if (!response.ok) return null
-
-    const data = (await response.json()) as {
+    const data = await fetchRegistryJson<{
       latest: string
       versions: Record<string, { yanked?: boolean; createdAt?: string }>
-    }
+    }>(`https://jsr.io/${packageName}/meta.json`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (!data) return null
 
     const versions = Object.entries(data.versions)
       .filter(([_, info]) => !info.yanked)

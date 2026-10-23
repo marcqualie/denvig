@@ -1,13 +1,8 @@
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
-
-import { runInherit } from './process.ts'
-
-const execFileAsync = promisify(execFile)
+import { execCommand, runInherit } from './process.ts'
 
 const readGlobalGitConfig = async (key: string): Promise<string | null> => {
   try {
-    const { stdout } = await execFileAsync('git', ['config', '--global', key])
+    const { stdout } = await execCommand('git', ['config', '--global', key])
     return stdout.trim() || null
   } catch {
     return null

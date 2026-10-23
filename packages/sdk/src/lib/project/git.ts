@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process'
 import {
   type Dirent,
   readdirSync,
@@ -9,11 +8,8 @@ import {
 } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path, { resolve } from 'node:path'
-import { promisify } from 'node:util'
 
-import { runInherit } from '../system/process.ts'
-
-const execFileAsync = promisify(execFile)
+import { execCommand, runInherit } from '../system/process.ts'
 
 /**
  * Parse a GitHub remote URL and extract owner/repo.
@@ -93,7 +89,7 @@ export const gitPull = (cwd: string): Promise<boolean> => {
  */
 export const isWorkingTreeDirty = async (cwd: string): Promise<boolean> => {
   try {
-    const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+    const { stdout } = await execCommand('git', ['status', '--porcelain'], {
       cwd,
     })
     return stdout.trim().length > 0

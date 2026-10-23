@@ -2,7 +2,11 @@
 
 import { type ParseArgsConfig, parseArgs } from 'node:util'
 import { DenvigSDK } from '@denvig/sdk'
-import { createCliLogTracker, getGlobalConfig } from '@denvig/sdk/internal'
+import {
+  appendTraceEvent,
+  createCliLogTracker,
+  getGlobalConfig,
+} from '@denvig/sdk/internal'
 
 import {
   formatCommandHelp,
@@ -305,6 +309,7 @@ async function main() {
       process.exit(1)
     }
 
+    const commandStart = performance.now()
     const { success, message } = await command.run(
       denvig,
       project,
@@ -312,6 +317,13 @@ async function main() {
       parsedFlags,
       extraArgs,
     )
+    appendTraceEvent({
+      group: 'denvig',
+      name: `command ${command.name}`,
+      category: 'cli',
+      start: commandStart,
+      args: { success, message },
+    })
     if (!success) {
       const errorMsg = (message || 'Command failed')
         .replace(/[\r\n]+/g, ' ')

@@ -19,6 +19,10 @@ export {
 } from './lib/certs.ts'
 export { createCliLogTracker } from './lib/cli-logs.ts'
 export { getGlobalConfig } from './lib/config.ts'
+export {
+  appendTraceEvent,
+  getActiveDebugTracePath,
+} from './lib/debug-trace.ts'
 export { buildReverseChain, isDevDependenciesSource } from './lib/deps/tree.ts'
 export { findCertForDomain, generateMissingCerts } from './lib/gateway/certs.ts'
 export { getDenvigNginxConfPath } from './lib/gateway/nginx.ts'

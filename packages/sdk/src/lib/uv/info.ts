@@ -1,6 +1,8 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 
+import { fetchRegistryJson, logCachedLookup } from '../deps/lookup.ts'
+
 /**
  * Cache duration in milliseconds
  */
@@ -122,21 +124,19 @@ export const fetchPyPIPackageInfo = async (
   if (!noCache) {
     const cached = await readCache(normalizedName)
     if (cached) {
+      logCachedLookup({ ecosystem: 'pypi', name: normalizedName })
       return cached
     }
   }
 
   try {
-    const response = await fetch(
-      `https://pypi.org/pypi/${encodeURIComponent(normalizedName)}/json`,
-      { headers: { Accept: 'application/json' } },
-    )
-    if (!response.ok) return null
-
-    const data = (await response.json()) as {
+    const data = await fetchRegistryJson<{
       releases: Record<string, Array<{ upload_time_iso_8601?: string }>>
       info: { version: string }
-    }
+    }>(`https://pypi.org/pypi/${encodeURIComponent(normalizedName)}/json`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (!data) return null
 
     // Get all versions, filtering out those with no files (yanked or empty)
     const versions = Object.entries(data.releases)

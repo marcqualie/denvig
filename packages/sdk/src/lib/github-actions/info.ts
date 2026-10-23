@@ -1,12 +1,10 @@
-import { execFile } from 'node:child_process'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
-import { promisify } from 'node:util'
 import semver from 'semver'
 
+import { fetchRegistryJson, logCachedLookup } from '../deps/lookup.ts'
 import { sanitizePackageName } from '../npm/info.ts'
-
-const execFileAsync = promisify(execFile)
+import { execCommand } from '../system/process.ts'
 
 /**
  * Cache duration in milliseconds
@@ -135,7 +133,10 @@ export const fetchGitHubActionInfo = async (
 ): Promise<GitHubActionInfo | null> => {
   if (!noCache) {
     const cached = await readCache<GitHubActionInfo>(name, 'releases')
-    if (cached) return cached
+    if (cached) {
+      logCachedLookup({ ecosystem: 'actions', name })
+      return cached
+    }
   }
 
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
@@ -146,13 +147,13 @@ export const fetchGitHubActionInfo = async (
   if (token) headers.Authorization = `Bearer ${token}`
 
   try {
-    const response = await fetch(
+    const releases = await fetchRegistryJson<GitHubRelease[]>(
       `https://api.github.com/repos/${name}/releases?per_page=100`,
       { headers },
     )
-    if (!response.ok) return null
+    if (!releases) return null
 
-    const result = parseReleases((await response.json()) as GitHubRelease[])
+    const result = parseReleases(releases)
     if (!result) return null
 
     await writeCache(name, 'releases', result)
@@ -195,7 +196,7 @@ export const parseTagCommits = (output: string): Record<string, string> => {
  * local repo config doesn't apply either.
  */
 export const listRemoteTags = async (url: string): Promise<string> => {
-  const { stdout } = await execFileAsync('git', ['ls-remote', '--tags', url], {
+  const { stdout } = await execCommand('git', ['ls-remote', '--tags', url], {
     cwd: tmpdir(),
     timeout: LS_REMOTE_TIMEOUT_MS,
     env: {
@@ -219,7 +220,10 @@ export const fetchGitHubActionTagCommits = async (
 ): Promise<Record<string, string> | null> => {
   if (!noCache) {
     const cached = await readCache<Record<string, string>>(name, 'tags')
-    if (cached) return cached
+    if (cached) {
+      logCachedLookup({ ecosystem: 'actions', name })
+      return cached
+    }
   }
 
   try {
