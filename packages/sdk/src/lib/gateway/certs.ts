@@ -168,3 +168,49 @@ export async function resolveSslPaths(
   }
   return null
 }
+
+export type GatewayCert = {
+  certPath: string
+  keyPath: string
+  /**
+   * Domains covered by the cert's SAN (may include wildcards).
+   */
+  domains: string[]
+}
+
+/**
+ * List every usable cert in `~/.denvig/certs/` along with the domains it
+ * covers. Unreadable or incomplete cert directories are skipped. Results are
+ * sorted by directory name so generated config is stable.
+ */
+export async function listGatewayCerts(): Promise<GatewayCert[]> {
+  const certsDir = getCertsDir()
+  let entries: string[]
+  try {
+    const dirents = await readdir(certsDir, { withFileTypes: true })
+    entries = dirents
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort()
+  } catch {
+    return []
+  }
+
+  const certs: GatewayCert[] = []
+  for (const entry of entries) {
+    const paths = await resolveSslPaths(resolve(certsDir, entry))
+    if (!paths) continue
+    try {
+      const domains = parseCertDomains(
+        await readFile(paths.sslCertPath, 'utf-8'),
+      )
+      if (domains.length === 0) continue
+      certs.push({
+        certPath: paths.sslCertPath,
+        keyPath: paths.sslKeyPath,
+        domains,
+      })
+    } catch {}
+  }
+  return certs
+}

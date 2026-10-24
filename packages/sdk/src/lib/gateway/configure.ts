@@ -1,5 +1,6 @@
 import { getGlobalConfig } from '../config.ts'
 import { getServiceStableLogPath } from '../services/paths.ts'
+import { listGatewayCerts } from './certs.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
   type NginxConfigOptions,
@@ -104,8 +105,10 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
     })
   }
 
-  // Write every server block into the single combined denvig nginx config.
-  const writeResult = await writeDenvigNginxConfig(serverConfigs)
+  // Write every server block into the single combined denvig nginx config,
+  // with catch-all blocks for cert domains that have no running service.
+  const fallbackCerts = await listGatewayCerts()
+  const writeResult = await writeDenvigNginxConfig(serverConfigs, fallbackCerts)
   if (!writeResult.success) {
     for (const result of services) {
       result.configStatus = 'error'

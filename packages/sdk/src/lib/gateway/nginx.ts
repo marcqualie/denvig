@@ -103,6 +103,48 @@ ${sslBlock}
 `
 }
 
+export type NginxFallbackCert = {
+  certPath: string
+  keyPath: string
+  domains: string[]
+}
+
+/**
+ * Generate a catch-all server block for every domain covered by a cert that
+ * isn't routed to a running service. Without it, requests for a stopped
+ * service would land on whichever server block nginx picks as the default for
+ * the port, which can be an entirely different app.
+ */
+export function generateNginxFallbackConfig(cert: NginxFallbackCert): string {
+  const htmlDir = getGatewayHtmlDir()
+  const serverNames = cert.domains.join(' ')
+
+  return `# denvig fallback:
+# domain: ${serverNames}
+server {
+  listen 80;
+  listen 443 ssl;
+  http2 on;
+  server_name ${serverNames};
+
+  ssl_certificate ${cert.certPath};
+  ssl_certificate_key ${cert.keyPath};
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_ciphers HIGH:!aNULL:!MD5;
+
+  error_page 504 /denvig-errors/504.html;
+  location /denvig-errors/ {
+    alias ${htmlDir}/errors/;
+    internal;
+  }
+
+  location / {
+    return 504;
+  }
+}
+`
+}
+
 /**
  * Get the main nginx.conf path based on the configsPath.
  * Assumes configsPath is a subdirectory (e.g. servers/) under the nginx config root.
@@ -146,6 +188,14 @@ http {
     error_page 404 /errors/404.html;
   }
 
+  # Reject TLS for domains without a matching server block so an unrelated
+  # service is never served by accident.
+  server {
+    listen 443 ssl default_server;
+    server_name _;
+    ssl_reject_handshake on;
+  }
+
   include ${getDenvigNginxConfPath()};
 }
 `
@@ -185,17 +235,37 @@ export function getDenvigNginxConfPath(): string {
  * Generate the combined denvig nginx config containing one server block per
  * service, sorted alphabetically by primary domain so the file is stable and
  * easy to scan.
+ *
+ * Fallback blocks for every cert's domains are appended at the bottom. Domains
+ * already claimed by a service (or an earlier cert) are dropped so nginx never
+ * sees a conflicting `server_name`.
  */
 export function generateDenvigNginxConfig(
   services: NginxConfigOptions[],
+  fallbackCerts: NginxFallbackCert[] = [],
 ): string {
   const sorted = [...services].sort((a, b) => a.domain.localeCompare(b.domain))
   const header =
     '# Managed by denvig — do not edit manually\n# https://denvig.com\n'
-  if (sorted.length === 0) {
-    return `${header}`
+
+  const claimed = new Set(
+    sorted.flatMap((service) => [service.domain, ...(service.cnames || [])]),
+  )
+  const fallbacks: NginxFallbackCert[] = []
+  for (const cert of fallbackCerts) {
+    const domains = cert.domains.filter((domain) => !claimed.has(domain))
+    if (domains.length === 0) continue
+    for (const domain of domains) claimed.add(domain)
+    fallbacks.push({ ...cert, domains })
   }
-  const blocks = sorted.map((service) => generateNginxConfig(service))
+
+  const blocks = [
+    ...sorted.map((service) => generateNginxConfig(service)),
+    ...fallbacks.map((cert) => generateNginxFallbackConfig(cert)),
+  ]
+  if (blocks.length === 0) {
+    return header
+  }
   return `${header}\n${blocks.join('\n')}`
 }
 
@@ -204,11 +274,12 @@ export function generateDenvigNginxConfig(
  */
 export async function writeDenvigNginxConfig(
   services: NginxConfigOptions[],
+  fallbackCerts: NginxFallbackCert[] = [],
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const confPath = getDenvigNginxConfPath()
     await mkdir(dirname(confPath), { recursive: true })
-    const content = generateDenvigNginxConfig(services)
+    const content = generateDenvigNginxConfig(services, fallbackCerts)
     await writeFile(confPath, content, 'utf-8')
 
     return { success: true }
