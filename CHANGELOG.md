@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-10-24
+
 ### Added
 
 - `DENVIG_DEBUG=deps` writes a trace of dependency checks, network requests and git commands that can be opened in https://ui.perfetto.dev
