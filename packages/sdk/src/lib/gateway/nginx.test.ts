@@ -1,9 +1,11 @@
-import { ok } from 'node:assert'
+import { equal, ok } from 'node:assert'
 import { describe, it } from 'node:test'
 
 import {
   generateDenvigNginxConfig,
   generateNginxConfig,
+  generateNginxFallbackConfig,
+  generateNginxMainConfig,
   getDenvigNginxConfPath,
 } from './nginx.ts'
 
@@ -222,6 +224,97 @@ describe('nginx gateway', () => {
 
       ok(config.includes('upstream denvig-abc123--api'))
       ok(config.includes('upstream denvig-abc123--web'))
+    })
+
+    it('should append cert fallback blocks after every service block', () => {
+      const config = generateDenvigNginxConfig(
+        [{ ...base, serviceName: 'web', domain: 'web.denvig.me' }],
+        [
+          {
+            certPath: '/certs/_wildcard.denvig.me/fullchain.pem',
+            keyPath: '/certs/_wildcard.denvig.me/privkey.pem',
+            domains: ['*.denvig.me'],
+          },
+        ],
+      )
+
+      const serviceIndex = config.indexOf('server_name web.denvig.me;')
+      const fallbackIndex = config.indexOf('server_name *.denvig.me;')
+      ok(serviceIndex !== -1 && fallbackIndex !== -1)
+      ok(serviceIndex < fallbackIndex, 'fallback should come last')
+    })
+
+    it('should drop fallback domains already claimed by a service', () => {
+      const config = generateDenvigNginxConfig(
+        [
+          {
+            ...base,
+            serviceName: 'web',
+            domain: 'example.dev',
+            cnames: ['www.example.dev'],
+          },
+        ],
+        [
+          {
+            certPath: '/certs/example.dev/fullchain.pem',
+            keyPath: '/certs/example.dev/privkey.pem',
+            domains: ['example.dev', 'www.example.dev', 'api.example.dev'],
+          },
+        ],
+      )
+
+      ok(config.includes('server_name example.dev www.example.dev;'))
+      ok(config.includes('server_name api.example.dev;'))
+      equal(config.match(/server_name/g)?.length, 2)
+    })
+
+    it('should not repeat domains covered by multiple certs', () => {
+      const config = generateDenvigNginxConfig(
+        [],
+        [
+          {
+            certPath: '/certs/a/fullchain.pem',
+            keyPath: '/certs/a/privkey.pem',
+            domains: ['*.example.dev'],
+          },
+          {
+            certPath: '/certs/b/fullchain.pem',
+            keyPath: '/certs/b/privkey.pem',
+            domains: ['*.example.dev'],
+          },
+        ],
+      )
+
+      equal(config.match(/server_name \*\.example\.dev;/g)?.length, 1)
+      ok(!config.includes('/certs/b/fullchain.pem'))
+    })
+  })
+
+  describe('generateNginxFallbackConfig()', () => {
+    it('should serve the 504 page over http and https for every domain', () => {
+      const config = generateNginxFallbackConfig({
+        certPath: '/certs/example.dev/fullchain.pem',
+        keyPath: '/certs/example.dev/privkey.pem',
+        domains: ['example.dev', '*.example.dev'],
+      })
+
+      ok(config.includes('server_name example.dev *.example.dev;'))
+      ok(config.includes('listen 80;'))
+      ok(config.includes('listen 443 ssl;'))
+      ok(config.includes('ssl_certificate /certs/example.dev/fullchain.pem;'))
+      ok(config.includes('ssl_certificate_key /certs/example.dev/privkey.pem;'))
+      ok(config.includes('error_page 504 /denvig-errors/504.html;'))
+      ok(config.includes('return 504;'))
+      ok(!config.includes('proxy_pass'))
+    })
+  })
+
+  describe('generateNginxMainConfig()', () => {
+    it('should reject TLS handshakes for unknown domains by default', () => {
+      const config = generateNginxMainConfig('/opt/homebrew/etc/nginx/servers')
+
+      ok(config.includes('listen 443 ssl default_server;'))
+      ok(config.includes('ssl_reject_handshake on;'))
     })
   })
 })

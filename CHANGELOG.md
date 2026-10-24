@@ -14,6 +14,8 @@
 
 - `denvig outdated` no longer hangs for up to 30s per SHA-pinned GitHub Action when git rewrites GitHub URLs to SSH
 - Service commands no longer stop unrelated launchd agents whose label merely contains `denvig.` (eg. Denvig Desktop)
+- Gateway domains for stopped services now show the "Service Unavailable" page instead of a different app sharing the same port
+- Gateway HTTPS requests for domains with no matching service or cert are rejected instead of being served by an unrelated app
 
 ## [0.7.4] - 2026-09-27
 
