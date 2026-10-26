@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated pnpm to v12.15.0
+
 ## [0.7.5] - 2026-10-24
 
 ### Added
