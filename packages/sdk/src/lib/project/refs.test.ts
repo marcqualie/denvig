@@ -1,13 +1,26 @@
 import assert from 'node:assert'
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { inspect } from 'node:util'
 
 import { projectId, projectRefs, projectSlug } from './refs.ts'
 
-const mockProjectPath = '/tmp/denvig-test-mock-project'
-const worktreePath = `${mockProjectPath}-worktree1`
+let mockProjectPath = ''
+let worktreePath = ''
+
+/**
+ * Each test gets a fresh directory so leftover git state from a previous test
+ * (eg. background maintenance still writing to .git) can never leak into it.
+ */
+function createMockProjectPath() {
+  mockProjectPath = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'denvig-test-mock-project-')),
+  )
+  worktreePath = `${mockProjectPath}-worktree1`
+}
 
 function assertArrayIncludes<T>(arr: T[], value: T, context?: string) {
   assert.ok(
@@ -18,7 +31,7 @@ function assertArrayIncludes<T>(arr: T[], value: T, context?: string) {
 
 describe('projectRefs()', () => {
   beforeEach(() => {
-    fs.mkdirSync(mockProjectPath, { recursive: true })
+    createMockProjectPath()
     execSync('git init -q -b main', { cwd: mockProjectPath })
   })
   afterEach(() => {
@@ -169,7 +182,7 @@ describe('projectRefs()', () => {
 
 describe('projectSlug()', () => {
   beforeEach(() => {
-    fs.mkdirSync(mockProjectPath, { recursive: true })
+    createMockProjectPath()
     execSync('git init -q -b main', { cwd: mockProjectPath })
   })
   afterEach(() => {
