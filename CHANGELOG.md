@@ -5,6 +5,7 @@
 ### Changed
 
 - Updated pnpm to v12.15.0
+- Docker services with volumes shared across worktrees can only be started from the primary checkout
 
 ## [0.7.5] - 2026-10-24
 

@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs'
 import {
   access,
   appendFile,
@@ -239,6 +240,48 @@ export class ServiceManager {
   }
 
   /**
+   * The `container.volumes` of a docker service whose host source is the same
+   * no matter which checkout of the project resolves it (named volumes,
+   * absolute and home-relative paths). Running the service from more than one
+   * checkout would share that data between containers, so such services may
+   * only run from the primary checkout.
+   *
+   * Returns null when nothing is shared: host services, the primary checkout,
+   * projects that aren't detached git worktrees, or no shared volumes.
+   */
+  private findWorktreeSharedVolumes(config: ServiceConfig): {
+    primaryPath: string
+    volumes: string[]
+  } | null {
+    if (!this.isDockerService(config)) return null
+    const git = detectGitWorktree(this.project.path)
+    if (!git) return null
+    let worktreePath: string
+    try {
+      worktreePath = realpathSync(this.project.path)
+    } catch {
+      worktreePath = this.project.path
+    }
+    if (worktreePath === git.primaryPath) return null
+
+    // Resolve each volume from both this worktree and the equivalent service
+    // directory in the primary checkout; a matching host source is shared.
+    const baseDir = this.resolveServiceCwd(config)
+    const primaryBaseDir = resolve(
+      git.primaryPath,
+      relative(this.project.path, baseDir),
+    )
+    const volumes = (config.container?.volumes ?? []).filter(
+      (spec) =>
+        // Anonymous volumes (no host source) are private to each container.
+        spec.indexOf(':') > 0 &&
+        this.resolveVolumeSpec(spec, baseDir) ===
+          this.resolveVolumeSpec(spec, primaryBaseDir),
+    )
+    return volumes.length ? { primaryPath: git.primaryPath, volumes } : null
+  }
+
+  /**
    * Build environment variables for a service.
    * This loads env files and merges with explicit env config.
    * All env files are optional - missing files are silently skipped.
@@ -471,6 +514,14 @@ export class ServiceManager {
     // Docker services bind to the container port inside the container, while
     // the host port is published to the host via `-p hostPort:containerPort`.
     // Host services bind directly to the resolved port.
+    const shared = this.findWorktreeSharedVolumes(config)
+    if (shared) {
+      return {
+        ok: false,
+        message: `Service "${name}" uses volumes shared across worktrees (${shared.volumes.join(', ')}) and can only run from the primary checkout at ${shared.primaryPath}`,
+      }
+    }
+
     const isDocker = this.isDockerService(config)
     const containerPort = isDocker
       ? (config.http?.containerPort ?? effectivePort)
