@@ -10,6 +10,8 @@ describe('commands / deps list', () => {
       {
         env: {
           GITHUB_ACTIONS: 'true',
+          GITHUB_EVENT_NAME: 'push',
+          GITHUB_EVENT_PATH: '',
           GITHUB_SHA: 'a'.repeat(40),
           GITHUB_REF: 'refs/heads/main',
           GITHUB_RUN_ID: '42',
