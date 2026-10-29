@@ -64,6 +64,30 @@ denvig deps outdated                   # Show outdated dependencies
 denvig deps outdated --semver patch    # Filter by semver level (patch or minor)
 denvig deps outdated --no-cache        # Force fresh data
 denvig deps why <package>              # Show why a dependency is installed
+denvig deps list --format dependabot   # Output a GitHub dependency snapshot
+```
+
+GitHub's dependency graph can't read pnpm 12 lockfiles, so Dependabot misses resolved versions. `--format dependabot`
+outputs the resolved graph in the dependency submission API format, which CI can upload on pushes and pull requests.
+The commit, ref and job are read from GitHub Actions or CircleCI environment variables, falling back to local git.
+
+```yaml
+# .github/workflows/dependencies.yml
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm install -g denvig
+      - run: denvig deps list --format dependabot --ecosystem npm | gh api repos/${{ github.repository }}/dependency-graph/snapshots --input -
+        env:
+          GH_TOKEN: ${{ github.token }}
 ```
 
 

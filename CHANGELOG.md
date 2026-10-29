@@ -2,10 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- `denvig deps list --format dependabot` outputs a GitHub dependency snapshot so CI can submit resolved dependencies for Dependabot alerts
+
 ### Changed
 
 - Updated pnpm to v12.15.0
 - Docker services with volumes shared across worktrees always run from the primary checkout, and worktree commands manage that instance
+
+### Fixed
+
+- pnpm optional dependencies (eg. platform-specific binaries) are now included in dependency listings
 
 ## [0.7.5] - 2026-10-24
 
