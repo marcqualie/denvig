@@ -117,6 +117,11 @@ describe('pnpm plugin', () => {
           specifier: '2.8.2',
           source: 'pnpm-lock.yaml:denvig@0.3.0',
         },
+        {
+          resolved: '2.8.2',
+          specifier: '2.8.2',
+          source: 'pnpm-lock.yaml:postcss-load-config@6.0.1(yaml@2.8.2)',
+        },
       ])
     })
 
@@ -264,6 +269,22 @@ describe('pnpm plugin', () => {
         {
           resolved: '5.2.0',
           specifier: '5.2.0',
+          source: 'pnpm-lock.yaml:tsup@8.5.1(yaml@2.9.0)',
+        },
+      ])
+    })
+
+    it('should include optional transitive dependencies', async () => {
+      const project = createMockProjectFromPath(multiDocExamplePath)
+      ok(pnpmPlugin.dependencies, 'dependencies function should exist')
+      const deps = await pnpmPlugin.dependencies(project)
+
+      const fseventsDep = deps.find((d) => d.name === 'fsevents')
+      ok(fseventsDep, 'fsevents should be detected from optionalDependencies')
+      deepStrictEqual(fseventsDep.versions, [
+        {
+          resolved: '2.3.3',
+          specifier: '2.3.3',
           source: 'pnpm-lock.yaml:tsup@8.5.1(yaml@2.9.0)',
         },
       ])

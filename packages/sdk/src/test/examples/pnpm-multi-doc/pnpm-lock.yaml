@@ -69,6 +69,11 @@ packages:
     resolution: {integrity: sha512-test==}
     engines: {node: '>=18'}
 
+  fsevents@2.3.3:
+    resolution: {integrity: sha512-test==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   tsup@8.5.1:
     resolution: {integrity: sha512-test==}
     engines: {node: '>=18'}
@@ -86,10 +91,15 @@ snapshots:
 
   bundle-require@5.2.0: {}
 
+  fsevents@2.3.3:
+    optional: true
+
   tsup@8.5.1(yaml@2.9.0):
     dependencies:
       bundle-require: 5.2.0
       yaml: 2.9.0
+    optionalDependencies:
+      fsevents: 2.3.3
 
   yaml@2.9.0: {}
 

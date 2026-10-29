@@ -1,10 +1,17 @@
+import { DenvigValidationError } from '@denvig/sdk'
+import {
+  buildDependabotSnapshot,
+  resolveDependabotContext,
+} from '@denvig/sdk/internal'
+
 import { Command } from '../../lib/command.ts'
 import { COLORS, formatTable } from '../../lib/formatters/table.ts'
 
 export const depsListCommand = new Command({
   name: 'deps:list',
   description: 'List all dependencies detected by plugins',
-  usage: 'deps list [--depth <n>] [--ecosystem <name>]',
+  usage:
+    'deps list [--depth <n>] [--ecosystem <name>] [--format table|json|dependabot]',
   example: 'denvig deps list --depth 1',
   args: [],
   flags: [
@@ -23,14 +30,61 @@ export const depsListCommand = new Command({
       type: 'string',
       defaultValue: undefined,
     },
+    {
+      name: 'format',
+      description:
+        'Output format: table, json, or dependabot (GitHub dependency submission snapshot)',
+      required: false,
+      type: 'string',
+      defaultValue: 'table',
+    },
   ],
-  handler: async ({ project, flags }) => {
+  handler: async ({ sdk, project, flags }) => {
     const ecosystemFilter = flags.ecosystem as string | undefined
     const maxDepth = (flags.depth as number) ?? 0
+    const format =
+      flags.json && flags.format === 'table' ? 'json' : (flags.format as string)
+
+    if (!['table', 'json', 'dependabot'].includes(format)) {
+      const message = `Invalid format "${format}". Must be "table", "json", or "dependabot".`
+      console.error(message)
+      return { success: false, message }
+    }
+
     const dependencies = await project.dependencies.list()
 
+    if (format === 'dependabot') {
+      let context: Awaited<ReturnType<typeof resolveDependabotContext>>
+      try {
+        context = await resolveDependabotContext({
+          cwd: project.path,
+          ecosystem: ecosystemFilter,
+        })
+      } catch (e) {
+        if (e instanceof DenvigValidationError) {
+          console.error(e.message)
+          return { success: false, message: e.message }
+        }
+        throw e
+      }
+      const snapshot = buildDependabotSnapshot({
+        dependencies: ecosystemFilter
+          ? dependencies.filter((dep) => dep.ecosystem === ecosystemFilter)
+          : dependencies,
+        context,
+        detector: {
+          name: 'denvig',
+          version: sdk.version(),
+          url: 'https://github.com/marcqualie/denvig',
+        },
+        scanned: new Date().toISOString(),
+      })
+      console.log(JSON.stringify(snapshot))
+      return { success: true, message: 'Dependency snapshot generated.' }
+    }
+
     if (dependencies.length === 0) {
-      if (flags.json) {
+      if (format === 'json') {
         console.log(JSON.stringify([]))
       } else {
         console.log('No dependencies detected in this project.')
@@ -44,7 +98,7 @@ export const depsListCommand = new Command({
     })
 
     if (entries.length === 0) {
-      if (flags.json) {
+      if (format === 'json') {
         console.log(JSON.stringify([]))
       } else {
         const message = ecosystemFilter
@@ -61,7 +115,7 @@ export const depsListCommand = new Command({
     }
 
     // JSON output
-    if (flags.json) {
+    if (format === 'json') {
       console.log(JSON.stringify(dependencies))
       return { success: true, message: 'Dependencies listed successfully.' }
     }

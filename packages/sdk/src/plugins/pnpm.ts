@@ -31,6 +31,7 @@ type PnpmLockfileDep = {
 type PnpmLockfileImporter = {
   dependencies?: Record<string, PnpmLockfileDep>
   devDependencies?: Record<string, PnpmLockfileDep>
+  packageManagerDependencies?: Record<string, PnpmLockfileDep>
 }
 
 type PnpmSnapshotDep = {
@@ -231,11 +232,23 @@ const plugin = definePlugin({
 
     // Add transitive dependencies from snapshots
     if (lockfile?.snapshots) {
+      // pnpm 12 records pnpm itself (and its platform binaries) as package
+      // manager dependencies. These aren't project dependencies, so skip them.
+      const packageManagerKeys = new Set(
+        Object.values(lockfile.importers ?? {}).flatMap((importer) =>
+          Object.entries(importer.packageManagerDependencies ?? {}).map(
+            ([name, dep]) => `${name}@${dep.version}`,
+          ),
+        ),
+      )
+
       for (const [snapshotKey, snapshot] of Object.entries(
         lockfile.snapshots,
       )) {
+        if (packageManagerKeys.has(snapshotKey)) continue
         const transitiveDeps = {
           ...snapshot.dependencies,
+          ...snapshot.optionalDependencies,
         }
         for (const [depName, depVersion] of Object.entries(transitiveDeps)) {
           const alias = resolveAlias(depVersion)
