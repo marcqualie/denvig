@@ -1303,6 +1303,178 @@ describe('ServiceManager', () => {
       ok(script.includes('-p 80:80'))
       ok(script.includes('-p 443:443'))
     })
+
+    describe('in a detached worktree', () => {
+      /**
+       * Lay out a fake primary checkout at `<tmpHome>/repo` with a detached
+       * worktree at `<tmpHome>/repo/.worktrees/feature-x`, and return a project for
+       * the given checkout declaring `service` (or `services`). Docker services skip the
+       * project mount, which is covered by the tests above.
+       */
+      const createCheckoutProject = (
+        checkout: 'primary' | 'worktree',
+        service: any,
+        services: Record<string, any> = { svc: service },
+      ) => {
+        const primaryPath = `${tmpHome}/repo`
+        const worktreePath = `${primaryPath}/.worktrees/feature-x`
+        const worktreeGitDir = `${primaryPath}/.git/worktrees/feature-x`
+        mkdirSync(worktreeGitDir, { recursive: true })
+        writeFileSync(`${primaryPath}/.git/HEAD`, 'ref: refs/heads/main\n')
+        writeFileSync(`${worktreeGitDir}/HEAD`, 'ref: refs/heads/feature-x\n')
+        mkdirSync(worktreePath, { recursive: true })
+        writeFileSync(`${worktreePath}/.git`, `gitdir: ${worktreeGitDir}\n`)
+
+        const project = createMockInternalProject({
+          slug: 'github:owner/repo',
+          path: checkout === 'primary' ? primaryPath : worktreePath,
+        })
+        project.config.services = services
+        return project
+      }
+
+      const sharedVolumes = [
+        'pgdata:/var/lib/postgresql/data',
+        '/abs/data:/data',
+        '~/.denvig/data:/more',
+      ]
+
+      for (const volume of sharedVolumes) {
+        it(`refuses to start with a shared volume (${volume})`, async (t) => {
+          mockLaunchctlStart(t)
+          const manager = new ServiceManager(
+            createCheckoutProject('worktree', {
+              runtime: 'docker',
+              image: 'postgres:18',
+              container: { mountProject: false, volumes: [volume] },
+            }),
+          )
+
+          const result = await manager.startService('svc', {
+            portResolved: true,
+          })
+          strictEqual(result.success, false)
+          match(result.message, /shared across worktrees/)
+          ok(result.message.includes(volume), result.message)
+        })
+      }
+
+      it('refuses to run in the foreground with a shared volume', async (t) => {
+        t.mock.method(launchctl, 'print', async () => null)
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', {
+            runtime: 'docker',
+            image: 'postgres:18',
+            container: {
+              mountProject: false,
+              volumes: ['pgdata:/var/lib/postgresql/data'],
+            },
+          }),
+        )
+
+        const prepared = await manager.prepareForegroundRun('svc', {
+          port: undefined,
+        })
+        ok(!prepared.success)
+        match(prepared.message, /can only run from the primary checkout/)
+      })
+
+      it('starts with volumes local to the worktree', async (t) => {
+        mockLaunchctlStart(t)
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', {
+            runtime: 'docker',
+            image: 'postgres:18',
+            container: {
+              mountProject: false,
+              volumes: ['./data:/var/lib/postgresql/data', '/anonymous'],
+            },
+          }),
+        )
+
+        const result = await manager.startService('svc', {
+          portResolved: true,
+        })
+        ok(result.success, result.message)
+      })
+
+      it('starts with a shared volume from the primary checkout', async (t) => {
+        mockLaunchctlStart(t)
+        const manager = new ServiceManager(
+          createCheckoutProject('primary', {
+            runtime: 'docker',
+            image: 'postgres:18',
+            container: {
+              mountProject: false,
+              volumes: ['pgdata:/var/lib/postgresql/data'],
+            },
+          }),
+        )
+
+        const result = await manager.startService('svc', {
+          portResolved: true,
+        })
+        ok(result.success, result.message)
+      })
+
+      const mixedServices = {
+        db: {
+          runtime: 'docker',
+          image: 'postgres:18',
+          container: {
+            mountProject: false,
+            volumes: ['pgdata:/var/lib/postgresql/data'],
+          },
+        },
+        web: { command: 'pnpm dev' },
+      }
+
+      it('hides services with shared volumes when listing a worktree', async () => {
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', undefined, mixedServices),
+        )
+        const services = await manager.listServices()
+        deepStrictEqual(
+          services.map((s) => s.name),
+          ['web'],
+        )
+      })
+
+      it('lists services with shared volumes in the primary checkout', async () => {
+        const manager = new ServiceManager(
+          createCheckoutProject('primary', undefined, mixedServices),
+        )
+        const services = await manager.listServices()
+        deepStrictEqual(
+          services.map((s) => s.name),
+          ['db', 'web'],
+        )
+      })
+
+      it('skips services with shared volumes when starting all', async (t) => {
+        mockLaunchctlStart(t)
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', undefined, mixedServices),
+        )
+        const results = await manager.startAll()
+        deepStrictEqual(
+          results.map((r) => r.name),
+          ['web'],
+        )
+      })
+
+      it('starts a host service from the worktree', async (t) => {
+        mockLaunchctlStart(t)
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', { command: 'pnpm dev' }),
+        )
+
+        const result = await manager.startService('svc', {
+          portResolved: true,
+        })
+        ok(result.success, result.message)
+      })
+    })
   })
 
   describe('foreground runs', () => {

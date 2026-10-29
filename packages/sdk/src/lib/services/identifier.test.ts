@@ -1,9 +1,17 @@
 import { deepStrictEqual, strictEqual } from 'node:assert'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { createMockInternalProject } from '../../test/mock.ts'
+import { DenvigProject } from '../project.ts'
 import { getServiceContext, parseServiceIdentifier } from './identifier.ts'
 
 describe('parseServiceIdentifier', () => {
@@ -91,5 +99,66 @@ describe('getServiceContext local path identifiers', () => {
     const ctx = await getServiceContext(`${projectDir}/dev`, currentProject())
     strictEqual(ctx.serviceName, 'dev')
     strictEqual(ctx.project.path, projectDir)
+  })
+})
+
+describe('getServiceContext in a detached worktree', () => {
+  let tmpDir = ''
+  let primaryPath = ''
+  let worktreePath = ''
+
+  beforeEach(() => {
+    tmpDir = realpathSync(mkdtempSync(`${tmpdir()}/denvig-identifier-wt-`))
+    primaryPath = `${tmpDir}/repo`
+    worktreePath = `${primaryPath}/.worktrees/test`
+    mkdirSync(primaryPath)
+    const git = (...args: string[]) =>
+      execFileSync('git', args, { cwd: primaryPath, stdio: 'ignore' })
+    git('init', '-q', '-b', 'main')
+    git(
+      '-c',
+      'user.name=t',
+      '-c',
+      'user.email=t@t',
+      'commit',
+      '-q',
+      '--allow-empty',
+      '-m',
+      'init',
+    )
+    git('worktree', 'add', '-q', '.worktrees/test', '-b', 'test')
+
+    const config = [
+      'name: App',
+      'services:',
+      '  db:',
+      '    runtime: docker',
+      '    image: mongo:8',
+      '    container:',
+      '      volumes:',
+      '        - app-mongodb:/data/db',
+      '  web:',
+      '    command: echo web',
+      '',
+    ].join('\n')
+    writeFileSync(`${primaryPath}/.denvig.yml`, config, 'utf-8')
+    writeFileSync(`${worktreePath}/.denvig.yml`, config, 'utf-8')
+  })
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('resolves services with shared volumes to the primary checkout', async () => {
+    const project = await DenvigProject.retrieve(worktreePath)
+    const ctx = await getServiceContext('db', project)
+    strictEqual(ctx.serviceName, 'db')
+    strictEqual(ctx.project.path, primaryPath)
+  })
+
+  it('resolves other services to the current worktree', async () => {
+    const project = await DenvigProject.retrieve(worktreePath)
+    const ctx = await getServiceContext('web', project)
+    strictEqual(ctx.serviceName, 'web')
+    strictEqual(ctx.project.path, worktreePath)
   })
 })

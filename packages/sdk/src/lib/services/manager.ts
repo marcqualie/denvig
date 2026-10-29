@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs'
 import {
   access,
   appendFile,
@@ -87,15 +88,42 @@ export class ServiceManager {
    * List all services defined in the project configuration.
    */
   async listServices(): Promise<ServiceInfo[]> {
-    const services = this.project.config.services || {}
-
-    return Object.entries(services).map(([name, config]) => ({
+    return this.launchableServices().map(([name, config]) => ({
       name,
       cwd: config.cwd || '.',
       command: this.getDisplayCommand(config),
       http: config.http,
       startOnBoot: config.startOnBoot,
     }))
+  }
+
+  /**
+   * Services from the project configuration that can run from this checkout,
+   * omitting those restricted to the primary checkout by shared volumes.
+   */
+  private launchableServices(): [string, ServiceConfig][] {
+    return Object.entries(this.project.config.services || {}).filter(
+      ([, config]) => !this.findWorktreeSharedVolumes(config),
+    )
+  }
+
+  /**
+   * Names of services this checkout defines that can only run from the
+   * primary checkout because their volumes are shared across worktrees.
+   */
+  primaryOnlyServices(): string[] {
+    return Object.keys(this.project.config.services || {}).filter((name) =>
+      this.isPrimaryOnly(name),
+    )
+  }
+
+  /**
+   * Whether a service can only run from the primary checkout because its
+   * volumes are shared across worktrees. Always false in the primary checkout.
+   */
+  isPrimaryOnly(name: string): boolean {
+    const config = this.getServiceConfig(name)
+    return !!config && !!this.findWorktreeSharedVolumes(config)
   }
 
   /**
@@ -236,6 +264,48 @@ export class ServiceManager {
       ? resolve(homedir(), host.slice(2))
       : host
     return `${resolve(baseDir, expanded)}:${rest}`
+  }
+
+  /**
+   * The `container.volumes` of a docker service whose host source is the same
+   * no matter which checkout of the project resolves it (named volumes,
+   * absolute and home-relative paths). Running the service from more than one
+   * checkout would share that data between containers, so such services may
+   * only run from the primary checkout.
+   *
+   * Returns null when nothing is shared: host services, the primary checkout,
+   * projects that aren't detached git worktrees, or no shared volumes.
+   */
+  private findWorktreeSharedVolumes(config: ServiceConfig): {
+    primaryPath: string
+    volumes: string[]
+  } | null {
+    if (!this.isDockerService(config)) return null
+    const git = detectGitWorktree(this.project.path)
+    if (!git) return null
+    let worktreePath: string
+    try {
+      worktreePath = realpathSync(this.project.path)
+    } catch {
+      worktreePath = this.project.path
+    }
+    if (worktreePath === git.primaryPath) return null
+
+    // Resolve each volume from both this worktree and the equivalent service
+    // directory in the primary checkout; a matching host source is shared.
+    const baseDir = this.resolveServiceCwd(config)
+    const primaryBaseDir = resolve(
+      git.primaryPath,
+      relative(this.project.path, baseDir),
+    )
+    const volumes = (config.container?.volumes ?? []).filter(
+      (spec) =>
+        // Anonymous volumes (no host source) are private to each container.
+        spec.indexOf(':') > 0 &&
+        this.resolveVolumeSpec(spec, baseDir) ===
+          this.resolveVolumeSpec(spec, primaryBaseDir),
+    )
+    return volumes.length ? { primaryPath: git.primaryPath, volumes } : null
   }
 
   /**
@@ -471,6 +541,14 @@ export class ServiceManager {
     // Docker services bind to the container port inside the container, while
     // the host port is published to the host via `-p hostPort:containerPort`.
     // Host services bind directly to the resolved port.
+    const shared = this.findWorktreeSharedVolumes(config)
+    if (shared) {
+      return {
+        ok: false,
+        message: `Service "${name}" uses volumes shared across worktrees (${shared.volumes.join(', ')}) and can only run from the primary checkout at ${shared.primaryPath}`,
+      }
+    }
+
     const isDocker = this.isDockerService(config)
     const containerPort = isDocker
       ? (config.http?.containerPort ?? effectivePort)
@@ -1131,8 +1209,7 @@ export class ServiceManager {
    * Start all services.
    */
   async startAll(): Promise<ServiceResult[]> {
-    const services = this.project.config.services || {}
-    const serviceNames = Object.keys(services)
+    const serviceNames = this.launchableServices().map(([name]) => name)
 
     return await Promise.all(
       serviceNames.map((name) => this.startService(name)),
