@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-10-29
+
 ### Added
 
 - `denvig deps list --format dependabot` outputs a GitHub dependency snapshot so CI can submit resolved dependencies for Dependabot alerts

@@ -1,6 +1,6 @@
 {
   "name": "@denvig/sdk",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "license": "MIT",
   "description": "Programmatic, in-process API for denvig — the logic layer behind the CLI",
   "type": "module",
