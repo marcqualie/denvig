@@ -80,7 +80,7 @@
     "test:ci": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default"
   },
   "dependencies": {
-    "node-forge": "^1.4.0",
+    "node-forge": "^1.4.2",
     "semver": "^7.8.5",
     "yaml": "^2.9.1",
     "zod": ">=4.5.0 <4.7.0"
