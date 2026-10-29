@@ -9,6 +9,7 @@
 ### Changed
 
 - Updated pnpm to v12.15.0
+- Updated node-forge to v1.4.2 for upstream security fixes
 - Docker services with volumes shared across worktrees always run from the primary checkout, and worktree commands manage that instance
 
 ### Fixed
