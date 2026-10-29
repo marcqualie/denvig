@@ -145,7 +145,13 @@ export const servicesListCommand = new Command({
               },
             ]
           : []),
-        { header: 'Name', accessor: (r: ServiceRow) => r.service.name },
+        {
+          header: 'Name',
+          accessor: (r: ServiceRow) =>
+            r.sharedFrom
+              ? `${r.service.name} (from ${r.sharedFrom})`
+              : r.service.name,
+        },
         {
           header: 'URL',
           accessor: (r: ServiceRow) => formatUrlCell(r.service),

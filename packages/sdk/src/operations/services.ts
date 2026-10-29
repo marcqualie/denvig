@@ -53,6 +53,12 @@ export type ServiceRow = {
    * Project column text: project slug at depth 0, branch at depth 1.
    */
   label: string
+  /**
+   * Branch of the checkout the service runs from when it isn't the listed
+   * worktree. Set for services restricted to the primary checkout because
+   * their volumes are shared across worktrees.
+   */
+  sharedFrom?: string
 }
 
 const VALID_STATUSES = new Set<ServiceRuntimeStatus>([
@@ -240,12 +246,30 @@ export const collectServiceRows = async (
     await collectFamily(project as DenvigProject, allServices)
   } else {
     const target = activeWorktree as Worktree
-    await collectFromManager(
-      new ServiceManager(target),
-      0,
-      target.slug,
-      allServices,
-    )
+    const manager = new ServiceManager(target)
+    await collectFromManager(manager, 0, target.slug, allServices)
+
+    // A worktree can't run services whose volumes are shared across
+    // worktrees, so show the primary checkout's instance in their place.
+    const primaryOnly = manager.primaryOnlyServices()
+    if (primaryOnly.length > 0) {
+      const primary = (project as DenvigProject).primaryWorktree
+      const primaryManager = new ServiceManager(primary)
+      for (const name of primaryOnly) {
+        const service = await primaryManager.getServiceResponse(name, {
+          launchctlList,
+        })
+        if (service) {
+          allServices.push({
+            service,
+            depth: 0,
+            label: target.slug,
+            sharedFrom: primary.branch,
+          })
+        }
+      }
+      allServices.sort((a, b) => a.service.name.localeCompare(b.service.name))
+    }
   }
 
   return statusFilter

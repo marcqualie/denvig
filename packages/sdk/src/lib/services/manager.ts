@@ -88,15 +88,42 @@ export class ServiceManager {
    * List all services defined in the project configuration.
    */
   async listServices(): Promise<ServiceInfo[]> {
-    const services = this.project.config.services || {}
-
-    return Object.entries(services).map(([name, config]) => ({
+    return this.launchableServices().map(([name, config]) => ({
       name,
       cwd: config.cwd || '.',
       command: this.getDisplayCommand(config),
       http: config.http,
       startOnBoot: config.startOnBoot,
     }))
+  }
+
+  /**
+   * Services from the project configuration that can run from this checkout,
+   * omitting those restricted to the primary checkout by shared volumes.
+   */
+  private launchableServices(): [string, ServiceConfig][] {
+    return Object.entries(this.project.config.services || {}).filter(
+      ([, config]) => !this.findWorktreeSharedVolumes(config),
+    )
+  }
+
+  /**
+   * Names of services this checkout defines that can only run from the
+   * primary checkout because their volumes are shared across worktrees.
+   */
+  primaryOnlyServices(): string[] {
+    return Object.keys(this.project.config.services || {}).filter((name) =>
+      this.isPrimaryOnly(name),
+    )
+  }
+
+  /**
+   * Whether a service can only run from the primary checkout because its
+   * volumes are shared across worktrees. Always false in the primary checkout.
+   */
+  isPrimaryOnly(name: string): boolean {
+    const config = this.getServiceConfig(name)
+    return !!config && !!this.findWorktreeSharedVolumes(config)
   }
 
   /**
@@ -1182,8 +1209,7 @@ export class ServiceManager {
    * Start all services.
    */
   async startAll(): Promise<ServiceResult[]> {
-    const services = this.project.config.services || {}
-    const serviceNames = Object.keys(services)
+    const serviceNames = this.launchableServices().map(([name]) => name)
 
     return await Promise.all(
       serviceNames.map((name) => this.startService(name)),

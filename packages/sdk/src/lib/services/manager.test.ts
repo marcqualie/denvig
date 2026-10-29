@@ -1308,12 +1308,13 @@ describe('ServiceManager', () => {
       /**
        * Lay out a fake primary checkout at `<tmpHome>/repo` with a detached
        * worktree at `<tmpHome>/repo/.worktrees/feature-x`, and return a project for
-       * the given checkout declaring `service`. Docker services skip the
+       * the given checkout declaring `service` (or `services`). Docker services skip the
        * project mount, which is covered by the tests above.
        */
       const createCheckoutProject = (
         checkout: 'primary' | 'worktree',
         service: any,
+        services: Record<string, any> = { svc: service },
       ) => {
         const primaryPath = `${tmpHome}/repo`
         const worktreePath = `${primaryPath}/.worktrees/feature-x`
@@ -1328,7 +1329,7 @@ describe('ServiceManager', () => {
           slug: 'github:owner/repo',
           path: checkout === 'primary' ? primaryPath : worktreePath,
         })
-        project.config.services = { svc: service }
+        project.config.services = services
         return project
       }
 
@@ -1414,6 +1415,52 @@ describe('ServiceManager', () => {
           portResolved: true,
         })
         ok(result.success, result.message)
+      })
+
+      const mixedServices = {
+        db: {
+          runtime: 'docker',
+          image: 'postgres:18',
+          container: {
+            mountProject: false,
+            volumes: ['pgdata:/var/lib/postgresql/data'],
+          },
+        },
+        web: { command: 'pnpm dev' },
+      }
+
+      it('hides services with shared volumes when listing a worktree', async () => {
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', undefined, mixedServices),
+        )
+        const services = await manager.listServices()
+        deepStrictEqual(
+          services.map((s) => s.name),
+          ['web'],
+        )
+      })
+
+      it('lists services with shared volumes in the primary checkout', async () => {
+        const manager = new ServiceManager(
+          createCheckoutProject('primary', undefined, mixedServices),
+        )
+        const services = await manager.listServices()
+        deepStrictEqual(
+          services.map((s) => s.name),
+          ['db', 'web'],
+        )
+      })
+
+      it('skips services with shared volumes when starting all', async (t) => {
+        mockLaunchctlStart(t)
+        const manager = new ServiceManager(
+          createCheckoutProject('worktree', undefined, mixedServices),
+        )
+        const results = await manager.startAll()
+        deepStrictEqual(
+          results.map((r) => r.name),
+          ['web'],
+        )
       })
 
       it('starts a host service from the worktree', async (t) => {

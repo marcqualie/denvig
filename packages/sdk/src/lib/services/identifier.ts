@@ -150,6 +150,26 @@ export const resolveProjectIdToPath = async (
 }
 
 /**
+ * Build the service context for a service in one of a project's checkouts.
+ * Services restricted to the primary checkout (shared volumes) resolve to the
+ * primary checkout, so worktree commands manage the one shared instance.
+ */
+const contextFor = (
+  denvigProject: DenvigProject,
+  worktree: Worktree,
+  serviceName: string,
+) => {
+  const target = new ServiceManager(worktree).isPrimaryOnly(serviceName)
+    ? denvigProject.primaryWorktree
+    : worktree
+  return {
+    project: target,
+    manager: new ServiceManager(target),
+    serviceName,
+  }
+}
+
+/**
  * Get project and service manager for a service identifier.
  */
 export const getServiceContext = async (
@@ -175,10 +195,12 @@ export const getServiceContext = async (
   if (parsed.serviceName !== undefined && parsed.serviceName !== '') {
     const projectPath = await resolveProjectPath(parsed, expandTilde)
     if (projectPath) {
-      const worktree = (await DenvigProject.retrieve(projectPath))
-        .activeWorktree
-      const manager = new ServiceManager(worktree)
-      return { project: worktree, manager, serviceName: parsed.serviceName }
+      const denvigProject = await DenvigProject.retrieve(projectPath)
+      return contextFor(
+        denvigProject,
+        denvigProject.activeWorktree,
+        parsed.serviceName,
+      )
     }
   }
 
@@ -196,11 +218,10 @@ export const getServiceContext = async (
       const candidateService = parsed.value.slice(slashIndex + 1)
       const candidatePath = expandTilde(parsed.value.slice(0, slashIndex))
       if (await isDirectory(candidatePath)) {
-        const worktree = (await DenvigProject.retrieve(candidatePath))
-          .activeWorktree
+        const denvigProject = await DenvigProject.retrieve(candidatePath)
+        const worktree = denvigProject.activeWorktree
         if (worktree.config.services?.[candidateService]) {
-          const manager = new ServiceManager(worktree)
-          return { project: worktree, manager, serviceName: candidateService }
+          return contextFor(denvigProject, worktree, candidateService)
         }
       }
     }
@@ -212,7 +233,7 @@ export const getServiceContext = async (
     currentProject.slug,
   )
 
-  let worktree: Worktree
+  let denvigProject: DenvigProject
 
   // Handle global slug from parseServiceIdentifier
   if (isGlobalSlug(projectSlug)) {
@@ -227,29 +248,27 @@ export const getServiceContext = async (
       currentProject.id === projectId ||
       currentProject.id.startsWith(projectId)
     ) {
-      worktree = currentProject.activeWorktree
+      denvigProject = currentProject
     } else {
       const projectPath = await resolveProjectIdToPath(projectId)
       if (projectPath) {
-        worktree = (await DenvigProject.retrieve(projectPath)).activeWorktree
+        denvigProject = await DenvigProject.retrieve(projectPath)
       } else {
         throw new Error(`Project with ID "${projectId}" not found`)
       }
     }
   } else if (projectSlug === currentProject.slug) {
-    worktree = currentProject.activeWorktree
+    denvigProject = currentProject
   } else {
     // Try to resolve the slug to a path
     const projectPath = await resolveProjectSlugToPath(projectSlug)
     if (projectPath) {
-      worktree = (await DenvigProject.retrieve(projectPath)).activeWorktree
+      denvigProject = await DenvigProject.retrieve(projectPath)
     } else {
       // Fallback: treat as path (original behavior)
-      worktree = (await DenvigProject.retrieve(projectSlug)).activeWorktree
+      denvigProject = await DenvigProject.retrieve(projectSlug)
     }
   }
 
-  const manager = new ServiceManager(worktree)
-
-  return { project: worktree, manager, serviceName }
+  return contextFor(denvigProject, denvigProject.activeWorktree, serviceName)
 }
