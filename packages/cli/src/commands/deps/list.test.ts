@@ -30,12 +30,11 @@ describe('commands / deps list', () => {
       html_url: 'https://github.com/marcqualie/denvig/actions/runs/42',
     })
     strictEqual(snapshot.detector.name, 'denvig')
-    ok(snapshot.manifests['package.json'])
-    ok(snapshot.manifests['packages/sdk/package.json'])
+    deepStrictEqual(Object.keys(snapshot.manifests), ['pnpm-lock.yaml'])
     ok(
-      Object.keys(
-        snapshot.manifests['packages/sdk/package.json'].resolved,
-      ).some((key) => key.startsWith('pkg:npm/zod@')),
+      Object.keys(snapshot.manifests['pnpm-lock.yaml'].resolved).some((key) =>
+        key.startsWith('pkg:npm/zod@'),
+      ),
     )
   })
 

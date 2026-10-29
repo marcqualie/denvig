@@ -13,7 +13,7 @@ const PURL_TYPES: Record<string, string> = {
 }
 
 /**
- * Manifest file that declares direct dependencies for each ecosystem.
+ * Manifest file used when no lockfile is detected for an ecosystem.
  */
 const MANIFEST_FILES: Record<string, string> = {
   npm: 'package.json',
@@ -100,15 +100,13 @@ export const toPackageUrl = (
 }
 
 /**
- * Split a direct dependency source (`apps/web#devDependencies`) into its
- * importer path and dependency group. Returns null for anything else.
+ * Read the dependency group from a direct dependency source
+ * (`apps/web#devDependencies`). Returns null for anything else.
  */
-const parseDirectSource = (
-  source: string,
-): { importer: string; isDev: boolean } | null => {
-  const match = source.match(/^(.*)#(dependencies|devDependencies)$/)
+const parseDirectSource = (source: string): { isDev: boolean } | null => {
+  const match = source.match(/#(dependencies|devDependencies)$/)
   if (!match) return null
-  return { importer: match[1], isDev: match[2] === 'devDependencies' }
+  return { isDev: match[1] === 'devDependencies' }
 }
 
 /**
@@ -122,8 +120,9 @@ const joinPath = (...parts: string[]): string =>
 
 /**
  * Build a GitHub dependency snapshot from the dependencies detected by the
- * plugins. Each importer (workspace package) becomes its own manifest
- * containing its direct dependencies plus everything they pull in.
+ * plugins. Each ecosystem becomes a single manifest named after its lockfile,
+ * so a resolved version shared across workspace packages is only reported
+ * once.
  */
 export const buildDependabotSnapshot = ({
   dependencies,
@@ -133,6 +132,7 @@ export const buildDependabotSnapshot = ({
 }: BuildDependabotSnapshotInput): DependabotSnapshot => {
   const children = new Map<string, Set<string>>()
   const roots = new Map<string, { runtime: Set<string>; dev: Set<string> }>()
+  const lockfiles = new Map<string, string>()
 
   for (const dep of dependencies) {
     for (const version of dep.versions) {
@@ -148,6 +148,10 @@ export const buildDependabotSnapshot = ({
           parent.version,
         )
         if (!parentPurl) continue
+        lockfiles.set(
+          dep.ecosystem,
+          version.source.slice(0, version.source.indexOf(':')),
+        )
         const set = children.get(parentPurl) ?? new Set<string>()
         set.add(purl)
         children.set(parentPurl, set)
@@ -156,17 +160,12 @@ export const buildDependabotSnapshot = ({
 
       const direct = parseDirectSource(version.source)
       if (!direct) continue
-      const manifestPath = joinPath(
-        context.pathPrefix,
-        direct.importer,
-        MANIFEST_FILES[dep.ecosystem],
-      )
-      const entry = roots.get(manifestPath) ?? {
+      const entry = roots.get(dep.ecosystem) ?? {
         runtime: new Set<string>(),
         dev: new Set<string>(),
       }
       entry[direct.isDev ? 'dev' : 'runtime'].add(purl)
-      roots.set(manifestPath, entry)
+      roots.set(dep.ecosystem, entry)
     }
   }
 
@@ -183,11 +182,16 @@ export const buildDependabotSnapshot = ({
   }
 
   const manifests: Record<string, DependabotManifest> = {}
-  for (const manifestPath of [...roots.keys()].sort()) {
-    const { runtime, dev } = roots.get(manifestPath) as {
-      runtime: Set<string>
-      dev: Set<string>
-    }
+  const entries = [...roots.entries()].map(([ecosystem, entry]) => ({
+    ...entry,
+    manifestPath: joinPath(
+      context.pathPrefix,
+      lockfiles.get(ecosystem) ?? MANIFEST_FILES[ecosystem],
+    ),
+  }))
+  entries.sort((a, b) => a.manifestPath.localeCompare(b.manifestPath))
+
+  for (const { runtime, dev, manifestPath } of entries) {
     const runtimeReachable = walk(runtime)
     const allReachable = walk([...runtime, ...dev])
 

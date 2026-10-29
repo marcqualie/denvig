@@ -114,8 +114,8 @@ describe('buildDependabotSnapshot', () => {
   it('should resolve every package from a multi-document pnpm lockfile', async () => {
     const snapshot = build(await loadDependencies(multiDocExamplePath))
 
-    deepStrictEqual(Object.keys(snapshot.manifests), ['package.json'])
-    const resolved = snapshot.manifests['package.json'].resolved
+    deepStrictEqual(Object.keys(snapshot.manifests), ['pnpm-lock.yaml'])
+    const resolved = snapshot.manifests['pnpm-lock.yaml'].resolved
     deepStrictEqual(Object.keys(resolved), [
       'pkg:npm/bundle-require@5.2.0',
       'pkg:npm/fsevents@2.3.3',
@@ -127,7 +127,7 @@ describe('buildDependabotSnapshot', () => {
 
   it('should mark direct and indirect relationships', async () => {
     const snapshot = build(await loadDependencies(multiDocExamplePath))
-    const resolved = snapshot.manifests['package.json'].resolved
+    const resolved = snapshot.manifests['pnpm-lock.yaml'].resolved
 
     strictEqual(resolved['pkg:npm/tsup@8.5.1'].relationship, 'direct')
     strictEqual(resolved['pkg:npm/zod@4.6.1'].relationship, 'direct')
@@ -144,7 +144,7 @@ describe('buildDependabotSnapshot', () => {
 
   it('should only use development scope when every path is from devDependencies', async () => {
     const snapshot = build(await loadDependencies(multiDocExamplePath))
-    const resolved = snapshot.manifests['package.json'].resolved
+    const resolved = snapshot.manifests['pnpm-lock.yaml'].resolved
 
     strictEqual(resolved['pkg:npm/tsup@8.5.1'].scope, 'development')
     strictEqual(resolved['pkg:npm/bundle-require@5.2.0'].scope, 'development')
@@ -153,24 +153,68 @@ describe('buildDependabotSnapshot', () => {
     strictEqual(resolved['pkg:npm/zod@4.6.1'].scope, 'runtime')
   })
 
-  it('should create a manifest per workspace importer', async () => {
+  it('should report each resolved version once across workspace packages', () => {
+    const snapshot = build([
+      {
+        id: 'npm:next',
+        name: 'next',
+        ecosystem: 'npm',
+        versions: [
+          {
+            resolved: '16.3.8',
+            specifier: 'catalog:',
+            source: 'apps/web#dependencies',
+          },
+          {
+            resolved: '16.3.8',
+            specifier: 'catalog:',
+            source: 'apps/admin#devDependencies',
+          },
+        ],
+      },
+      {
+        id: 'npm:react',
+        name: 'react',
+        ecosystem: 'npm',
+        versions: [
+          {
+            resolved: '19.2.3',
+            specifier: '19.2.3',
+            source: 'pnpm-lock.yaml:next@16.3.8(react@19.2.3)',
+          },
+        ],
+      },
+    ])
+
+    deepStrictEqual(Object.keys(snapshot.manifests), ['pnpm-lock.yaml'])
+    deepStrictEqual(snapshot.manifests['pnpm-lock.yaml'].file, {
+      source_location: 'pnpm-lock.yaml',
+    })
+    deepStrictEqual(snapshot.manifests['pnpm-lock.yaml'].resolved, {
+      'pkg:npm/next@16.3.8': {
+        package_url: 'pkg:npm/next@16.3.8',
+        relationship: 'direct',
+        scope: 'runtime',
+        dependencies: ['pkg:npm/react@19.2.3'],
+      },
+      'pkg:npm/react@19.2.3': {
+        package_url: 'pkg:npm/react@19.2.3',
+        relationship: 'indirect',
+        scope: 'runtime',
+        dependencies: [],
+      },
+    })
+  })
+
+  it('should fall back to the manifest file when no lockfile is detected', async () => {
     const snapshot = build(await loadDependencies(catalogExamplePath))
 
-    deepStrictEqual(Object.keys(snapshot.manifests), [
-      'apps/api/package.json',
-      'apps/web/package.json',
+    deepStrictEqual(Object.keys(snapshot.manifests), ['package.json'])
+    deepStrictEqual(Object.keys(snapshot.manifests['package.json'].resolved), [
+      'pkg:npm/nock@14.0.14',
+      'pkg:npm/react@18.3.1',
+      'pkg:npm/react@19.2.3',
     ])
-    deepStrictEqual(
-      Object.keys(snapshot.manifests['apps/api/package.json'].resolved),
-      ['pkg:npm/nock@14.0.14', 'pkg:npm/react@19.2.3'],
-    )
-    deepStrictEqual(
-      Object.keys(snapshot.manifests['apps/web/package.json'].resolved),
-      ['pkg:npm/react@18.3.1'],
-    )
-    deepStrictEqual(snapshot.manifests['apps/web/package.json'].file, {
-      source_location: 'apps/web/package.json',
-    })
   })
 
   it('should prefix manifest paths with the project path in the repository', async () => {
@@ -179,7 +223,7 @@ describe('buildDependabotSnapshot', () => {
     })
 
     deepStrictEqual(Object.keys(snapshot.manifests), [
-      'services/api/package.json',
+      'services/api/pnpm-lock.yaml',
     ])
   })
 
@@ -220,7 +264,7 @@ describe('buildDependabotSnapshot', () => {
     deepStrictEqual(snapshot.manifests, {})
   })
 
-  it('should use the ecosystem manifest file for non-npm dependencies', () => {
+  it('should use the ecosystem lockfile for non-npm dependencies', () => {
     const snapshot = build([
       {
         id: 'rubygems:rails',
@@ -244,7 +288,7 @@ describe('buildDependabotSnapshot', () => {
       },
     ])
 
-    deepStrictEqual(Object.keys(snapshot.manifests.Gemfile.resolved), [
+    deepStrictEqual(Object.keys(snapshot.manifests['Gemfile.lock'].resolved), [
       'pkg:gem/actionpack@8.0.0',
       'pkg:gem/rails@8.0.0',
     ])
