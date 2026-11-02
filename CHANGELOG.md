@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated @biomejs/biome to v2.6.4
+
 ## [0.7.6] - 2026-10-29
 
 ### Added

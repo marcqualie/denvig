@@ -10,9 +10,8 @@ describe('commands / run', () => {
     strictEqual(result.code, 0)
     // Should have some output from the lint process
     match(result.stdout, /pnpm --reporter=silent run lint/)
-    // biome's own output (the `> biome check` echo is silenced by pnpm now)
-    match(result.stdout, /Checked \d+ files/)
-    // Stderr may contain lint warnings/errors, but that's okay as long as exit code is 0
+    // biome prints its summary to stderr (the `> biome check` echo is silenced by pnpm now)
+    match(result.stderr, /Checked \d+ files/)
   })
 
   it('should return error code for non-existent action', async () => {
