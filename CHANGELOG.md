@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-11-06
+
 ### Added
 
 - `gitProviders` global config adds GitLab, Gitea and self-hosted git hosts as project slug prefixes (eg. `gitea-mqn:owner/repo`)
