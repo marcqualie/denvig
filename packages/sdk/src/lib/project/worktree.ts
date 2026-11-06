@@ -9,7 +9,7 @@ import {
   type ProjectDependencySchema,
 } from '../dependencies.ts'
 import plugins from '../plugins.ts'
-import { projectRefs } from './refs.ts'
+import { projectIdentity } from './refs.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
 import type {
@@ -17,6 +17,7 @@ import type {
   DeduplicateResult,
   OutdatedDependenciesOptions,
 } from '../plugin.ts'
+import type { GitProviderMatch } from './git-providers.ts'
 
 /**
  * A single git checkout belonging to a project — either the primary checkout
@@ -47,6 +48,10 @@ export class Worktree {
   readonly refs: string[]
   readonly slug: string
   readonly id: string
+  /**
+   * The git provider the slug was derived from, or null for local projects.
+   */
+  readonly gitProvider: GitProviderMatch | null
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
 
@@ -60,12 +65,11 @@ export class Worktree {
     this.path = path
     this.branch = branch
     this.isPrimary = isPrimary
-    this.refs = projectRefs(path)
-    const githubRef = this.refs.find((ref) => ref.startsWith('github:'))
-    const localRef = this.refs.find((ref) => ref.startsWith('local:')) as string
-    const idRef = this.refs.find((ref) => ref.startsWith('id:')) as string
-    this.slug = githubRef ?? localRef
-    this.id = idRef.slice('id:'.length)
+    const identity = projectIdentity(path)
+    this.refs = identity.refs
+    this.slug = identity.slug
+    this.id = identity.id
+    this.gitProvider = identity.gitProvider
     this.config = config
     if (rootFiles) {
       this._rootFilesCache = rootFiles

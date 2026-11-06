@@ -8,6 +8,7 @@ import type {
   DeduplicateResult,
   OutdatedDependenciesOptions,
 } from '../lib/plugin.ts'
+import type { GitProviderMatch } from '../lib/project/git-providers.ts'
 import type { Worktree as InternalWorktree } from '../lib/project/worktree.ts'
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 
@@ -48,6 +49,13 @@ export class DenvigWorktree {
 
   get id(): string {
     return this._internal.id
+  }
+
+  /**
+   * The git provider the slug was derived from, or null for local projects.
+   */
+  get gitProvider(): GitProviderMatch | null {
+    return this._internal.gitProvider
   }
 
   get isPrimary(): boolean {

@@ -33,8 +33,8 @@ Excluding a directory also excludes everything inside it, so `!~/src/example-pro
 **Project Slugs:**
 
 Projects are identified by slugs that indicate their source:
-- `github:owner/repo` - For projects with a GitHub remote (detected from git config)
-- `local:/absolute/path` - For projects without a GitHub remote
+- `[provider]:owner/repo` - For projects with a remote matching one of the `gitProviders` below (eg. `github:owner/repo`)
+- `local:/absolute/path` - For projects without a recognised remote
 
 **Example Configuration:**
 ```yaml
@@ -44,6 +44,35 @@ projectPaths:
   - ~/.dotfiles
   - "!~/src/example-project/*"
 ```
+
+
+## gitProviders
+
+**default:** a single `github` provider
+
+Git hosts used to derive project slugs. The key is the slug prefix, so a project hosted on `gitea-mqn` gets the slug `gitea-mqn:owner/repo`. The built-in `github` provider is always included, and you can override it by defining a `github` key.
+
+Each provider has:
+- `type` - one of `github`, `gitlab`, `gitea` or `git` (use `git` for hosts without built-in icon support)
+- `url` - repository URL template using `{{owner}}` and `{{repo}}` placeholders. Only `{{repo}}` is required
+- `name` - display name
+
+A project's slug comes from its `origin` remote, falling back to a remote named after a provider key (eg. a `github` remote alongside an `origin` that points at a mirror). SSH and HTTPS remotes both match, including SSH on a custom port. Keys cannot be `git`, `global`, `id` or `local`.
+
+**Example Configuration:**
+```yaml
+gitProviders:
+  gitea-mqn:
+    type: gitea
+    url: https://gitea.example.com/{{owner}}/{{repo}}
+    name: Gitea
+  git-vps:
+    type: git
+    url: https://vps.example.com/{{repo}}
+    name: Git VPS
+```
+
+This gives slugs like `github:owner/repo`, `gitea-mqn:owner/repo` and `git-vps:repo`.
 
 
 ## quickActions

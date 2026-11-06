@@ -1,3 +1,8 @@
+import {
+  type GitProvider,
+  getGitProviders,
+  gitProviderSlugSegments,
+} from './project/git-providers.ts'
 import { DenvigProject } from './project.ts'
 import { listProjects } from './projects.ts'
 
@@ -6,9 +11,15 @@ import { listProjects } from './projects.ts'
  */
 export type ParsedProjectId = {
   /**
-   * Type of identifier: 'id', 'github', 'local', or 'path'
+   * Type of identifier. `slug` covers git provider slugs, with or without a
+   * provider prefix.
    */
-  type: 'id' | 'github' | 'local' | 'path'
+  type: 'id' | 'slug' | 'local' | 'path'
+  /**
+   * Git provider key for `slug` identifiers (eg. `github`), or undefined when
+   * the slug was given without a prefix.
+   */
+  provider?: string
   /**
    * The value portion after the prefix (or the full value for unprefixed)
    */
@@ -25,16 +36,19 @@ export type ParsedProjectId = {
  * Supported formats:
  * - `id:[id]` - direct ID lookup
  * - `id:[id]/[serviceName]` - ID with service
- * - `github:[slug]` - GitHub slug lookup (e.g., `github:owner/repo`)
- * - `github:[slug]/[serviceName]` - GitHub slug with service
+ * - `[provider]:[slug]` - git provider slug lookup (e.g., `github:owner/repo`, `git-vps:repo`)
+ * - `[provider]:[slug]/[serviceName]` - git provider slug with service
  * - `local:/path/to/project` - local path lookup
  * - `local:/path/to/project/[serviceName]` - local path with service (service inferred from config)
  * - `/path/to/project` - absolute path (treated as local)
  * - `~/path/to/project` - home-relative path (treated as local)
- * - `[slug]` - defaults to github: if no prefix (e.g., `owner/repo`)
+ * - `[slug]` - matches any provider if no prefix (e.g., `owner/repo`)
  * - `[slug]/[serviceName]` - slug with service (e.g., `owner/repo/myservice`)
  */
-export const parseProjectId = (identifier: string): ParsedProjectId => {
+export const parseProjectId = (
+  identifier: string,
+  providers: GitProvider[] = getGitProviders(),
+): ParsedProjectId => {
   // Handle id:[id] or id:[id]/[serviceName]
   if (identifier.startsWith('id:')) {
     const withoutPrefix = identifier.slice(3)
@@ -47,18 +61,25 @@ export const parseProjectId = (identifier: string): ParsedProjectId => {
     return { type: 'id', value: id, serviceName }
   }
 
-  // Handle github:[slug] or github:[slug]/[serviceName]
-  if (identifier.startsWith('github:')) {
-    const withoutPrefix = identifier.slice(7)
-    // Slug format is owner/repo, so service would be the third slash-separated part
+  // Handle [provider]:[slug] or [provider]:[slug]/[serviceName]
+  const colonIndex = identifier.indexOf(':')
+  const provider =
+    colonIndex === -1
+      ? undefined
+      : providers.find((p) => p.key === identifier.slice(0, colonIndex))
+  if (provider) {
+    const withoutPrefix = identifier.slice(colonIndex + 1)
+    const segments = gitProviderSlugSegments(provider)
     const parts = withoutPrefix.split('/')
-    if (parts.length <= 2) {
-      return { type: 'github', value: withoutPrefix }
+    if (parts.length <= segments) {
+      return { type: 'slug', provider: provider.key, value: withoutPrefix }
     }
-    // owner/repo/serviceName
-    const slug = `${parts[0]}/${parts[1]}`
-    const serviceName = parts.slice(2).join('/')
-    return { type: 'github', value: slug, serviceName }
+    return {
+      type: 'slug',
+      provider: provider.key,
+      value: parts.slice(0, segments).join('/'),
+      serviceName: parts.slice(segments).join('/'),
+    }
   }
 
   // Handle local:/path or local:/path/[serviceName]
@@ -78,16 +99,21 @@ export const parseProjectId = (identifier: string): ParsedProjectId => {
     return { type: 'path', value: identifier }
   }
 
-  // Default: treat as github slug (owner/repo or owner/repo/serviceName)
+  // Default: treat as an unprefixed owner/repo slug (or owner/repo/serviceName)
   const parts = identifier.split('/')
   if (parts.length <= 2) {
-    return { type: 'github', value: identifier }
+    return { type: 'slug', value: identifier }
   }
-  // owner/repo/serviceName
   const slug = `${parts[0]}/${parts[1]}`
   const serviceName = parts.slice(2).join('/')
-  return { type: 'github', value: slug, serviceName }
+  return { type: 'slug', value: slug, serviceName }
 }
+
+/**
+ * Remove the `[provider]:` or `local:` prefix from a project slug.
+ */
+export const stripSlugPrefix = (slug: string): string =>
+  slug.replace(/^[a-z][a-z0-9-]*:/, '')
 
 /**
  * Resolve a parsed project identifier to a project path.
@@ -117,15 +143,11 @@ export const resolveProjectPath = async (
       return null
     }
 
-    case 'github': {
-      // Try exact match with github: prefix
-      const exactMatch = projects.find(
-        (p) => p.slug === `github:${parsed.value}`,
-      )
-      if (exactMatch) {
-        return exactMatch.path
-      }
-      return null
+    case 'slug': {
+      const match = parsed.provider
+        ? projects.find((p) => p.slug === `${parsed.provider}:${parsed.value}`)
+        : projects.find((p) => stripSlugPrefix(p.slug) === parsed.value)
+      return match?.path ?? null
     }
 
     case 'local': {

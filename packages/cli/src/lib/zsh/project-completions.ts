@@ -4,7 +4,7 @@ import { DenvigSDK } from '@denvig/sdk'
  * Get project completions based on the current input prefix.
  *
  * Completion behavior:
- * - No prefix or partial slug: returns slugs without github: prefix (e.g., `marcqualie/denvig`)
+ * - No prefix or partial slug: returns slugs without their provider prefix (e.g., `marcqualie/denvig`)
  * - `id:` prefix: returns project IDs in `id:[shortId]` format
  * - `/` or `~` prefix: returns empty (path completion not yet supported)
  *
@@ -29,9 +29,9 @@ export const getProjectCompletions = async (
       .filter((completion) => completion.startsWith(partial))
   }
 
-  // Default: slug completion (without github: prefix)
+  // Default: slug completion (without the provider prefix)
   return projects
-    .map((project) => project.slug.replace(/^(github|local):/, ''))
+    .map((project) => project.slug.replace(/^[a-z][a-z0-9-]*:/, ''))
     .filter((slug) => slug.startsWith(partial))
 }
 

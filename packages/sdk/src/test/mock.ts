@@ -46,6 +46,7 @@ export const createMockInternalProject = (
     isPrimary: true,
     branch: 'main',
     refs: [],
+    gitProvider: null,
     rootFiles: [],
   } as unknown as Worktree
 

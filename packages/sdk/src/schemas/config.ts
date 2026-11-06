@@ -129,6 +129,46 @@ export const ServicesConfigSchema = z
   .describe('Services that can be managed')
 
 /**
+ * Slug prefixes already used by other ref types, so they cannot be used as
+ * git provider keys.
+ */
+export const RESERVED_GIT_PROVIDER_KEYS = ['git', 'global', 'id', 'local']
+
+/**
+ * Schema for a git provider key, which doubles as the project slug prefix.
+ */
+export const GitProviderKeySchema = z
+  .string()
+  .regex(
+    /^[a-z]([a-z0-9-]*[a-z0-9])?$/,
+    'Git provider key must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen',
+  )
+  .refine((key) => !RESERVED_GIT_PROVIDER_KEYS.includes(key), {
+    message: `Git provider key cannot be one of: ${RESERVED_GIT_PROVIDER_KEYS.join(', ')}`,
+  })
+
+/**
+ * Schema for a single git provider entry.
+ */
+export const GitProviderSchema = z.object({
+  type: z
+    .enum(['github', 'gitlab', 'gitea', 'git'])
+    .describe('Kind of git host, used for display (eg. icons)'),
+  url: z
+    .string()
+    .regex(
+      /^[a-z][a-z0-9+.-]*:\/\/[^/]+\/.*\{\{repo\}\}/i,
+      'url must be an absolute URL containing a {{repo}} placeholder',
+    )
+    .describe(
+      'Repository URL template using {{owner}} and {{repo}} placeholders (eg. https://github.com/{{owner}}/{{repo}})',
+    ),
+  name: z.string().describe('Display name for the provider'),
+})
+
+export type GitProviderSchema = z.infer<typeof GitProviderSchema>
+
+/**
  * Global configuration for the system.
  *
  * This is located in ~/.denvig/config.yml but can be overridden by ENV.DENVIG_GLOBAL_CONFIG_PATH
@@ -155,6 +195,12 @@ export const GlobalConfigSchema = z.object({
       configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
     })
     .prefault({}),
+  gitProviders: z
+    .record(GitProviderKeySchema, GitProviderSchema)
+    .optional()
+    .describe(
+      'Git hosts used to derive project slugs, keyed by slug prefix. A github provider is always included unless overridden',
+    ),
 })
 
 export type GlobalConfigSchema = z.infer<typeof GlobalConfigSchema>

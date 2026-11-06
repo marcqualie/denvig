@@ -124,15 +124,6 @@ export const normaliseGitRemote = (remote: string): string | null => {
   return null
 }
 
-/**
- * Extract the `owner/repo` slug from a normalised github.com remote, or null
- * for non-github remotes.
- */
-export const extractGitHubSlug = (normalised: string | null): string | null => {
-  const match = normalised?.match(/^github\.com\/(.+\/.+)$/)
-  return match ? match[1] : null
-}
-
 export type GitWorktree = {
   /**
    * Real path of the primary worktree (shared across all sibling worktrees).

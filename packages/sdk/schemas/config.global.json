@@ -160,6 +160,43 @@
         }
       },
       "additionalProperties": false
+    },
+    "gitProviders": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "github",
+              "gitlab",
+              "gitea",
+              "git"
+            ],
+            "description": "Kind of git host, used for display (eg. icons)"
+          },
+          "url": {
+            "type": "string",
+            "description": "Repository URL template using {{owner}} and {{repo}} placeholders (eg. https://github.com/{{owner}}/{{repo}})"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for the provider"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "url",
+          "name"
+        ]
+      },
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z]([a-z0-9-]*[a-z0-9])?$"
+      },
+      "description": "Git hosts used to derive project slugs, keyed by slug prefix. A github provider is always included unless overridden"
     }
   },
   "additionalProperties": false
