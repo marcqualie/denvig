@@ -5,6 +5,7 @@
 ### Changed
 
 - Updated @biomejs/biome to v2.6.4
+- Updated 2 minor dev dependencies (rolldown, rolldown-plugin-dts)
 
 ## [0.7.6] - 2026-10-29
 
