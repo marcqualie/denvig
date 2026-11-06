@@ -26,6 +26,7 @@ export { ProjectConfigSchema } from './schemas/config.ts'
 export { DenvigSDK } from './sdk.ts'
 
 export type { TreeNode } from './lib/formatters/tree-node.ts'
+export type { GitProviderMatch } from './lib/project/git-providers.ts'
 export type {
   ProjectInfo,
   ServiceStatus as ProjectServiceStatus,

@@ -35,6 +35,7 @@ import type {
   OutdatedDependencySchema,
   ProjectDependencySchema,
 } from '../lib/dependencies.ts'
+import type { GitProviderMatch } from '../lib/project/git-providers.ts'
 import type { Worktree as InternalWorktree } from '../lib/project/worktree.ts'
 import type { DenvigProject as InternalProject } from '../lib/project.ts'
 import type { GetProjectInfoOptions, ProjectInfo } from '../lib/projectInfo.ts'
@@ -155,6 +156,13 @@ export class DenvigProject {
 
   get refs(): string[] {
     return this.internal.refs
+  }
+
+  /**
+   * The git provider the slug was derived from, or null for local projects.
+   */
+  get gitProvider(): GitProviderMatch | null {
+    return this.internal.gitProvider
   }
 
   /**

@@ -1,6 +1,8 @@
 import { detectProjectWorktrees, readGitInfo } from './project/git.ts'
 import { Worktree } from './project/worktree.ts'
 
+import type { GitProviderMatch } from './project/git-providers.ts'
+
 /**
  * Truncate a project ID for display purposes.
  * Returns the first 8 characters of the ID.
@@ -91,8 +93,15 @@ export class DenvigProject {
   }
 
   /**
+   * The git provider the slug was derived from, or null for local projects.
+   */
+  get gitProvider(): GitProviderMatch | null {
+    return this.primaryWorktree.gitProvider
+  }
+
+  /**
    * All identifiers for the project. See `projectRefs()` for the format
-   * of each ref (`id:`, `local:`, `github:`, `git:`).
+   * of each ref (`id:`, `local:`, `git:` and git provider refs like `github:`).
    */
   get refs(): string[] {
     return this.primaryWorktree.refs

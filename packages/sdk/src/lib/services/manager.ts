@@ -1418,15 +1418,16 @@ export class ServiceManager {
 
   /**
    * Get the path to the service wrapper script.
-   * Includes the project slug in the filename for github projects so Login Items
-   * shows a meaningful name (e.g. "denvig-marcqualie-myapp-api").
+   * Includes the project slug in the filename for git provider projects so
+   * Login Items shows a meaningful name (e.g. "denvig-marcqualie-myapp-api").
    */
   getServiceScriptPath(name: string): string {
     const normalizedName = this.normalizeForLabel(name)
     const slug = this.project.slug
-    const slugPrefix = slug.startsWith('github:')
-      ? `${slug.replace('github:', '').replace('/', '-')}-`
-      : ''
+    const providerSlug = slug.startsWith('local:')
+      ? null
+      : slug.match(/^[a-z][a-z0-9-]*:(.+)$/)?.[1]
+    const slugPrefix = providerSlug ? `${providerSlug.replace('/', '-')}-` : ''
     return resolve(
       this.getServiceDir(name),
       `denvig-${slugPrefix}${normalizedName}`,

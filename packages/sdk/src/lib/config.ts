@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
@@ -114,6 +115,22 @@ export const getGlobalConfig = async (): Promise<
   const configRaw = await safeReadTextFile(configPath)
   return buildGlobalConfig(configRaw, configPath)
 }
+
+/**
+ * Synchronous variant of `getGlobalConfig()` for hot paths that must stay sync
+ * (eg. deriving project refs).
+ */
+export const getGlobalConfigSync =
+  (): ConfigWithSourcePaths<GlobalConfigSchema> => {
+    const configPath = resolveConfigPath()
+    let configRaw: string | null = null
+    try {
+      configRaw = readFileSync(configPath, 'utf8').trim() || null
+    } catch {
+      configRaw = null
+    }
+    return buildGlobalConfig(configRaw, configPath)
+  }
 
 /**
  * Load the project configuration for the given project path.

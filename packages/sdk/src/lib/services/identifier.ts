@@ -1,6 +1,10 @@
 import { expandTilde } from '../config.ts'
 import { DenvigProject } from '../project.ts'
-import { parseProjectId, resolveProjectPath } from '../project-id.ts'
+import {
+  parseProjectId,
+  resolveProjectPath,
+  stripSlugPrefix,
+} from '../project-id.ts'
 import { listProjects } from '../projects.ts'
 import { isDirectory } from '../safeReadFile.ts'
 import {
@@ -25,7 +29,7 @@ export type ServiceIdentifier = {
  * - `serviceName` - uses the current project
  * - `global:serviceName` - global service (e.g., `global:redis`)
  * - `id:[id]/[serviceName]` - ID lookup (e.g., `id:a1b2c3d4/hello`)
- * - `github:[slug]/[serviceName]` - GitHub slug (e.g., `github:owner/repo/hello`)
+ * - `[provider]:[slug]/[serviceName]` - git provider slug (e.g., `github:owner/repo/hello`)
  * - `local:/path/to/project` - local path (service name extracted from path if exists)
  * - `[slug]/[serviceName]` - unprefixed slug (e.g., `marcqualie/denvig/hello`)
  */
@@ -62,11 +66,14 @@ export const parseServiceIdentifier = (
       }
     }
 
-    // For github/local types, construct the slug
+    // For local/slug types, construct the slug. Unprefixed slugs are left
+    // bare and matched against every provider by `resolveProjectSlugToPath`.
     const slug =
       parsed.type === 'local'
         ? `local:${parsed.value}`
-        : `github:${parsed.value}`
+        : parsed.provider
+          ? `${parsed.provider}:${parsed.value}`
+          : parsed.value
     return {
       projectSlug: slug,
       serviceName: parsed.serviceName,
@@ -85,7 +92,7 @@ export const parseServiceIdentifier = (
     }
   }
 
-  // For github slugs without explicit service name, fall back to old behavior
+  // For slugs without explicit service name, fall back to old behavior
   // Split by `/` and the last part is the service name
   const parts = identifier.split('/')
   const serviceName = parts.pop() as string
@@ -116,10 +123,7 @@ export const resolveProjectSlugToPath = async (
   }
 
   // Try matching without prefix (e.g., `marcqualie/denvig` matches `github:marcqualie/denvig`)
-  const prefixedMatch = projects.find((p) => {
-    const slugWithoutPrefix = p.slug.replace(/^(github|local):/, '')
-    return slugWithoutPrefix === slug
-  })
+  const prefixedMatch = projects.find((p) => stripSlugPrefix(p.slug) === slug)
   if (prefixedMatch) {
     return prefixedMatch.path
   }

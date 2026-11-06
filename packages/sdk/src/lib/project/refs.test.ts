@@ -6,7 +6,8 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { inspect } from 'node:util'
 
-import { projectId, projectRefs, projectSlug } from './refs.ts'
+import { resolveGitProviders } from './git-providers.ts'
+import { projectId, projectIdentity, projectRefs, projectSlug } from './refs.ts'
 
 let mockProjectPath = ''
 let worktreePath = ''
@@ -176,6 +177,52 @@ describe('projectRefs()', () => {
       })
       const refs = projectRefs(mockProjectPath)
       assertArrayIncludes(refs, 'github:marcqualie/denvig')
+    })
+
+    describe('with custom git providers', () => {
+      const providers = resolveGitProviders({
+        'gitea-mqn': {
+          type: 'gitea',
+          url: 'https://gitea.example.com/{{owner}}/{{repo}}',
+          name: 'Gitea',
+        },
+      })
+
+      beforeEach(() => {
+        execSync('git remote remove origin', { cwd: mockProjectPath })
+        execSync(
+          'git remote add origin ssh://git@gitea.example.com:2222/owner/mirror.git',
+          { cwd: mockProjectPath },
+        )
+      })
+
+      it('uses the origin provider for the slug', () => {
+        const identity = projectIdentity(mockProjectPath, providers)
+        assert.strictEqual(identity.slug, 'gitea-mqn:owner/mirror')
+        assert.strictEqual(identity.gitProvider?.type, 'gitea')
+        assert.strictEqual(
+          identity.gitProvider?.url,
+          'https://gitea.example.com/owner/mirror',
+        )
+      })
+
+      it('also adds refs for providers matched by a remote named after them', () => {
+        execSync('git remote add github git@github.com:marcqualie/denvig.git', {
+          cwd: mockProjectPath,
+        })
+        const identity = projectIdentity(mockProjectPath, providers)
+        assert.strictEqual(identity.slug, 'gitea-mqn:owner/mirror')
+        assertArrayIncludes(identity.refs, 'github:marcqualie/denvig')
+      })
+
+      it('keeps the id stable when a provider is added', () => {
+        execSync('git remote add github git@github.com:marcqualie/denvig.git', {
+          cwd: mockProjectPath,
+        })
+        const before = projectIdentity(mockProjectPath, resolveGitProviders())
+        const after = projectIdentity(mockProjectPath, providers)
+        assert.strictEqual(after.id, before.id)
+      })
     })
   })
 })

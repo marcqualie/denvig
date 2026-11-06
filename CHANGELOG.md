@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- `gitProviders` global config adds GitLab, Gitea and self-hosted git hosts as project slug prefixes (eg. `gitea-mqn:owner/repo`)
+- Project info includes the detected git provider and repository URL
+
 ### Changed
 
 - Updated @biomejs/biome to v2.6.4

@@ -507,3 +507,43 @@ describe('ProjectConfigSchema - services', () => {
     ok(!result.success)
   })
 })
+
+describe('GlobalConfigSchema - gitProviders', () => {
+  it('should parse custom git providers', () => {
+    const result = GlobalConfigSchema.safeParse({
+      gitProviders: {
+        'gitea-mqn': {
+          type: 'gitea',
+          url: 'https://gitea.example.com/{{owner}}/{{repo}}',
+          name: 'Gitea',
+        },
+        'git-vps': {
+          type: 'git',
+          url: 'https://vps.example.com/{{repo}}',
+          name: 'Git VPS',
+        },
+      },
+    })
+    ok(result.success)
+  })
+
+  it('should reject reserved provider keys', () => {
+    for (const key of ['local', 'id', 'git', 'global']) {
+      const result = GlobalConfigSchema.safeParse({
+        gitProviders: {
+          [key]: { type: 'git', url: 'https://x.test/{{repo}}', name: 'X' },
+        },
+      })
+      ok(!result.success, `expected ${key} to be rejected`)
+    }
+  })
+
+  it('should reject urls without a {{repo}} placeholder', () => {
+    const result = GlobalConfigSchema.safeParse({
+      gitProviders: {
+        vps: { type: 'git', url: 'https://x.test/owner', name: 'X' },
+      },
+    })
+    ok(!result.success)
+  })
+})

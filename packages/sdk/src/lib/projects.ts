@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises'
 
 import { expandTilde, getGlobalConfig } from './config.ts'
+import { resolveGitProviders } from './project/git-providers.ts'
 import { projectSlug } from './project/refs.ts'
 import { DenvigProject } from './project.ts'
 import { isDirectory, pathExists } from './safeReadFile.ts'
@@ -100,6 +101,7 @@ export const listProjects = async (
 ): Promise<ProjectInfo[]> => {
   const globalConfig = await getGlobalConfig()
   const projectPaths = globalConfig.projectPaths
+  const providers = resolveGitProviders(globalConfig.gitProviders)
   const withConfig = options?.withConfig ?? false
 
   const includePatterns = projectPaths.filter(
@@ -132,7 +134,7 @@ export const listProjects = async (
           const configPath = `${projectPath}/.denvig.yml`
           if (!(await pathExists(configPath))) return null
         }
-        return { slug: projectSlug(projectPath), path: projectPath }
+        return { slug: projectSlug(projectPath, providers), path: projectPath }
       }),
     )
   ).filter((project): project is ProjectInfo => project !== null)

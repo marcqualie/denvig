@@ -3,6 +3,7 @@ import { ServiceManager } from './services/manager.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
 import type { ProjectWorktree } from './project/git.ts'
+import type { GitProviderMatch } from './project/git-providers.ts'
 import type { DenvigProject } from './project.ts'
 
 export type ServiceStatus = 'running' | 'stopped' | 'none'
@@ -13,6 +14,7 @@ export type ProjectInfo = {
   name: string
   path: string
   refs: string[]
+  gitProvider: GitProviderMatch | null
   worktrees: ProjectWorktree[]
   config: ProjectConfigSchema | null
   serviceStatus: ServiceStatus
@@ -79,6 +81,7 @@ export const getProjectInfo = async (
     name: active.name,
     path: active.path,
     refs: active.refs,
+    gitProvider: active.gitProvider,
     worktrees: project.worktrees
       .filter((wt) => !wt.isPrimary)
       .map((wt) => ({ path: wt.path, branch: wt.branch })),
