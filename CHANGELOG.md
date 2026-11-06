@@ -11,6 +11,9 @@
 
 - Updated @biomejs/biome to v2.6.4
 - Updated 2 minor dev dependencies (rolldown, rolldown-plugin-dts)
+- Updated node-forge to v1.4.3 for upstream security fixes
+- Updated semver to v7.8.6
+- Updated rolldown to v1.3.0
 
 ## [0.7.6] - 2026-10-29
 
