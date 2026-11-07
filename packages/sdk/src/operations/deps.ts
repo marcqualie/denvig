@@ -3,7 +3,10 @@ import { parseDuration } from '../lib/formatters/duration.ts'
 import { fetchGitHubActionInfo } from '../lib/github-actions/info.ts'
 import { fetchJsrPackageInfo } from '../lib/jsr/info.ts'
 import { fetchNpmPackageInfo } from '../lib/npm/info.ts'
-import { readPnpmReleaseAgeConfig } from '../lib/pnpm-config.ts'
+import {
+  isReleaseAgeExcluded,
+  readPnpmReleaseAgeConfig,
+} from '../lib/pnpm-config.ts'
 import { fetchRubygemInfo } from '../lib/rubygems/info.ts'
 import { outdatedMatchesSemverFilter } from '../lib/semver.ts'
 import { fetchPyPIPackageInfo } from '../lib/uv/info.ts'
@@ -200,12 +203,8 @@ export const outdatedDependencies = async (
     releaseLatencyMs = null
   } else if (latencyValue === 'auto') {
     const pnpmConfig = await readPnpmReleaseAgeConfig(worktree.path)
-    if (pnpmConfig) {
-      releaseLatencyMs = pnpmConfig.minimumReleaseAgeMs
-      releaseLatencyExclude = pnpmConfig.exclude
-    } else {
-      releaseLatencyMs = 24 * 60 * 60 * 1000
-    }
+    releaseLatencyMs = pnpmConfig?.minimumReleaseAgeMs ?? 24 * 60 * 60 * 1000
+    releaseLatencyExclude = pnpmConfig?.exclude ?? []
   } else {
     releaseLatencyMs = parseDuration(latencyValue)
     if (releaseLatencyMs === null) {
@@ -219,11 +218,17 @@ export const outdatedDependencies = async (
     const threshold = releaseLatencyMs
     const now = Date.now()
     entries = entries.filter((dep) => {
-      if (releaseLatencyExclude.includes(dep.name)) return true
-
       const current = getCurrent(dep)
       const wantedIsUpdate = dep.wanted !== current
       const latestIsUpdate = dep.latest !== current
+
+      const wantedExcluded =
+        wantedIsUpdate &&
+        isReleaseAgeExcluded(releaseLatencyExclude, dep.name, dep.wanted)
+      const latestExcluded =
+        latestIsUpdate &&
+        isReleaseAgeExcluded(releaseLatencyExclude, dep.name, dep.latest)
+      if (wantedExcluded || latestExcluded) return true
 
       const wantedOldEnough =
         wantedIsUpdate && dep.wantedDate
