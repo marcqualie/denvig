@@ -16,6 +16,10 @@ export type GatewayServiceRoute = {
   projectPath: string
   serviceName: string
   port: number
+  /**
+   * Upstream host; `undefined` means the default IPv4 loopback.
+   */
+  host?: string
   secure: boolean
   /**
    * Primary domain (first claimed); cnames follow in `cnames`.
@@ -33,6 +37,7 @@ type RouteGroup = {
   projectId: string
   serviceName: string
   port: number
+  host?: string
   secure: boolean
   /**
    * Order: first entry is the primary domain, the rest are cnames.
@@ -79,6 +84,7 @@ export async function resolveGatewayServices(): Promise<GatewayServiceRoute[]> {
         projectId: route.project,
         serviceName: route.service,
         port: route.port,
+        host: route.host,
         secure: route.secure,
         domains: [domain],
         certKey: route.cert,
@@ -122,6 +128,7 @@ export async function resolveGatewayServices(): Promise<GatewayServiceRoute[]> {
       projectPath: projectMeta.path,
       serviceName: group.serviceName,
       port: group.port,
+      host: group.host,
       secure: group.secure,
       domain: primary,
       cnames,

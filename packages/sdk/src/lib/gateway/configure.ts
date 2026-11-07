@@ -3,6 +3,7 @@ import { getServiceStableLogPath } from '../services/paths.ts'
 import { listGatewayCerts } from './certs.ts'
 import { writeGatewayHtmlFiles } from './html.ts'
 import {
+  DEFAULT_UPSTREAM_HOST,
   type NginxConfigOptions,
   reloadNginx,
   removeAllNginxConfigs,
@@ -17,6 +18,10 @@ export type ConfigureServiceResult = {
   domain: string
   cnames: string[]
   port: number
+  /**
+   * Host nginx proxies to (the default loopback when not configured).
+   */
+  host: string
   certStatus: 'valid' | 'missing' | 'not_configured'
   certDir?: string
   certMessage?: string
@@ -85,6 +90,7 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
       domain: route.domain,
       cnames: route.cnames,
       port: route.port,
+      host: route.host ?? DEFAULT_UPSTREAM_HOST,
       certStatus: route.certStatus,
       certDir: route.certDir,
       certMessage: route.certMessage,
@@ -97,6 +103,7 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
       projectSlug: route.projectSlug,
       serviceName: route.serviceName,
       port: route.port,
+      host: route.host,
       domain: route.domain,
       cnames: route.cnames,
       sslCertPath: route.sslCertPath,

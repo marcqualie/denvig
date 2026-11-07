@@ -14,6 +14,10 @@ export type NginxConfigOptions = {
   projectSlug: string
   serviceName: string
   port: number
+  /**
+   * Host to proxy to. Defaults to `127.0.0.1`; IPv6 addresses are bracketed.
+   */
+  host?: string
   domain: string
   cnames?: string[]
   sslCertPath?: string
@@ -25,6 +29,18 @@ export type NginxConfigOptions = {
 }
 
 /**
+ * Default upstream host when a service doesn't configure `http.host`.
+ */
+export const DEFAULT_UPSTREAM_HOST = '127.0.0.1'
+
+/**
+ * Format a host for an nginx `server` directive, bracketing bare IPv6
+ * addresses so the port separator stays unambiguous.
+ */
+export const formatUpstreamHost = (host: string): string =>
+  host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
+
+/**
  * Generate nginx config content for a service.
  */
 export function generateNginxConfig(options: NginxConfigOptions): string {
@@ -34,6 +50,7 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
     projectSlug,
     serviceName,
     port,
+    host = DEFAULT_UPSTREAM_HOST,
     domain,
     cnames,
     sslCertPath,
@@ -71,8 +88,9 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
 # path: ${projectPath}
 # service: ${serviceName}
 # domain: ${allDomains}
+# host: ${host}
 # port: ${port}${logComment}
-upstream ${upstreamName} { server 127.0.0.1:${port} max_fails=0 fail_timeout=30; server [::1]:${port} max_fails=0 fail_timeout=30 backup; }
+upstream ${upstreamName} { server ${formatUpstreamHost(host)}:${port} max_fails=0 fail_timeout=30; }
 server {
 ${listenBlock}
   server_name ${allDomains};

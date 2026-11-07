@@ -64,6 +64,7 @@ export const gatewayStatusCommand = new Command({
           projectSlug: service.projectSlug,
           serviceName: service.name,
           domains: [service.domain, ...service.cnames],
+          host: service.host,
           port: service.port,
           certStatus: service.certStatus,
           certDir: service.certDir,

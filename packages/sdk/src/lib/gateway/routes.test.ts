@@ -59,6 +59,33 @@ describe('resolveGatewayServices', () => {
     assert.strictEqual(services[0].certStatus, 'not_configured')
   })
 
+  it('carries the upstream host from the route', async () => {
+    const project = await globalId()
+    await setGatewayRoute('web.denvig.localhost', {
+      project,
+      service: 'web',
+      port: 5173,
+      host: '::1',
+      defaultService: true,
+      secure: false,
+      desiredStatus: 'running',
+    })
+    await setGatewayRoute('api.denvig.localhost', {
+      project,
+      service: 'api',
+      port: 3000,
+      defaultService: true,
+      secure: false,
+      desiredStatus: 'running',
+    })
+
+    const services = await resolveGatewayServices()
+    const web = services.find((s) => s.serviceName === 'web')
+    const api = services.find((s) => s.serviceName === 'api')
+    assert.strictEqual(web?.host, '::1')
+    assert.strictEqual(api?.host, undefined)
+  })
+
   it('excludes routes whose desiredStatus is not running', async () => {
     const project = await globalId()
     await setGatewayRoute('running.denvig.localhost', {

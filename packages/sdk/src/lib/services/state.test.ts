@@ -281,6 +281,36 @@ describe('service state', () => {
     assert.strictEqual(route?.cert, 'wildcard.test')
   })
 
+  it("hands a released domain back with the original owner's host", async () => {
+    await updateServiceState('orig', 'api', {
+      cwd: '/tmp/orig',
+      port: 8080,
+      domains: ['api.test'],
+      desiredStatus: 'running',
+      project: {
+        id: 'orig',
+        slug: 'github:owner/repo',
+        name: 'repo',
+        path: '/tmp/orig',
+      },
+      serviceName: 'api',
+      config: { http: { domain: 'api.test', host: '::1' } },
+    })
+    await setGatewayRoute('api.test', {
+      project: 'wt',
+      service: 'api',
+      port: 9001,
+      host: '192.168.1.10',
+      secure: false,
+      defaultService: false,
+      desiredStatus: 'running',
+    })
+    await releaseGatewayRoutesForService('wt', 'api')
+    const route = await getGatewayRoute('api.test')
+    assert.strictEqual(route?.project, 'orig')
+    assert.strictEqual(route?.host, '::1')
+  })
+
   it('marks a released domain stopped when the original owner is not running', async () => {
     await updateServiceState('orig', 'api', {
       cwd: '/tmp/orig',

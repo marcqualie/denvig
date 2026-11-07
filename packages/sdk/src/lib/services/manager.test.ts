@@ -803,6 +803,30 @@ describe('ServiceManager', () => {
       )
     })
 
+    it('records the configured upstream host on the gateway route', async (t) => {
+      const project = createOriginalProject()
+      project.config.services = {
+        hello: {
+          ...httpServiceConfig,
+          http: { ...httpServiceConfig.http, host: '::1' },
+        },
+      }
+      const manager = new ServiceManager(project)
+      mockLaunchctlStart(t)
+
+      const result = await manager.startService('hello', {
+        port: 5173,
+        portResolved: true,
+      })
+      ok(result.success, result.message)
+
+      const route = await getGatewayRoute('hello.denvig.me')
+      strictEqual(route?.port, 5173)
+      strictEqual(route?.host, '::1')
+      const state = await getServiceState(project.id, 'hello')
+      strictEqual(state?.config?.http?.host, '::1')
+    })
+
     it('routes an explicit domain set, leaving the configured domain untouched', async (t) => {
       const original = createOriginalProject()
       await seedRunningOriginal(original)
