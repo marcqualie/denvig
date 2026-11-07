@@ -13,25 +13,41 @@ export type PortRange = {
 }
 
 /**
- * Check whether a TCP port is currently bound by any other process. Returns
- * true when the port is unavailable.
- *
- * Listens without an explicit address so the probe binds across IPv4 and
- * IPv6 — necessary on macOS where IPv6 sockets are not always dual-stack
- * and a `127.0.0.1`-only probe would miss processes listening on `::`.
+ * Addresses probed by `isPortInUse`. On macOS a wildcard bind succeeds even
+ * while another process holds the same port on a specific loopback address,
+ * so each loopback is probed explicitly. Dev servers binding `localhost`
+ * (eg. Vite/Astro) commonly listen on `::1` only.
  */
-export const isPortInUse = (port: number): Promise<boolean> => {
+const PROBE_HOSTS = ['::', '0.0.0.0', '127.0.0.1', '::1'] as const
+
+/**
+ * Try to bind `port` on `host`. Resolves `true` when the port is taken there.
+ * Addresses the host can't bind at all (eg. no IPv6) count as free.
+ */
+const isPortBoundOn = (port: number, host: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const server = createServer()
     server.unref()
     server.once('error', (err: NodeJS.ErrnoException) => {
-      resolve(err.code === 'EADDRINUSE')
+      resolve(err.code === 'EADDRINUSE' || err.code === 'EACCES')
     })
     server.once('listening', () => {
       server.close(() => resolve(false))
     })
-    server.listen(port)
+    server.listen(port, host)
   })
+}
+
+/**
+ * Check whether a TCP port is currently bound by any other process on any
+ * IPv4/IPv6 wildcard or loopback address. Returns true when the port is
+ * unavailable.
+ */
+export const isPortInUse = async (port: number): Promise<boolean> => {
+  for (const host of PROBE_HOSTS) {
+    if (await isPortBoundOn(port, host)) return true
+  }
+  return false
 }
 
 /**

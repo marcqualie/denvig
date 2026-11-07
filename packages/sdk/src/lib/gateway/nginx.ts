@@ -72,7 +72,7 @@ export function generateNginxConfig(options: NginxConfigOptions): string {
 # service: ${serviceName}
 # domain: ${allDomains}
 # port: ${port}${logComment}
-upstream ${upstreamName} { server 127.0.0.1:${port} max_fails=0 fail_timeout=30; }
+upstream ${upstreamName} { server 127.0.0.1:${port} max_fails=0 fail_timeout=30; server [::1]:${port} max_fails=0 fail_timeout=30 backup; }
 server {
 ${listenBlock}
   server_name ${allDomains};

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Gateway now reaches services listening only on IPv6 localhost (eg. Astro and Vite dev servers) instead of returning a 504
+- Random port allocation no longer picks ports already bound to localhost by other processes
+
 ## [0.7.7] - 2026-11-06
 
 ### Added
