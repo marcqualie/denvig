@@ -1,4 +1,4 @@
-import plugins from '../lib/plugins.ts'
+import { loadPlugins, pluginRegistry } from '../lib/plugins.ts'
 
 import type { Worktree } from '../lib/project/worktree.ts'
 
@@ -8,16 +8,19 @@ export type PluginInfo = {
 }
 
 /**
- * List the available plugins and the actions each resolves for a worktree.
- * Shared by `denvig plugins` and `sdk.plugins()`.
+ * List every available plugin and the actions each resolves for a worktree.
+ * Plugins with no matched files in the worktree report no actions without
+ * being loaded. Shared by `denvig plugins` and `sdk.plugins()`.
  */
 export const listPlugins = async (
   worktree: Worktree,
 ): Promise<Record<string, PluginInfo>> => {
+  const loaded = new Map(await loadPlugins(worktree))
   const pluginData: Record<string, PluginInfo> = {}
-  for (const [key, plugin] of Object.entries(plugins)) {
-    const actions = await plugin.actions(worktree)
-    pluginData[key] = { name: plugin.name, actions }
+  for (const [key, entry] of Object.entries(pluginRegistry)) {
+    const plugin = loaded.get(key)
+    const actions = plugin ? await plugin.actions(worktree) : {}
+    pluginData[key] = { name: entry.name, actions }
   }
   return pluginData
 }
