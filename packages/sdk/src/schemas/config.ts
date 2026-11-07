@@ -81,6 +81,12 @@ export const ServiceConfigSchema = z
           .describe(
             'Port the container listens on when runtime is "docker" (defaults to the host port)',
           ),
+        host: z
+          .string()
+          .optional()
+          .describe(
+            'Host the gateway proxies to (defaults to 127.0.0.1); use "::1" for servers that only listen on IPv6 localhost',
+          ),
         domain: z
           .string()
           .optional()

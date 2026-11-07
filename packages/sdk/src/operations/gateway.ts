@@ -6,6 +6,7 @@ import {
   configureGateway,
 } from '../lib/gateway/configure.ts'
 import {
+  DEFAULT_UPSTREAM_HOST,
   getDenvigNginxConfPath,
   getNginxConfPath,
 } from '../lib/gateway/nginx.ts'
@@ -55,6 +56,10 @@ export type GatewayServiceStatus = {
   domain: string
   cnames: string[]
   port: number
+  /**
+   * Host nginx proxies to (the default loopback when not configured).
+   */
+  host: string
   secure: boolean
   /**
    * Cert resolution for a secure route; `not_configured` when not secure.
@@ -122,6 +127,7 @@ export const getGatewayStatus = async (): Promise<GatewayStatus> => {
       domain: route.domain,
       cnames: route.cnames,
       port: route.port,
+      host: route.host ?? DEFAULT_UPSTREAM_HOST,
       secure: route.secure,
       certStatus: route.certStatus,
       certDir: route.certDir ?? null,

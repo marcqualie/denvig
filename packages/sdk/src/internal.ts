@@ -27,7 +27,10 @@ export { buildDependabotSnapshot } from './lib/deps/dependabot.ts'
 export { resolveDependabotContext } from './lib/deps/dependabot-context.ts'
 export { buildReverseChain, isDevDependenciesSource } from './lib/deps/tree.ts'
 export { findCertForDomain, generateMissingCerts } from './lib/gateway/certs.ts'
-export { getDenvigNginxConfPath } from './lib/gateway/nginx.ts'
+export {
+  formatUpstreamHost,
+  getDenvigNginxConfPath,
+} from './lib/gateway/nginx.ts'
 export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
 export { default as launchctl } from './lib/services/launchctl.ts'
 export { ServiceManager } from './lib/services/manager.ts'

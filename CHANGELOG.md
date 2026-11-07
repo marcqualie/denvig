@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- `http.host` service option sets the address the gateway proxies to (eg. `::1` for Astro and Vite dev servers that only listen on IPv6)
+
+### Fixed
+
+- Random port allocation no longer picks ports already bound to localhost by other processes
+
 ## [0.7.7] - 2026-11-06
 
 ### Added

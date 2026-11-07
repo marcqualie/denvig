@@ -38,6 +38,7 @@ export const ServiceConfigSnapshotSchema = z.object({
     .object({
       port: z.number().optional(),
       containerPort: z.number().optional(),
+      host: z.string().optional(),
       domain: z.string().optional(),
       cnames: z.array(z.string()).optional(),
       secure: z.boolean().optional(),
@@ -92,6 +93,10 @@ export const GatewayRouteSchema = z.object({
   project: z.string(),
   service: z.string(),
   port: z.number().int().positive(),
+  /**
+   * Host nginx proxies to; `undefined` means the default IPv4 loopback.
+   */
+  host: z.string().optional(),
   defaultService: z.boolean().default(true),
   secure: z.boolean().default(false),
   desiredStatus: z.enum(['running', 'stopped']).default('running'),
@@ -312,6 +317,7 @@ export const releaseGatewayRoutesForService = async (
         project: heir.project.id,
         service: heir.serviceName,
         port: heir.port,
+        host: heir.config?.http?.host,
         secure: heir.config?.http?.secure ?? route.secure,
         defaultService: true,
         desiredStatus: 'running',

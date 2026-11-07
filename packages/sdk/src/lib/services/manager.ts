@@ -661,6 +661,7 @@ export class ServiceManager {
           project: this.project.id,
           service: name,
           port: effectivePort,
+          host: config.http?.host,
           secure,
           defaultService: true,
           desiredStatus: 'running',

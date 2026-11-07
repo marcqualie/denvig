@@ -1,3 +1,5 @@
+import { formatUpstreamHost } from '@denvig/sdk/internal'
+
 /**
  * Normalized view of one gateway service, rendered the same everywhere.
  */
@@ -8,6 +10,10 @@ export type GatewayServiceView = {
    * Primary domain first, then any cnames.
    */
   domains: string[]
+  /**
+   * Host the gateway proxies to.
+   */
+  host: string
   port: number
   certStatus: 'valid' | 'missing' | 'not_configured'
   certDir?: string | null
@@ -32,7 +38,7 @@ const certIcon = (status: GatewayServiceView['certStatus']): string =>
  *
  * ```
  *   slug/service
- *     Domains: a.localhost, b.localhost -> localhost:3000
+ *     Domains: a.localhost, b.localhost -> 127.0.0.1:3000
  *     Certs:   ✓ valid (wildcard)
  *     Nginx:   ✓ configured
  * ```
@@ -48,7 +54,7 @@ export const formatGatewayService = (view: GatewayServiceView): string => {
 
   return [
     `  ${view.projectSlug}/${view.serviceName}`,
-    `    Domains: ${view.domains.join(', ')} -> localhost:${view.port}`,
+    `    Domains: ${view.domains.join(', ')} -> ${formatUpstreamHost(view.host)}:${view.port}`,
     `    Certs:   ${certIcon(view.certStatus)} ${view.certStatus}${certDetail}`,
     `    Nginx:   ${view.nginxOk ? '✓' : '✗'} ${view.nginxLabel}${nginxMessage}`,
   ].join('\n')

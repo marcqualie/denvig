@@ -41,6 +41,56 @@ describe('nginx gateway', () => {
       ok(!config.includes('ssl_certificate'))
     })
 
+    describe('upstream host', () => {
+      const upstreamFor = (host?: string) =>
+        generateNginxConfig({
+          projectId: 'abc123',
+          projectPath: '/Users/test/project',
+          projectSlug: 'test/project',
+          serviceName: 'web',
+          port: 5173,
+          domain: 'web.denvig.localhost',
+          host,
+        })
+          .split('\n')
+          .find((line) => line.startsWith('upstream denvig-abc123--web'))
+
+      it('defaults to a single IPv4 loopback server', () => {
+        const upstream = upstreamFor()
+        ok(upstream?.includes('{ server 127.0.0.1:5173 '))
+        ok(!upstream?.includes('[::1]'))
+        ok(!upstream?.includes('backup'))
+      })
+
+      it('wraps an IPv6 host in brackets', () => {
+        const upstream = upstreamFor('::1')
+        ok(upstream?.includes('{ server [::1]:5173 '))
+        ok(!upstream?.includes('127.0.0.1'))
+      })
+
+      it('keeps an already-bracketed IPv6 host as-is', () => {
+        ok(upstreamFor('[::1]')?.includes('{ server [::1]:5173 '))
+      })
+
+      it('uses hostnames and remote addresses verbatim', () => {
+        ok(upstreamFor('localhost')?.includes('{ server localhost:5173 '))
+        ok(upstreamFor('192.168.1.10')?.includes('{ server 192.168.1.10:5173 '))
+      })
+
+      it('records the host in the header comments', () => {
+        const config = generateNginxConfig({
+          projectId: 'abc123',
+          projectPath: '/Users/test/project',
+          projectSlug: 'test/project',
+          serviceName: 'web',
+          port: 5173,
+          domain: 'web.denvig.localhost',
+          host: '::1',
+        })
+        ok(config.includes('# host: ::1'))
+      })
+    })
+
     it('should include SSL when sslCertPath and sslKeyPath are provided', () => {
       const config = generateNginxConfig({
         projectId: 'abc123',
