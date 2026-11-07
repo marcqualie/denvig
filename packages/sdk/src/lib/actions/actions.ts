@@ -1,4 +1,4 @@
-import plugins from '../plugins.ts'
+import { loadPlugins } from '../plugins.ts'
 import { mergeActions } from './mergeActions.ts'
 
 import type { Worktree } from '../project/worktree.ts'
@@ -27,7 +27,7 @@ export const detectActions = async (project: Worktree): Promise<Actions> => {
   }
 
   // Plugins
-  for (const [_key, plugin] of Object.entries(plugins)) {
+  for (const [, plugin] of await loadPlugins(project)) {
     const pluginActions = await plugin.actions(project)
     actions = mergeActions(actions, pluginActions)
   }

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import plugins from './plugins.ts'
+import { loadPlugins } from './plugins.ts'
 
 import type { Worktree } from './project/worktree.ts'
 
@@ -99,7 +99,7 @@ export const detectDependencies = async (
 ): Promise<ProjectDependencySchema[]> => {
   // Run all plugin dependency detections in parallel
   const pluginResults = await Promise.all(
-    Object.values(plugins).map((plugin) =>
+    (await loadPlugins(project)).map(([, plugin]) =>
       plugin.dependencies ? plugin.dependencies(project) : Promise.resolve([]),
     ),
   )

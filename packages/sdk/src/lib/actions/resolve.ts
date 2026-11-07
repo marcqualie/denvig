@@ -1,5 +1,5 @@
 import { DenvigValidationError } from '../errors.ts'
-import plugins from '../plugins.ts'
+import { loadPlugins } from '../plugins.ts'
 
 import type { Worktree } from '../project/worktree.ts'
 
@@ -38,7 +38,7 @@ export const detectActionsByEcosystem = async (
     }
   }
 
-  for (const [key, plugin] of Object.entries(plugins)) {
+  for (const [key, plugin] of await loadPlugins(worktree)) {
     const pluginActions = await plugin.actions(worktree)
     for (const [name, commands] of Object.entries(pluginActions)) {
       resolved.push({ name, ecosystem: plugin.name ?? key, commands })

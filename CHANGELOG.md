@@ -6,6 +6,10 @@
 
 - `http.host` service option sets the address the gateway proxies to (eg. `::1` for Astro and Vite dev servers that only listen on IPv6)
 
+### Changed
+
+- Ecosystem plugins only load for projects that contain their files
+
 ### Fixed
 
 - Random port allocation no longer picks ports already bound to localhost by other processes

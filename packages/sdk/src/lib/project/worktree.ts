@@ -8,7 +8,7 @@ import {
   type OutdatedDependencySchema,
   type ProjectDependencySchema,
 } from '../dependencies.ts'
-import plugins from '../plugins.ts'
+import { loadPlugins } from '../plugins.ts'
 import { projectIdentity } from './refs.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
@@ -135,7 +135,7 @@ export class Worktree {
     options?: OutdatedDependenciesOptions,
   ): Promise<OutdatedDependencySchema[]> {
     const pluginResults = await Promise.all(
-      Object.values(plugins).map(async (plugin) => {
+      (await loadPlugins(this)).map(async ([, plugin]) => {
         if (!plugin.outdatedDependencies) return []
         const start = performance.now()
         const outdated = await plugin.outdatedDependencies(this, options)
@@ -158,7 +158,7 @@ export class Worktree {
     options?: DeduplicateDependenciesOptions,
   ): Promise<DeduplicateResult[]> {
     const results = await Promise.all(
-      Object.values(plugins).map((plugin) =>
+      (await loadPlugins(this)).map(([, plugin]) =>
         plugin.deduplicateDependencies
           ? plugin.deduplicateDependencies(this, options)
           : Promise.resolve(null),

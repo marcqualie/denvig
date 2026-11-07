@@ -77,6 +77,8 @@ type PluginOptions = {
   ) => Promise<DeduplicateResult | null>
 }
 
-export const definePlugin = (options: PluginOptions) => {
+export type Plugin = PluginOptions
+
+export const definePlugin = (options: PluginOptions): Plugin => {
   return options
 }
