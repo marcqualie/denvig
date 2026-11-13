@@ -18,17 +18,30 @@ export {
   writeCaFiles,
 } from './lib/certs.ts'
 export { createCliLogTracker } from './lib/cli-logs.ts'
-export { getGlobalConfig } from './lib/config.ts'
+export {
+  expandTilde,
+  getGlobalConfig,
+  resolveConfigPath as getGlobalConfigPath,
+} from './lib/config.ts'
 export {
   appendTraceEvent,
   getActiveDebugTracePath,
 } from './lib/debug-trace.ts'
+export { detectDependencies } from './lib/dependencies.ts'
 export { buildDependabotSnapshot } from './lib/deps/dependabot.ts'
 export { resolveDependabotContext } from './lib/deps/dependabot-context.ts'
 export { buildReverseChain, isDevDependenciesSource } from './lib/deps/tree.ts'
 export { findCertForDomain, generateMissingCerts } from './lib/gateway/certs.ts'
 export { getDenvigNginxConfPath } from './lib/gateway/nginx.ts'
-export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
+export { pluginWatchFiles } from './lib/plugins.ts'
+export {
+  gitPull,
+  isWorkingTreeDirty,
+  readGitInfo,
+} from './lib/project/git.ts'
+export { DenvigProject as InternalDenvigProject } from './lib/project.ts'
+export { listProjects } from './lib/projects.ts'
+export { BUILTIN_GLOBAL_SERVICES } from './lib/services/global.ts'
 export { default as launchctl } from './lib/services/launchctl.ts'
 export { ServiceManager } from './lib/services/manager.ts'
 export {
@@ -57,7 +70,9 @@ export {
 export { installXcodeCli, isXcodeCliInstalled } from './lib/system/xcodeCli.ts'
 export { teardownGlobal } from './lib/teardown.ts'
 
+export type { ProjectDependencySchema } from './lib/dependencies.ts'
 export type { DependabotSnapshot } from './lib/deps/dependabot.ts'
+export type { Worktree } from './lib/project/worktree.ts'
 export type { LaunchctlListItem } from './lib/services/launchctl.ts'
 export type { ServiceManagerProject } from './lib/services/manager.ts'
 export type { GatewayRoute } from './lib/services/state.ts'

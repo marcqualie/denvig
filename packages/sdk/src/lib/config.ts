@@ -97,7 +97,10 @@ const buildGlobalConfig = (
 /**
  * Resolve the config file path (explicit or default).
  */
-const resolveConfigPath = (): string => {
+/**
+ * Absolute path of the global config file, honouring DENVIG_GLOBAL_CONFIG_PATH.
+ */
+export const resolveConfigPath = (): string => {
   const explicitConfigPath = process.env.DENVIG_GLOBAL_CONFIG_PATH
   return explicitConfigPath ? resolve(explicitConfigPath) : GLOBAL_CONFIG_PATH
 }

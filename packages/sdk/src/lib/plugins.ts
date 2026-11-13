@@ -6,4 +6,16 @@ import ruby from '../plugins/ruby.ts'
 import uv from '../plugins/uv.ts'
 import yarn from '../plugins/yarn.ts'
 
-export default { deno, githubActions, npm, pnpm, ruby, uv, yarn }
+const plugins = { deno, githubActions, npm, pnpm, ruby, uv, yarn }
+
+/**
+ * Every file or directory, relative to a checkout root, that any plugin reads
+ * to detect dependencies.
+ */
+export const pluginWatchFiles = (): string[] => [
+  ...new Set(
+    Object.values(plugins).flatMap((plugin) => plugin.watchFiles ?? []),
+  ),
+]
+
+export default plugins

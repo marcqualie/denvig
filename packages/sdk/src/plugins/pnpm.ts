@@ -74,6 +74,7 @@ const resolveAlias = (
 
 const plugin = definePlugin({
   name: 'pnpm',
+  watchFiles: ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'],
 
   actions: async (project: Worktree) => {
     const hasPnpmLock = project.rootFiles.includes('pnpm-lock.yaml')

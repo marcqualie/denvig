@@ -11,6 +11,7 @@ const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
 
 const plugin = definePlugin({
   name: 'ruby',
+  watchFiles: ['Gemfile', 'Gemfile.lock'],
 
   actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles

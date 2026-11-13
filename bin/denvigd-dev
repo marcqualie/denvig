@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Resolved relative to this script so it also works as the `command` of the
+# `global:denvigd` service, which launchd runs from a different directory.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# shellcheck disable=SC2068
+exec node --conditions=denvig-source --experimental-strip-types "$ROOT/packages/denvigd/src/denvigd.ts" $@

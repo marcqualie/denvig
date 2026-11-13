@@ -10,6 +10,7 @@ const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
 
 const plugin = definePlugin({
   name: 'uv',
+  watchFiles: ['pyproject.toml', 'uv.lock'],
 
   actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles

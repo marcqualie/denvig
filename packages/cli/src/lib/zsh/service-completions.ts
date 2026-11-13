@@ -1,3 +1,5 @@
+import { BUILTIN_GLOBAL_SERVICES } from '@denvig/sdk/internal'
+
 import type { DenvigProject, DenvigSDK } from '@denvig/sdk'
 
 /**
@@ -21,7 +23,11 @@ export const serviceCompletions = async (
 
   // Global services, with a `global:` prefix.
   const globalConfig = await sdk.config.retrieve()
-  for (const name of Object.keys(globalConfig.services ?? {})) {
+  const globalNames = new Set([
+    ...Object.keys(BUILTIN_GLOBAL_SERVICES),
+    ...Object.keys(globalConfig.services ?? {}),
+  ])
+  for (const name of globalNames) {
     completions.push(`global:${name}`)
   }
 

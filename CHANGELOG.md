@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- New `denvigd` package: a background daemon that keeps every project's config, worktrees, actions, services and dependencies in memory and serves them over a unix socket
+- Built-in `global:denvigd` service, so the daemon can be managed and its logs streamed with `denvig services`
+
 ## [0.7.7] - 2026-11-06
 
 ### Added

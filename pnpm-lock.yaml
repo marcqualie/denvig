@@ -226,6 +226,15 @@ importers:
         specifier: workspace:*
         version: link:../tsconfig
 
+  packages/denvigd:
+    devDependencies:
+      '@denvig/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      '@denvig/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+
   packages/sdk:
     dependencies:
       node-forge:

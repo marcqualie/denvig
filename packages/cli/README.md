@@ -93,6 +93,17 @@ denvig services start marcqualie/denvig/dev    # Start 'dev' service in marcqual
 denvig services status marcqualie/denvig/hello # Check status of 'hello' in marcqualie/denvig project
 ```
 
+Global services live in `~/.denvig/config.yml` under `services` and use the `global:` prefix. Denvig ships with a
+built-in `denvigd` global service, a background daemon that keeps project state in memory (requires
+`npm install -g denvigd`):
+
+```shell
+denvig services start global:denvigd   # Start the denvig daemon
+denvig services logs global:denvigd -f # Follow its logs
+```
+
+Override any of its fields by defining `services.denvigd` in the global config (eg. `command: denvigd --socket ~/.denvig/custom.sock`).
+
 See [docs/configuration.md](docs/configuration.md) for service configuration options.
 
 

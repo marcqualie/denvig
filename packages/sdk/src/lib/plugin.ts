@@ -54,6 +54,12 @@ export type DeduplicateResult = {
 type PluginOptions = {
   name: string
 
+  /**
+   * Files (or directories) relative to a checkout root whose changes affect
+   * this plugin's dependencies. Used by denvigd to know when to refresh.
+   */
+  watchFiles?: string[]
+
   actions: (project: Worktree) => Promise<Record<string, string[]>>
 
   dependencies?: (project: Worktree) => Promise<ProjectDependencySchema[]>

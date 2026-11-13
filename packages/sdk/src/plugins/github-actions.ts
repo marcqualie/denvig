@@ -10,6 +10,7 @@ const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
 
 const plugin = definePlugin({
   name: 'github-actions',
+  watchFiles: ['.github/workflows'],
 
   actions: async () => ({}),
 

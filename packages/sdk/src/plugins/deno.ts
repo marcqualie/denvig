@@ -100,6 +100,7 @@ const readJsonFile = async (
 
 const plugin = definePlugin({
   name: 'deno',
+  watchFiles: ['deno.json', 'deno.jsonc', 'deno.lock'],
 
   actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles

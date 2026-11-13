@@ -63,6 +63,7 @@ function extractPackageName(key: string): string {
 
 const plugin = definePlugin({
   name: 'yarn',
+  watchFiles: ['package.json', 'yarn.lock'],
 
   actions: async (project: Worktree) => {
     const hasPackageJson = project.rootFiles.includes('package.json')

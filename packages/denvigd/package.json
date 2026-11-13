@@ -1,0 +1,41 @@
+{
+  "name": "denvigd",
+  "version": "0.7.7",
+  "license": "MIT",
+  "description": "Background daemon that keeps denvig project state in memory for fast lookups",
+  "type": "module",
+  "bin": {
+    "denvigd": "./dist/denvigd.cjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && rolldown -c && chmod +x dist/denvigd.cjs",
+    "check-types": "tsc --noEmit",
+    "test": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts'",
+    "test:ci": "node --test --conditions=denvig-source --test-skip-pattern='node_modules' 'src/**/*.test.ts' --reporter=default"
+  },
+  "devDependencies": {
+    "@denvig/sdk": "workspace:*",
+    "@denvig/tsconfig": "workspace:*"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcqualie/denvig.git",
+    "directory": "packages/denvigd"
+  },
+  "keywords": [
+    "daemon",
+    "developer-tools",
+    "denvig"
+  ]
+}

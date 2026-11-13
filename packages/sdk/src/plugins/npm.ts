@@ -5,6 +5,7 @@ import type { Worktree } from '../lib/project/worktree.ts'
 
 const plugin = definePlugin({
   name: 'npm',
+  watchFiles: ['package.json', 'package-lock.json'],
 
   actions: async (project: Worktree) => {
     const rootFiles = project.rootFiles
