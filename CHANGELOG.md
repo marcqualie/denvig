@@ -6,6 +6,10 @@
 
 - `http.host` service option sets the address the gateway proxies to (eg. `::1` for Astro and Vite dev servers that only listen on IPv6)
 
+### Changed
+
+- Updated 4 minor dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts, turbo)
+
 ### Fixed
 
 - Random port allocation no longer picks ports already bound to localhost by other processes
