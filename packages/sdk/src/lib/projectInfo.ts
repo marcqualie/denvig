@@ -1,4 +1,4 @@
-import launchctl, { type LaunchctlListItem } from './services/launchctl.ts'
+import serviceBackend, { type ServiceListItem } from './services/backend.ts'
 import { ServiceManager } from './services/manager.ts'
 
 import type { ProjectConfigSchema } from '../schemas/config.ts'
@@ -22,11 +22,17 @@ export type ProjectInfo = {
 
 export type GetProjectInfoOptions = {
   /**
-   * Pre-fetched launchctl list to avoid repeated shell calls
+   * Pre-fetched service manager list to avoid repeated shell calls
    */
-  launchctlList?: LaunchctlListItem[]
+  serviceList?: ServiceListItem[]
   /**
-   * Include service status in the response (requires launchctl calls)
+   * Pre-fetched launchctl list to avoid repeated shell calls
+   *
+   * @deprecated Use `serviceList`, which also covers systemd on Linux.
+   */
+  launchctlList?: ServiceListItem[]
+  /**
+   * Include service status in the response (requires service manager calls)
    */
   includeServiceStatus?: boolean
 }
@@ -54,16 +60,18 @@ export const getProjectInfo = async (
     const serviceNames = Object.keys(services)
 
     if (serviceNames.length > 0) {
-      // Use provided launchctl list or fetch it
-      const launchctlList =
-        options?.launchctlList ?? (await launchctl.list('denvig.'))
+      // Use provided service list or fetch it
+      const serviceList =
+        options?.serviceList ??
+        options?.launchctlList ??
+        (await serviceBackend.list('denvig.'))
 
       const manager = new ServiceManager(active)
       let hasRunningService = false
 
       for (const serviceName of serviceNames) {
         const response = await manager.getServiceResponse(serviceName, {
-          launchctlList,
+          serviceList,
         })
         if (response?.status === 'running') {
           hasRunningService = true

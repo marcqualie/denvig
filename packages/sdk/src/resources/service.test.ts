@@ -1,12 +1,12 @@
 /**
- * biome-ignore-all lint/suspicious/noExplicitAny: launchctl methods are overridden for mocking
+ * biome-ignore-all lint/suspicious/noExplicitAny: service backend methods are overridden for mocking
  */
 import { ok, strictEqual } from 'node:assert'
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
-import launchctl from '../lib/services/launchctl.ts'
+import serviceBackend from '../lib/services/backend.ts'
 import { getGatewayRoute, setGatewayRoute } from '../lib/services/state.ts'
 import { createMockProject } from '../test/mock.ts'
 
@@ -51,12 +51,12 @@ describe('DenvigService', () => {
       } as any,
     })
 
-    t.mock.method(launchctl, 'print', async () => null)
-    t.mock.method(launchctl, 'enable', async () => ({
+    t.mock.method(serviceBackend, 'print', async () => null)
+    t.mock.method(serviceBackend, 'enable', async () => ({
       success: true,
       output: '',
     }))
-    t.mock.method(launchctl, 'bootstrap', async () => ({
+    t.mock.method(serviceBackend, 'bootstrap', async () => ({
       success: true,
       output: '',
     }))

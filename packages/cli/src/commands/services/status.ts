@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 import { pathExists } from '@denvig/sdk/fs'
-import { getDenvigNginxConfPath } from '@denvig/sdk/internal'
+import { getDenvigNginxConfPath, serviceBackend } from '@denvig/sdk/internal'
 import { z } from 'zod'
 
 import { Command } from '../../lib/command.ts'
@@ -120,9 +120,10 @@ export const servicesStatusCommand = new Command({
     console.log(`CWD:     ${response.cwd.replace(homedir(), '~')}`)
     console.log(`Logs:    ${response.logPath.replace(homedir(), '~')}`)
 
-    const plistPath = manager.getPlistPath(serviceName)
-    if (await pathExists(plistPath)) {
-      console.log(`Plist:   ${plistPath.replace(homedir(), '~')}`)
+    const configPath = manager.getServiceConfigPath(serviceName)
+    if (await pathExists(configPath)) {
+      const label = `${serviceBackend.configLabel()}:`.padEnd(9)
+      console.log(`${label}${configPath.replace(homedir(), '~')}`)
     }
 
     // Show the combined nginx config path if the service has a domain

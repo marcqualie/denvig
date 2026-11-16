@@ -4,7 +4,7 @@ import { formatGatewayService } from '../../lib/formatters/gateway-service.ts'
 export const gatewayConfigureCommand = new Command({
   name: 'gateway:configure',
   description:
-    'Reconcile launchctl with ~/.denvig/state.json and rebuild all nginx configs',
+    'Reconcile launchd/systemd services with ~/.denvig/state.json and rebuild all nginx configs',
   usage: 'gateway configure',
   example: 'gateway configure',
   args: [],

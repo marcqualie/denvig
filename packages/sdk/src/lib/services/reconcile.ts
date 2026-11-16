@@ -1,10 +1,8 @@
-import { unlink } from 'node:fs/promises'
-
 import { configureGateway } from '../gateway/configure.ts'
 import { resolveProjectCheckouts } from '../projects.ts'
+import serviceBackend from './backend.ts'
 import { isProcessAlive } from './foreground.ts'
 import { createGlobalProject } from './global.ts'
-import launchctl from './launchctl.ts'
 import { ServiceManager, type ServiceManagerProject } from './manager.ts'
 import {
   markServiceStopped,
@@ -49,7 +47,7 @@ const LABEL_PREFIX = 'denvig.'
 export const CONFIG_CHANGED_REASON = 'config changed since last bootstrap'
 
 /**
- * Parse a launchctl label of the form `denvig.{projectId}.{serviceName}`.
+ * Parse a service label of the form `denvig.{projectId}.{serviceName}`.
  * Service names can contain dots, so the project ID is the first segment
  * after `denvig.` (project IDs are sha1 hashes — hex only).
  */
@@ -102,20 +100,20 @@ const projectFromStateEntry = (
 }
 
 /**
- * Reconcile actual launchctl state with the desired state recorded in
+ * Reconcile actual service manager state (launchd or systemd) with the desired state recorded in
  * `~/.denvig/state.json`.
  *
  * Categories of action:
  * 0. A service whose recorded checkout no longer resolves to a real
- *    project (a deleted worktree) is orphaned → bootout it, drop its plist
+ *    project (a deleted worktree) is orphaned → bootout it, drop its config
  *    and remove its state and gateway routes so the project that
  *    legitimately owns its domain can reclaim it.
- * 1. State says running, launchctl agrees, plist matches → no-op.
- * 2. State says running, but launchctl is missing the service or the
- *    plist on disk differs from what the snapshot would produce → call
- *    startService (idempotent: it only re-bootstraps when the plist
+ * 1. State says running, the service manager agrees, config matches → no-op.
+ * 2. State says running, but the service manager is missing the service or
+ *    the config on disk differs from what the snapshot would produce → call
+ *    startService (idempotent: it only re-bootstraps when the config
  *    content actually changed).
- * 3. launchctl has a `denvig.*` service that state doesn't know about,
+ * 3. The service manager has a `denvig.*` service that state doesn't know about,
  *    or marks as `desiredStatus: stopped` → bootout it.
  *
  * Services attached to a terminal via `services run` are owned by that
@@ -124,17 +122,17 @@ const projectFromStateEntry = (
  */
 export const reconcileServices = async (): Promise<ReconcileResult> => {
   const state = await readState()
-  const launchctlEntries = await launchctl.list(LABEL_PREFIX)
+  const serviceEntries = await serviceBackend.list(LABEL_PREFIX)
   const result: ReconcileResult = { actions: [], errors: [] }
 
-  // Index launchctl entries by label for quick lookup.
-  const launchctlByLabel = new Map<
+  // Index service manager entries by label for quick lookup.
+  const serviceByLabel = new Map<
     string,
     { projectId: string; serviceName: string }
   >()
-  for (const item of launchctlEntries) {
+  for (const item of serviceEntries) {
     const parsed = parseLabel(item.label)
-    if (parsed) launchctlByLabel.set(item.label, parsed)
+    if (parsed) serviceByLabel.set(item.label, parsed)
   }
 
   // Labels we shouldn't bootout in pass 2 — either because we've launched
@@ -142,7 +140,7 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
   // them yet due to a missing snapshot).
   const protectedLabels = new Set<string>()
 
-  // Helper: derive the launchctl label from a serviceStateKey
+  // Helper: derive the service label from a serviceStateKey
   // (`id:<projectId>:<serviceName>`). Used when we can't construct a full
   // ServiceManager from the state entry (legacy entry without snapshot).
   const labelFromKey = (key: string): string | null => {
@@ -171,16 +169,12 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
 
     routesChanged = true
     const project = projectFromStateEntry(entry)
-    let label: string | null
-    if (project) {
-      const manager = new ServiceManager(project)
-      label = manager.getServiceLabel(entry.serviceName)
-      await unlink(manager.getPlistPath(entry.serviceName)).catch(() => {})
-    } else {
-      label = labelFromKey(key)
-    }
+    const label = project
+      ? new ServiceManager(project).getServiceLabel(entry.serviceName)
+      : labelFromKey(key)
     if (label) {
-      await launchctl.bootout(label)
+      await serviceBackend.bootout(label)
+      await serviceBackend.uninstall([label])
       // Already handled — keep pass 2 from booting the stale label again.
       protectedLabels.add(label)
     }
@@ -264,7 +258,7 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
         continue
       }
       const configChanged = !!start.configDiff && start.configDiff.length > 0
-      if (launchctlByLabel.has(label)) {
+      if (serviceByLabel.has(label)) {
         // The service was already bootstrapped. Only report a restart when the
         // rendered plist actually changed — otherwise the service was left
         // running untouched. Without this guard a running service is reported
@@ -304,10 +298,10 @@ export const reconcileServices = async (): Promise<ReconcileResult> => {
     }
   }
 
-  // Pass 2: bootout any launchctl entries that state doesn't claim.
-  for (const item of launchctlEntries) {
+  // Pass 2: bootout any service manager entries that state doesn't claim.
+  for (const item of serviceEntries) {
     if (protectedLabels.has(item.label)) continue
-    const bootoutResult = await launchctl.bootout(item.label)
+    const bootoutResult = await serviceBackend.bootout(item.label)
     const parsed = parseLabel(item.label)
     const slug = parsed?.projectId.slice(0, 8) ?? 'unknown'
     const serviceName = parsed?.serviceName ?? item.label

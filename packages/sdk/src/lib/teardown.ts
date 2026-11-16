@@ -2,7 +2,7 @@ import { readdir, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
-import launchctl from './services/launchctl.ts'
+import serviceBackend from './services/backend.ts'
 import { ServiceManager } from './services/manager.ts'
 
 import type { DenvigProject } from './project.ts'
@@ -31,12 +31,12 @@ export async function teardownGlobal(
   const results: ServiceResult[] = []
   const successfullyRemovedLabels: string[] = []
 
-  // Get all denvig services from launchctl
-  const allServices = await launchctl.list('denvig.')
+  // Get all denvig services from the service manager
+  const allServices = await serviceBackend.list('denvig.')
 
   // Bootout all services
   for (const service of allServices) {
-    const bootoutResult = await launchctl.bootout(service.label)
+    const bootoutResult = await serviceBackend.bootout(service.label)
 
     if (!bootoutResult.success) {
       results.push({
@@ -49,30 +49,15 @@ export async function teardownGlobal(
       results.push({
         name: service.label,
         success: true,
-        message: 'Service removed from launchctl',
+        message: `Service removed from ${serviceBackend.kind()}`,
       })
     }
   }
 
-  // Remove all denvig plist files from LaunchAgents directory
-  const launchAgentsDir = resolve(homedir(), 'Library', 'LaunchAgents')
-  try {
-    const files = await readdir(launchAgentsDir)
-    const denvigPlists = files.filter(
-      (f) => f.startsWith('denvig.') && f.endsWith('.plist'),
-    )
-    await Promise.all(
-      denvigPlists.map(async (file) => {
-        try {
-          await unlink(resolve(launchAgentsDir, file))
-        } catch {
-          // Ignore errors removing individual plist files
-        }
-      }),
-    )
-  } catch {
-    // Ignore errors reading directory (may not exist)
-  }
+  // Remove all denvig config files (launchd plists or systemd units)
+  await serviceBackend.uninstall(
+    await serviceBackend.installedLabels('denvig.'),
+  )
 
   // Optionally remove all denvig log files
   if (options?.removeLogs) {

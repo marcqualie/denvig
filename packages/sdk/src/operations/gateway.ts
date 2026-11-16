@@ -155,7 +155,7 @@ export type ConfigureGatewayOutput = {
 }
 
 /**
- * Reconcile launchctl with the recorded state, then rebuild every nginx config
+ * Reconcile the OS service manager with the recorded state, then rebuild every nginx config
  * from the runtime gateway routes. Shared by `denvig gateway configure` and
  * `sdk.gateway.configure()`.
  */
