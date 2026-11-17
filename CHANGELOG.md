@@ -15,7 +15,7 @@
 - Random port allocation no longer picks ports already bound to localhost by other processes
 - `deps outdated` respects pnpm `minimumReleaseAgeExclude` when `minimumReleaseAge` isn't set, including version-pinned and wildcard entries
 - Dependency commands no longer hang for minutes when a registry request stalls
-- Yarn projects only read packages listed in `workspaces`, so nested git worktrees no longer slow down dependency commands or leak into results
+- Yarn dependency commands no longer slow down or report extra packages when the project contains nested git worktrees
 
 ## [0.7.7] - 2026-11-06
 

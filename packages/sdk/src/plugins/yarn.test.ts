@@ -56,7 +56,7 @@ describe('yarn plugin', () => {
       rmSync(root, { recursive: true, force: true })
     })
 
-    it('should read workspace packages without scanning nested worktrees', async () => {
+    it('should only read the root package.json', async () => {
       const deps = await yarnPlugin.dependencies?.(
         createMockProjectFromPath(root),
       )
@@ -66,7 +66,7 @@ describe('yarn plugin', () => {
           ?.versions.map((version) => version.source)
 
       deepStrictEqual(sources('lodash'), ['.#dependencies'])
-      deepStrictEqual(sources('react'), ['packages/web#dependencies'])
+      strictEqual(sources('react'), undefined)
       strictEqual(sources('left-pad'), undefined)
     })
   })

@@ -12,10 +12,6 @@ import { readPackageJson } from '../lib/packageJson.ts'
 import { parseYarnLockContent } from '../lib/parsers/yarn.ts'
 import { definePlugin } from '../lib/plugin.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
-import {
-  findWorkspacePackageJsons,
-  workspacePatterns,
-} from '../lib/workspaces.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { Worktree } from '../lib/project/worktree.ts'
@@ -217,78 +213,51 @@ const plugin = definePlugin({
       }
     }
 
-    // Root package.json plus any packages matched by its `workspaces` globs
-    const rootPackageJson = await readPackageJson(project)
-    const packageJsonFiles = [
-      packageJsonPath,
-      ...(await findWorkspacePackageJsons(
-        project.path,
-        workspacePatterns(rootPackageJson),
-      )),
-    ]
+    // Only the root package.json is read. Walking the checkout for workspace
+    // manifests descends into nested git worktrees on large repos.
+    const packageJson = await readPackageJson(project)
 
-    // Process each package.json
-    for (const pkgJsonPath of packageJsonFiles) {
-      try {
-        const pkgContent = await readFile(pkgJsonPath, 'utf-8')
-        const pkg = JSON.parse(pkgContent) as {
-          dependencies?: Record<string, string>
-          devDependencies?: Record<string, string>
-        }
+    // Helper to process a dependency group
+    const processDeps = (
+      deps: Record<string, string> | undefined,
+      section: 'dependencies' | 'devDependencies',
+    ) => {
+      if (!deps) return
 
-        // Determine base source path (relative to project root)
-        let basePath = '.'
-        if (pkgJsonPath !== packageJsonPath) {
-          basePath = pkgJsonPath
-            .replace(`${project.path}/`, '')
-            .replace('/package.json', '')
-        }
+      for (const [name, specifier] of Object.entries(deps)) {
+        directDependencies.add(name)
 
-        // Helper to process a dependency group
-        const processDeps = (
-          deps: Record<string, string> | undefined,
-          section: 'dependencies' | 'devDependencies',
-        ) => {
-          if (!deps) return
+        // Find resolved version from lockfile
+        const versionMap = resolvedVersionsByName.get(name)
+        let resolvedVersion = specifier
 
-          for (const [name, specifier] of Object.entries(deps)) {
-            directDependencies.add(name)
-
-            // Find resolved version from lockfile
-            const versionMap = resolvedVersionsByName.get(name)
-            let resolvedVersion = specifier
-
-            if (versionMap) {
-              // Try exact specifier match first
-              const exactMatch = versionMap.get(specifier)
-              if (exactMatch) {
-                resolvedVersion = exactMatch
-              } else {
-                // Fall back to first available resolved version
-                const firstVersion = versionMap.values().next().value
-                if (firstVersion) {
-                  resolvedVersion = firstVersion
-                }
-              }
+        if (versionMap) {
+          // Try exact specifier match first
+          const exactMatch = versionMap.get(specifier)
+          if (exactMatch) {
+            resolvedVersion = exactMatch
+          } else {
+            // Fall back to first available resolved version
+            const firstVersion = versionMap.values().next().value
+            if (firstVersion) {
+              resolvedVersion = firstVersion
             }
-
-            addDependency(
-              `npm:${name}`,
-              name,
-              'npm',
-              resolvedVersion,
-              `${basePath}#${section}`,
-              specifier,
-            )
           }
         }
 
-        processDeps(pkg.dependencies, 'dependencies')
-        processDeps(pkg.devDependencies, 'devDependencies')
-      } catch {
-        // Skip invalid package.json files
+        addDependency(
+          `npm:${name}`,
+          name,
+          'npm',
+          resolvedVersion,
+          `.#${section}`,
+          specifier,
+        )
       }
     }
+
+    processDeps(packageJson?.dependencies, 'dependencies')
+    processDeps(packageJson?.devDependencies, 'devDependencies')
 
     // Add transitive dependencies
     if (isBerry) {
