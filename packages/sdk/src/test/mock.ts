@@ -82,22 +82,5 @@ export const createMockProjectFromPath = (projectPath: string): Worktree => {
   return {
     path: projectPath,
     rootFiles: fs.readdirSync(projectPath),
-    async findFilesByName(fileName: string): Promise<string[]> {
-      const results: string[] = []
-      const walk = (dir: string) => {
-        const files = fs.readdirSync(dir, { withFileTypes: true })
-        for (const file of files) {
-          if (file.isDirectory()) {
-            if (file.name !== 'node_modules') {
-              walk(`${dir}/${file.name}`)
-            }
-          } else if (file.name === fileName) {
-            results.push(`${dir}/${file.name}`)
-          }
-        }
-      }
-      walk(projectPath)
-      return results
-    },
   } as unknown as Worktree
 }

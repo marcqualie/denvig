@@ -183,27 +183,4 @@ export class Worktree {
   get services() {
     return this.config.services || {}
   }
-
-  /**
-   * Find all files recursively with a given name in this checkout.
-   */
-  async findFilesByName(fileName: string): Promise<string[]> {
-    const results: string[] = []
-
-    const walk = async (dir: string) => {
-      const files = await readdir(dir, { withFileTypes: true })
-      for (const file of files) {
-        if (file.isDirectory()) {
-          if (file.name !== 'node_modules') {
-            await walk(`${dir}/${file.name}`)
-          }
-        } else if (file.name === fileName) {
-          results.push(`${dir}/${file.name}`)
-        }
-      }
-    }
-
-    await walk(this.path)
-    return results
-  }
 }
