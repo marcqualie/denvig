@@ -17,6 +17,11 @@ describe('deps lookup', () => {
       if (req.url === '/found') {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ latest: '1.0.0' }))
+      } else if (req.url === '/stalled-headers') {
+        // Never respond.
+      } else if (req.url === '/stalled-body') {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.write('{"latest":')
       } else {
         res.writeHead(404)
         res.end()
@@ -29,6 +34,7 @@ describe('deps lookup', () => {
   })
 
   after(() => {
+    server.closeAllConnections()
     server.close()
   })
 
@@ -40,6 +46,20 @@ describe('deps lookup', () => {
 
     it('should return null for non-2xx responses', async () => {
       assert.strictEqual(await fetchRegistryJson(`${baseUrl}/missing`), null)
+    })
+
+    it('should give up when the server never responds', async () => {
+      await assert.rejects(
+        fetchRegistryJson(`${baseUrl}/stalled-headers`, undefined, 50),
+        { name: 'TimeoutError' },
+      )
+    })
+
+    it('should give up when the response body stalls', async () => {
+      await assert.rejects(
+        fetchRegistryJson(`${baseUrl}/stalled-body`, undefined, 50),
+        { name: 'TimeoutError' },
+      )
     })
   })
 
