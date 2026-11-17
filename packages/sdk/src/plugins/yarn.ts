@@ -12,6 +12,10 @@ import { readPackageJson } from '../lib/packageJson.ts'
 import { parseYarnLockContent } from '../lib/parsers/yarn.ts'
 import { definePlugin } from '../lib/plugin.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
+import {
+  findWorkspacePackageJsons,
+  workspacePatterns,
+} from '../lib/workspaces.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { Worktree } from '../lib/project/worktree.ts'
@@ -213,10 +217,15 @@ const plugin = definePlugin({
       }
     }
 
-    // Find all package.json files (root + workspaces)
-    const packageJsonFiles = [packageJsonPath]
-    const workspacePackageJsons = await project.findFilesByName('package.json')
-    packageJsonFiles.push(...workspacePackageJsons)
+    // Root package.json plus any packages matched by its `workspaces` globs
+    const rootPackageJson = await readPackageJson(project)
+    const packageJsonFiles = [
+      packageJsonPath,
+      ...(await findWorkspacePackageJsons(
+        project.path,
+        workspacePatterns(rootPackageJson),
+      )),
+    ]
 
     // Process each package.json
     for (const pkgJsonPath of packageJsonFiles) {
