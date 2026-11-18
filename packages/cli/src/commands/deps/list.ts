@@ -78,6 +78,7 @@ export const depsListCommand = new Command({
           url: 'https://github.com/marcqualie/denvig',
         },
         scanned: new Date().toISOString(),
+        manifestDirs: await project.dependencies.manifestDirs(),
       })
       console.log(JSON.stringify(snapshot))
       return { success: true, message: 'Dependency snapshot generated.' }

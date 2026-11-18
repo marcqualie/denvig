@@ -1,8 +1,17 @@
 import { z } from 'zod'
 
+import { prefixSource } from './deps/tree.ts'
 import plugins from './plugins.ts'
 
-import type { Worktree } from './project/worktree.ts'
+import type { ManifestScope } from './project/manifests.ts'
+
+/**
+ * A manifest directory (relative to the checkout root) and its scope.
+ */
+export type ScopedManifest = {
+  dir: string
+  scope: ManifestScope
+}
 
 // Re-export dependency types from shared types file
 export type {
@@ -94,18 +103,40 @@ export const dedupeDependencies = (
   return Array.from(depsMap.values())
 }
 
+/**
+ * Prefix every version source with the manifest directory it was read from,
+ * so sources are relative to the project root.
+ */
+export const prefixDependencySources = <T extends ProjectDependencySchema>(
+  dir: string,
+  dependencies: T[],
+): T[] => {
+  if (dir === '.') return dependencies
+  return dependencies.map((dep) => ({
+    ...dep,
+    versions: dep.versions.map((version) => ({
+      ...version,
+      source: prefixSource(dir, version.source),
+    })),
+  }))
+}
+
+/**
+ * Detect dependencies across every manifest directory of a checkout.
+ */
 export const detectDependencies = async (
-  project: Worktree,
+  scopes: ScopedManifest[],
 ): Promise<ProjectDependencySchema[]> => {
-  // Run all plugin dependency detections in parallel
-  const pluginResults = await Promise.all(
-    Object.values(plugins).map((plugin) =>
-      plugin.dependencies ? plugin.dependencies(project) : Promise.resolve([]),
+  const results = await Promise.all(
+    scopes.flatMap(({ dir, scope }) =>
+      Object.values(plugins).map(async (plugin) =>
+        prefixDependencySources(
+          dir,
+          (await plugin.dependencies?.(scope)) ?? [],
+        ),
+      ),
     ),
   )
 
-  // Flatten all results into a single array
-  const allDependencies = pluginResults.flat()
-
-  return dedupeDependencies(allDependencies)
+  return dedupeDependencies(results.flat())
 }

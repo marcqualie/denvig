@@ -3,6 +3,7 @@ import { uvOutdated } from '../lib/uv/outdated.ts'
 import { parseUvDependencies } from '../lib/uv/parse.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
+import type { ManifestScope } from '../lib/project/manifests.ts'
 import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
@@ -29,7 +30,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: Worktree,
+    project: ManifestScope,
   ): Promise<ProjectDependencySchema[]> => {
     const hasPyProject = project.rootFiles.includes('pyproject.toml')
     const hasUvLock = project.rootFiles.includes('uv.lock')

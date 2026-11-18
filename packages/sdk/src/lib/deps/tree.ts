@@ -2,16 +2,11 @@ import type { ProjectDependencySchema } from '../dependencies.ts'
 import type { TreeNode } from '../formatters/tree-node.ts'
 
 /**
- * Lockfile source prefixes for different package managers.
+ * Matches a transitive dependency source: an optional directory, the lockfile
+ * name, then the parent package reference (`app/uv.lock:django@4.2.0`).
  */
-const LOCKFILE_PREFIXES = [
-  'pnpm-lock.yaml:',
-  'package-lock.json:',
-  'yarn.lock:',
-  'Gemfile.lock:',
-  'uv.lock:',
-  'deno.lock:',
-]
+const LOCKFILE_SOURCE =
+  /^((?:.+?\/)?(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock|Gemfile\.lock|uv\.lock|deno\.lock)):(.*)$/s
 
 /**
  * A dependency entry with tree metadata for rendering.
@@ -34,29 +29,52 @@ export type TreeDependencyEntry = {
  *
  * @example
  * parseParentFromSource('pnpm-lock.yaml:tsup@8.5.0') // { name: 'tsup', version: '8.5.0' }
+ * parseParentFromSource('app/uv.lock:django@4.2.0') // { name: 'django', version: '4.2.0' }
  * parseParentFromSource('.#dependencies') // null
  */
 export const parseParentFromSource = (
   source: string,
 ): { name: string; version: string } | null => {
-  for (const prefix of LOCKFILE_PREFIXES) {
-    if (source.startsWith(prefix)) {
-      const ref = source.slice(prefix.length)
-      // Parse "package@version", "@scope/package@version", or with peer deps
-      const match = ref.match(/^((?:@[^@/]+\/)?[^@]+)@([^(@]+)/)
-      if (match) {
-        return { name: match[1], version: match[2] }
-      }
-    }
-  }
-  return null
+  const ref = source.match(LOCKFILE_SOURCE)?.[2]
+  if (ref === undefined) return null
+  // Parse "package@version", "@scope/package@version", or with peer deps
+  const match = ref.match(/^((?:@[^@/]+\/)?[^@]+)@([^(@]+)/)
+  return match ? { name: match[1], version: match[2] } : null
+}
+
+/**
+ * Read the lockfile path (relative to the project root) from a transitive
+ * dependency source. Returns null for any other source.
+ *
+ * @example
+ * lockfileFromSource('app/uv.lock:django@4.2.0') // 'app/uv.lock'
+ */
+export const lockfileFromSource = (source: string): string | null => {
+  return source.match(LOCKFILE_SOURCE)?.[1] ?? null
 }
 
 /**
  * Check if a source is from a lockfile (transitive dependency).
  */
 export const isLockfileSource = (source: string): boolean => {
-  return LOCKFILE_PREFIXES.some((prefix) => source.startsWith(prefix))
+  return LOCKFILE_SOURCE.test(source)
+}
+
+/**
+ * Prefix a dependency source with the directory its manifest lives in, so
+ * every source is relative to the project root.
+ *
+ * @example
+ * prefixSource('app', '.#dependencies') // 'app#dependencies'
+ * prefixSource('app', 'uv.lock:django@4.2.0') // 'app/uv.lock:django@4.2.0'
+ * prefixSource('.', 'uv.lock:django@4.2.0') // 'uv.lock:django@4.2.0'
+ */
+export const prefixSource = (dir: string, source: string): string => {
+  if (dir === '.' || dir === '') return source
+  if (source.startsWith('.#') || source.startsWith('.$')) {
+    return `${dir}${source.slice(1)}`
+  }
+  return `${dir}/${source}`
 }
 
 /**

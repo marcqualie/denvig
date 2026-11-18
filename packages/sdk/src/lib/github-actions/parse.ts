@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
-import type { Worktree } from '../project/worktree.ts'
+import type { ManifestScope } from '../project/manifests.ts'
 
 export type ActionReference = {
   /**
@@ -102,7 +102,7 @@ export const findWorkflowFiles = async (projectPath: string) => {
  * version is the specifier until the outdated check resolves floating tags.
  */
 export const parseGitHubActionsDependencies = async (
-  project: Worktree,
+  project: ManifestScope,
 ): Promise<ProjectDependencySchema[]> => {
   const files = await findWorkflowFiles(project.path)
   const dependencies = new Map<string, ProjectDependencySchema>()

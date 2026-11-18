@@ -2,6 +2,7 @@ import type {
   OutdatedDependencySchema,
   ProjectDependencySchema,
 } from './dependencies'
+import type { ManifestScope } from './project/manifests.ts'
 import type { Worktree } from './project/worktree'
 
 /**
@@ -56,14 +57,14 @@ type PluginOptions = {
 
   actions: (project: Worktree) => Promise<Record<string, string[]>>
 
-  dependencies?: (project: Worktree) => Promise<ProjectDependencySchema[]>
+  dependencies?: (project: ManifestScope) => Promise<ProjectDependencySchema[]>
 
   /**
    * Get outdated dependencies for the project.
    * Returns an array of outdated dependencies with version info.
    */
   outdatedDependencies?: (
-    project: Worktree,
+    project: ManifestScope,
     options?: OutdatedDependenciesOptions,
   ) => Promise<OutdatedDependencySchema[]>
 
@@ -72,7 +73,7 @@ type PluginOptions = {
    * Returns the analysis result, and applies changes if dryRun is false.
    */
   deduplicateDependencies?: (
-    project: Worktree,
+    project: ManifestScope,
     options?: DeduplicateDependenciesOptions,
   ) => Promise<DeduplicateResult | null>
 }

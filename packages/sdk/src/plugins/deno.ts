@@ -8,6 +8,7 @@ import { definePlugin } from '../lib/plugin.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
+import type { ManifestScope } from '../lib/project/manifests.ts'
 import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
@@ -155,7 +156,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: Worktree,
+    project: ManifestScope,
   ): Promise<ProjectDependencySchema[]> => {
     if (!(await pathExists(`${project.path}/deno.lock`))) {
       return []
@@ -286,7 +287,7 @@ const plugin = definePlugin({
     return result
   },
 
-  outdatedDependencies: async (project: Worktree, options) => {
+  outdatedDependencies: async (project: ManifestScope, options) => {
     if (!(await pathExists(`${project.path}/deno.lock`))) {
       return []
     }

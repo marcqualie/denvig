@@ -8,8 +8,12 @@
 - Services run on Linux using systemd user units, still driven by `~/.denvig/state.json`
 - Gateway on Linux runs its own nginx under `~/.denvig/nginx` as a systemd user service, with setup hints when ports 80/443 aren't available
 - `deps` commands support npm projects using `package-lock.json`
+- `deps` commands find manifests in subdirectories, so projects without root manifests still report dependencies
 
 ### Changed
+
+- Dependency sources show their path from the project root (eg. `app/uv.lock`)
+- Dependabot snapshots report a separate manifest for each lockfile
 
 - Updated 4 minor dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts, turbo)
 - Updated 1 patch dev dependency (@biomejs/biome)

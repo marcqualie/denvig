@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 
-import type { Worktree } from './project/worktree'
+import type { ManifestScope } from './project/manifests.ts'
 
 export type PackageJson = {
   name: string
@@ -13,7 +13,7 @@ export type PackageJson = {
  * Read the contents of a package.json file in a given project.
  */
 export const readPackageJson = async (
-  project: Worktree,
+  project: ManifestScope,
 ): Promise<PackageJson | null> => {
   const packageJsonPath = `${project.path}/package.json`
   try {

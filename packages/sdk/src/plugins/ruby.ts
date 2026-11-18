@@ -4,6 +4,7 @@ import { parseRubyDependencies } from '../lib/rubygems/parse.ts'
 import { pathExists } from '../lib/safeReadFile.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
+import type { ManifestScope } from '../lib/project/manifests.ts'
 import type { Worktree } from '../lib/project/worktree.ts'
 
 // Cache for parsed dependencies by project path
@@ -48,7 +49,7 @@ const plugin = definePlugin({
   },
 
   dependencies: async (
-    project: Worktree,
+    project: ManifestScope,
   ): Promise<ProjectDependencySchema[]> => {
     const hasGemfile = project.rootFiles.includes('Gemfile')
     if (!hasGemfile) {
