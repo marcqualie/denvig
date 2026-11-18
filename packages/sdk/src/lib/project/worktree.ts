@@ -7,8 +7,11 @@ import {
   detectDependencies,
   type OutdatedDependencySchema,
   type ProjectDependencySchema,
+  prefixDependencySources,
+  type ScopedManifest,
 } from '../dependencies.ts'
 import plugins from '../plugins.ts'
+import { detectManifestDirs, manifestScope } from './manifests.ts'
 import { projectIdentity } from './refs.ts'
 
 import type { ProjectConfigSchema } from '../../schemas/config.ts'
@@ -54,6 +57,7 @@ export class Worktree {
   readonly gitProvider: GitProviderMatch | null
   config: ConfigWithSourcePaths<ProjectConfigSchema>
   private _rootFilesCache: string[] | null = null
+  private _manifestDirsCache: Promise<string[]> | null = null
 
   private constructor(
     path: string,
@@ -127,28 +131,50 @@ export class Worktree {
     return this.packageManagers[0] || null
   }
 
+  /**
+   * Directories (relative to this checkout) that hold their own dependency
+   * manifests. Always includes the root (`.`).
+   */
+  manifestDirs(): Promise<string[]> {
+    this._manifestDirsCache ??= detectManifestDirs(this.path)
+    return this._manifestDirsCache
+  }
+
+  private async manifestScopes(): Promise<ScopedManifest[]> {
+    const dirs = await this.manifestDirs()
+    return Promise.all(
+      dirs.map(async (dir) => ({
+        dir,
+        scope: dir === '.' ? this : await manifestScope(this.path, dir),
+      })),
+    )
+  }
+
   async dependencies(): Promise<ProjectDependencySchema[]> {
-    return await detectDependencies(this)
+    return await detectDependencies(await this.manifestScopes())
   }
 
   async outdatedDependencies(
     options?: OutdatedDependenciesOptions,
   ): Promise<OutdatedDependencySchema[]> {
+    const scopes = await this.manifestScopes()
     const pluginResults = await Promise.all(
-      Object.values(plugins).map(async (plugin) => {
-        if (!plugin.outdatedDependencies) return []
-        const start = performance.now()
-        const outdated = await plugin.outdatedDependencies(this, options)
-        appendTraceEvent({
-          group: 'denvig',
-          scope: 'deps',
-          name: `plugin ${plugin.name}`,
-          category: 'plugin',
-          start,
-          args: { path: this.path, outdated: outdated.length },
-        })
-        return outdated
-      }),
+      scopes.flatMap(({ dir, scope }) =>
+        Object.values(plugins).map(async (plugin) => {
+          if (!plugin.outdatedDependencies) return []
+          const start = performance.now()
+          const outdated = await plugin.outdatedDependencies(scope, options)
+          appendTraceEvent({
+            group: 'denvig',
+            scope: 'deps',
+            name: `plugin ${plugin.name}`,
+            category: 'plugin',
+            start,
+            args: { path: scope.path, outdated: outdated.length },
+          })
+          return prefixDependencySources(dir, outdated)
+        }),
+      ),
     )
 
     return pluginResults.flat()
@@ -157,11 +183,16 @@ export class Worktree {
   async deduplicateDependencies(
     options?: DeduplicateDependenciesOptions,
   ): Promise<DeduplicateResult[]> {
+    const scopes = await this.manifestScopes()
     const results = await Promise.all(
-      Object.values(plugins).map((plugin) =>
-        plugin.deduplicateDependencies
-          ? plugin.deduplicateDependencies(this, options)
-          : Promise.resolve(null),
+      scopes.flatMap(({ dir, scope }) =>
+        Object.values(plugins).map(async (plugin) => {
+          const result = await plugin.deduplicateDependencies?.(scope, options)
+          if (!result) return null
+          return dir === '.'
+            ? result
+            : { ...result, ecosystem: `${dir}/${result.ecosystem}` }
+        }),
       ),
     )
 

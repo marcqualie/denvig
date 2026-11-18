@@ -1,4 +1,4 @@
-import { isLockfileSource, parseParentFromSource } from './tree.ts'
+import { lockfileFromSource, parseParentFromSource } from './tree.ts'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
 
@@ -69,6 +69,12 @@ export type BuildDependabotSnapshotInput = {
   context: DependabotSnapshotContext
   detector: { name: string; version: string; url: string }
   scanned: string
+  /**
+   * Directories (relative to the project root) holding their own dependency
+   * manifests. Used to place direct dependencies that have no lockfile.
+   * Defaults to the project root only.
+   */
+  manifestDirs?: string[]
 }
 
 /**
@@ -100,13 +106,15 @@ export const toPackageUrl = (
 }
 
 /**
- * Read the dependency group from a direct dependency source
+ * Read the directory and dependency group from a direct dependency source
  * (`apps/web#devDependencies`). Returns null for anything else.
  */
-const parseDirectSource = (source: string): { isDev: boolean } | null => {
-  const match = source.match(/#(dependencies|devDependencies)$/)
+const parseDirectSource = (
+  source: string,
+): { path: string; isDev: boolean } | null => {
+  const match = source.match(/^(.*)#(dependencies|devDependencies)$/)
   if (!match) return null
-  return { isDev: match[1] === 'devDependencies' }
+  return { path: match[1] || '.', isDev: match[2] === 'devDependencies' }
 }
 
 /**
@@ -119,27 +127,80 @@ const joinPath = (...parts: string[]): string =>
     .join('/')
 
 /**
+ * Directory of a manifest path relative to the project root (`.` for the
+ * root itself).
+ */
+const dirOf = (path: string): string => {
+  const index = path.lastIndexOf('/')
+  return index === -1 ? '.' : path.slice(0, index)
+}
+
+/**
+ * Check if `dir` is `path` or one of its parent directories.
+ */
+const containsPath = (dir: string, path: string): boolean =>
+  dir === '.' || path === dir || path.startsWith(`${dir}/`)
+
+/**
  * Build a GitHub dependency snapshot from the dependencies detected by the
- * plugins. Each ecosystem becomes a single manifest named after its lockfile,
- * so a resolved version shared across workspace packages is only reported
- * once.
+ * plugins. Each lockfile becomes a manifest, so a resolved version shared
+ * across workspace packages is only reported once while separate installs in
+ * subdirectories (eg. `app/uv.lock`) get their own manifest. Direct
+ * dependencies belong to the nearest lockfile at or above their directory,
+ * falling back to the manifest file of the nearest manifest directory.
  */
 export const buildDependabotSnapshot = ({
   dependencies,
   context,
   detector,
   scanned,
+  manifestDirs = ['.'],
 }: BuildDependabotSnapshotInput): DependabotSnapshot => {
-  const children = new Map<string, Set<string>>()
+  const lockfiles = new Map<string, Set<string>>()
+  for (const dep of dependencies) {
+    for (const version of dep.versions) {
+      const lockfile = lockfileFromSource(version.source)
+      if (!lockfile) continue
+      const set = lockfiles.get(dep.ecosystem) ?? new Set<string>()
+      set.add(lockfile)
+      lockfiles.set(dep.ecosystem, set)
+    }
+  }
+
+  /**
+   * Pick the deepest candidate directory that contains `path`.
+   */
+  const nearest = (candidates: Iterable<string>, path: string) => {
+    let match: string | null = null
+    for (const dir of candidates) {
+      if (containsPath(dir, path) && (!match || dir.length > match.length)) {
+        match = dir
+      }
+    }
+    return match
+  }
+
+  const manifestForDirectSource = (ecosystem: string, path: string): string => {
+    const ecosystemLockfiles = [...(lockfiles.get(ecosystem) ?? [])]
+    const lockfileDir = nearest(ecosystemLockfiles.map(dirOf), path)
+    const lockfile = ecosystemLockfiles.find((l) => dirOf(l) === lockfileDir)
+    if (lockfile) return lockfile
+    return joinPath(
+      nearest(manifestDirs, path) ?? '.',
+      MANIFEST_FILES[ecosystem],
+    )
+  }
+
+  const children = new Map<string, Map<string, Set<string>>>()
   const roots = new Map<string, { runtime: Set<string>; dev: Set<string> }>()
-  const lockfiles = new Map<string, string>()
 
   for (const dep of dependencies) {
     for (const version of dep.versions) {
       const purl = toPackageUrl(dep.ecosystem, dep.name, version.resolved)
       if (!purl) continue
 
-      if (isLockfileSource(version.source)) {
+      const lockfile = lockfileFromSource(version.source)
+      if (lockfile) {
         const parent = parseParentFromSource(version.source)
         if (!parent) continue
         const parentPurl = toPackageUrl(
@@ -148,50 +209,46 @@ export const buildDependabotSnapshot = ({
           parent.version,
         )
         if (!parentPurl) continue
-        lockfiles.set(
-          dep.ecosystem,
-          version.source.slice(0, version.source.indexOf(':')),
-        )
-        const set = children.get(parentPurl) ?? new Set<string>()
+        const graph = children.get(lockfile) ?? new Map<string, Set<string>>()
+        const set = graph.get(parentPurl) ?? new Set<string>()
         set.add(purl)
-        children.set(parentPurl, set)
+        graph.set(parentPurl, set)
+        children.set(lockfile, graph)
         continue
       }
 
       const direct = parseDirectSource(version.source)
       if (!direct) continue
-      const entry = roots.get(dep.ecosystem) ?? {
+      const manifest = manifestForDirectSource(dep.ecosystem, direct.path)
+      const entry = roots.get(manifest) ?? {
         runtime: new Set<string>(),
         dev: new Set<string>(),
       }
       entry[direct.isDev ? 'dev' : 'runtime'].add(purl)
-      roots.set(dep.ecosystem, entry)
+      roots.set(manifest, entry)
     }
-  }
-
-  const walk = (start: Iterable<string>): Set<string> => {
-    const seen = new Set<string>()
-    const stack = [...start]
-    while (stack.length > 0) {
-      const purl = stack.pop() as string
-      if (seen.has(purl)) continue
-      seen.add(purl)
-      for (const child of children.get(purl) ?? []) stack.push(child)
-    }
-    return seen
   }
 
   const manifests: Record<string, DependabotManifest> = {}
-  const entries = [...roots.entries()].map(([ecosystem, entry]) => ({
+  const entries = [...roots.entries()].map(([manifest, entry]) => ({
     ...entry,
-    manifestPath: joinPath(
-      context.pathPrefix,
-      lockfiles.get(ecosystem) ?? MANIFEST_FILES[ecosystem],
-    ),
+    graph: children.get(manifest) ?? new Map<string, Set<string>>(),
+    manifestPath: joinPath(context.pathPrefix, manifest),
   }))
   entries.sort((a, b) => a.manifestPath.localeCompare(b.manifestPath))
 
-  for (const { runtime, dev, manifestPath } of entries) {
+  for (const { runtime, dev, graph, manifestPath } of entries) {
+    const walk = (start: Iterable<string>): Set<string> => {
+      const seen = new Set<string>()
+      const stack = [...start]
+      while (stack.length > 0) {
+        const purl = stack.pop() as string
+        if (seen.has(purl)) continue
+        seen.add(purl)
+        for (const child of graph.get(purl) ?? []) stack.push(child)
+      }
+      return seen
+    }
     const runtimeReachable = walk(runtime)
     const allReachable = walk([...runtime, ...dev])
 
@@ -202,7 +259,7 @@ export const buildDependabotSnapshot = ({
         relationship:
           runtime.has(purl) || dev.has(purl) ? 'direct' : 'indirect',
         scope: runtimeReachable.has(purl) ? 'runtime' : 'development',
-        dependencies: [...(children.get(purl) ?? [])].sort(),
+        dependencies: [...(graph.get(purl) ?? [])].sort(),
       }
     }
 

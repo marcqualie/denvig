@@ -292,6 +292,12 @@ export class DenvigProject {
         listDependencies(this.internal.activeWorktree),
       ),
     /**
+     * Directories (relative to the active worktree) that hold their own
+     * dependency manifests. Always includes the root (`.`).
+     */
+    manifestDirs: (): Promise<string[]> =>
+      this.internal.activeWorktree.manifestDirs(),
+    /**
      * Build the dependency tree for the active worktree. Direct dependencies
      * are the roots; pass `depth` to walk transitive dependencies.
      */

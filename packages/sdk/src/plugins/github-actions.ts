@@ -3,7 +3,7 @@ import { parseGitHubActionsDependencies } from '../lib/github-actions/parse.ts'
 import { definePlugin } from '../lib/plugin.ts'
 
 import type { ProjectDependencySchema } from '../lib/dependencies.ts'
-import type { Worktree } from '../lib/project/worktree.ts'
+import type { ManifestScope } from '../lib/project/manifests.ts'
 
 // Cache for parsed dependencies by project path
 const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
@@ -14,7 +14,7 @@ const plugin = definePlugin({
   actions: async () => ({}),
 
   dependencies: async (
-    project: Worktree,
+    project: ManifestScope,
   ): Promise<ProjectDependencySchema[]> => {
     const cached = dependenciesCache.get(project.path)
     if (cached) return cached

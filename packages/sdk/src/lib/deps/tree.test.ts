@@ -1,7 +1,13 @@
 import { deepStrictEqual, strictEqual } from 'node:assert'
 import { describe, it } from 'node:test'
 
-import { buildReverseChain, parseParentFromSource } from './tree.ts'
+import {
+  buildReverseChain,
+  isLockfileSource,
+  lockfileFromSource,
+  parseParentFromSource,
+  prefixSource,
+} from './tree.ts'
 
 import type { ProjectDependencySchema } from '../dependencies.ts'
 
@@ -241,5 +247,43 @@ describe('buildReverseChain()', () => {
         },
       ],
     })
+  })
+})
+
+describe('prefixed sources', () => {
+  it('should parse lockfile sources inside a subdirectory', () => {
+    deepStrictEqual(parseParentFromSource('app/uv.lock:django@4.2.0'), {
+      name: 'django',
+      version: '4.2.0',
+    })
+    deepStrictEqual(
+      parseParentFromSource('app/assets/package-lock.json:@babel/core@7.16.0'),
+      { name: '@babel/core', version: '7.16.0' },
+    )
+    strictEqual(isLockfileSource('app/assets/package-lock.json:a@1.0.0'), true)
+    strictEqual(isLockfileSource('app/assets#dependencies'), false)
+  })
+
+  it('should read the lockfile path from a source', () => {
+    strictEqual(lockfileFromSource('uv.lock:django@4.2.0'), 'uv.lock')
+    strictEqual(lockfileFromSource('app/uv.lock:django@4.2.0'), 'app/uv.lock')
+    strictEqual(lockfileFromSource('app#dependencies'), null)
+  })
+
+  it('should prefix sources with the manifest directory', () => {
+    strictEqual(prefixSource('.', '.#dependencies'), '.#dependencies')
+    strictEqual(prefixSource('app', '.#dependencies'), 'app#dependencies')
+    strictEqual(
+      prefixSource('app', 'packages/web#devDependencies'),
+      'app/packages/web#devDependencies',
+    )
+    strictEqual(
+      prefixSource('app', 'uv.lock:django@4.2.0'),
+      'app/uv.lock:django@4.2.0',
+    )
+    strictEqual(
+      prefixSource('web', 'pnpm-workspace.yaml$catalog'),
+      'web/pnpm-workspace.yaml$catalog',
+    )
   })
 })

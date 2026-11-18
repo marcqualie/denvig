@@ -302,4 +302,133 @@ describe('buildDependabotSnapshot', () => {
       JSON.stringify(build([...dependencies].reverse())),
     )
   })
+
+  it('should report a manifest per lockfile directory', () => {
+    const snapshot = build([
+      {
+        id: 'npm:jquery-validation',
+        name: 'jquery-validation',
+        ecosystem: 'npm',
+        versions: [
+          {
+            resolved: '1.19.4',
+            specifier: '^1.19.4',
+            source: 'app/assets#dependencies',
+          },
+        ],
+      },
+      {
+        id: 'npm:jquery',
+        name: 'jquery',
+        ecosystem: 'npm',
+        versions: [
+          {
+            resolved: '3.6.0',
+            specifier: '^3.6.0',
+            source: 'app/assets/package-lock.json:jquery-validation@1.19.4',
+          },
+        ],
+      },
+      {
+        id: 'npm:typescript',
+        name: 'typescript',
+        ecosystem: 'npm',
+        versions: [
+          {
+            resolved: '5.0.0',
+            specifier: '^5.0.0',
+            source: '.#devDependencies',
+          },
+        ],
+      },
+      {
+        id: 'npm:tslib',
+        name: 'tslib',
+        ecosystem: 'npm',
+        versions: [
+          {
+            resolved: '2.0.0',
+            specifier: '^2.0.0',
+            source: 'pnpm-lock.yaml:typescript@5.0.0',
+          },
+        ],
+      },
+      {
+        id: 'pypi:boto3',
+        name: 'boto3',
+        ecosystem: 'pypi',
+        versions: [
+          { resolved: '1.25.2', specifier: '*', source: 'app#dependencies' },
+        ],
+      },
+      {
+        id: 'pypi:botocore',
+        name: 'botocore',
+        ecosystem: 'pypi',
+        versions: [
+          {
+            resolved: '1.28.5',
+            specifier: '*',
+            source: 'app/uv.lock:boto3@1.25.2',
+          },
+        ],
+      },
+    ])
+
+    deepStrictEqual(Object.keys(snapshot.manifests), [
+      'app/assets/package-lock.json',
+      'app/uv.lock',
+      'pnpm-lock.yaml',
+    ])
+    deepStrictEqual(
+      Object.keys(snapshot.manifests['app/assets/package-lock.json'].resolved),
+      ['pkg:npm/jquery-validation@1.19.4', 'pkg:npm/jquery@3.6.0'],
+    )
+    deepStrictEqual(
+      Object.keys(snapshot.manifests['pnpm-lock.yaml'].resolved),
+      ['pkg:npm/tslib@2.0.0', 'pkg:npm/typescript@5.0.0'],
+    )
+    deepStrictEqual(Object.keys(snapshot.manifests['app/uv.lock'].resolved), [
+      'pkg:pypi/boto3@1.25.2',
+      'pkg:pypi/botocore@1.28.5',
+    ])
+  })
+
+  it('should fall back to the manifest file in each separate install directory', () => {
+    const snapshot = buildDependabotSnapshot({
+      context,
+      detector,
+      scanned: '2026-10-29T00:00:00.000Z',
+      manifestDirs: ['.', 'docs', 'web'],
+      dependencies: [
+        {
+          id: 'npm:react',
+          name: 'react',
+          ecosystem: 'npm',
+          versions: [
+            {
+              resolved: '18.3.1',
+              specifier: '^18',
+              source: 'web#dependencies',
+            },
+            {
+              resolved: '18.3.1',
+              specifier: '^18',
+              source: 'web/packages/ui#dependencies',
+            },
+            {
+              resolved: '18.3.1',
+              specifier: '^18',
+              source: 'docs#dependencies',
+            },
+          ],
+        },
+      ],
+    })
+
+    deepStrictEqual(Object.keys(snapshot.manifests), [
+      'docs/package.json',
+      'web/package.json',
+    ])
+  })
 })
