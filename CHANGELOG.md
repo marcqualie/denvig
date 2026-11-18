@@ -7,6 +7,7 @@
 - `http.host` service option sets the address the gateway proxies to (eg. `::1` for Astro and Vite dev servers that only listen on IPv6)
 - Services run on Linux using systemd user units, still driven by `~/.denvig/state.json`
 - Gateway on Linux runs its own nginx under `~/.denvig/nginx` as a systemd user service, with setup hints when ports 80/443 aren't available
+- `deps` commands support npm projects using `package-lock.json`
 
 ### Changed
 
