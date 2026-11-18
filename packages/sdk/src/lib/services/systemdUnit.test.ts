@@ -38,10 +38,19 @@ describe('generateSystemdUnit()', () => {
     ok(unit.includes('RemainAfterExit=yes'))
   })
 
-  it('only adds an install section when the service starts on boot', () => {
-    ok(!generateSystemdUnit(baseOptions).includes('[Install]'))
+  it('starts kept-alive services on login, matching launchd', () => {
+    ok(
+      generateSystemdUnit(baseOptions).includes(
+        '[Install]\nWantedBy=default.target',
+      ),
+    )
+  })
 
-    const unit = generateSystemdUnit({ ...baseOptions, runAtLoad: true })
+  it('starts one-shot services on login only when they start on boot', () => {
+    const oneShot = { ...baseOptions, keepAlive: false }
+    ok(!generateSystemdUnit(oneShot).includes('[Install]'))
+
+    const unit = generateSystemdUnit({ ...oneShot, runAtLoad: true })
     ok(unit.includes('[Install]\nWantedBy=default.target'))
   })
 

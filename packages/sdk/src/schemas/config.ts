@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { getDefaultGatewayConfigsPath } from '../lib/gateway/userNginx.ts'
+
 /**
  * Actions that are available on the CLI root for quick access.
  */
@@ -198,7 +200,12 @@ export const GlobalConfigSchema = z.object({
   gateway: z
     .object({
       handler: z.enum(['nginx']).default('nginx'),
-      configsPath: z.string().default(`/opt/homebrew/etc/nginx/servers`),
+      configsPath: z
+        .string()
+        .default(getDefaultGatewayConfigsPath)
+        .describe(
+          'Directory for nginx server configs. Defaults to Homebrew nginx on macOS and a denvig-managed nginx in ~/.denvig/nginx on Linux',
+        ),
     })
     .prefault({}),
   gitProviders: z

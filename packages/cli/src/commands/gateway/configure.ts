@@ -91,7 +91,9 @@ export const gatewayConfigureCommand = new Command({
       if (result.nginxReload) {
         console.log('Nginx reloaded successfully')
       } else {
-        console.log(`Nginx reload failed: ${result.nginxReloadMessage}`)
+        console.log(
+          `Nginx reload failed: ${result.nginxReloadMessage ?? result.message ?? 'unknown error'}`,
+        )
       }
       console.log('')
     }

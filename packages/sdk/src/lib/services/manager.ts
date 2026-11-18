@@ -1310,6 +1310,20 @@ export class ServiceManager {
       }
     }
 
+    // Stopped services aren't loaded but can still have an installed config
+    // file (eg. a stopped start-on-boot unit stays enabled), so remove those
+    // too. Nothing is running for them, so there's nothing to bootout.
+    const loadedLabels = new Set(allServices.map((service) => service.label))
+    for (const label of await serviceBackend.installedLabels(labelPrefix)) {
+      if (loadedLabels.has(label)) continue
+      successfullyRemovedLabels.push(label)
+      results.push({
+        name: label.replace(labelPrefix, ''),
+        success: true,
+        message: 'Removed stopped service config',
+      })
+    }
+
     // Only remove config files for services that were successfully booted out
     await serviceBackend.uninstall(successfullyRemovedLabels)
 

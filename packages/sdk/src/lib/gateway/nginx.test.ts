@@ -1,5 +1,14 @@
 import { equal, ok } from 'node:assert'
-import { describe, it } from 'node:test'
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { delimiter, join } from 'node:path'
+import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import {
   generateDenvigNginxConfig,
@@ -7,6 +16,7 @@ import {
   generateNginxFallbackConfig,
   generateNginxMainConfig,
   getDenvigNginxConfPath,
+  resolveNginxBinary,
 } from './nginx.ts'
 
 describe('nginx gateway', () => {
@@ -365,6 +375,56 @@ describe('nginx gateway', () => {
 
       ok(config.includes('listen 443 ssl default_server;'))
       ok(config.includes('ssl_reject_handshake on;'))
+    })
+  })
+
+  describe('resolveNginxBinary()', () => {
+    let dir = ''
+
+    const makeBinary = (path: string, mode = 0o755) => {
+      mkdirSync(join(path, '..'), { recursive: true })
+      writeFileSync(path, '#!/bin/sh\n')
+      chmodSync(path, mode)
+      return path
+    }
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'denvig-nginx-'))
+    })
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true })
+    })
+
+    it('prefers the first executable default path', async () => {
+      const first = join(dir, 'missing/nginx')
+      const second = makeBinary(join(dir, 'sbin/nginx'))
+      const third = makeBinary(join(dir, 'bin/nginx'))
+
+      equal(await resolveNginxBinary([first, second, third], ''), second)
+    })
+
+    it('skips files that are not executable', async () => {
+      const plain = makeBinary(join(dir, 'plain/nginx'), 0o644)
+      const exec = makeBinary(join(dir, 'exec/nginx'))
+
+      equal(await resolveNginxBinary([plain, exec], ''), exec)
+    })
+
+    it('falls back to nginx on PATH', async () => {
+      const onPath = makeBinary(join(dir, 'path-b/nginx'))
+      const pathEnv = [join(dir, 'path-a'), join(dir, 'path-b')].join(delimiter)
+
+      equal(
+        await resolveNginxBinary([join(dir, 'missing/nginx')], pathEnv),
+        onPath,
+      )
+    })
+
+    it('returns null when nginx is not installed', async () => {
+      equal(
+        await resolveNginxBinary([join(dir, 'missing/nginx')], join(dir, 'x')),
+        null,
+      )
     })
   })
 })

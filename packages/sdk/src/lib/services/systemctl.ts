@@ -31,7 +31,7 @@ export function unitName(label: string): string {
 /**
  * Run a `systemctl --user` command, capturing success and output.
  */
-async function run(args: string): Promise<CommandResult> {
+export async function run(args: string): Promise<CommandResult> {
   try {
     const { stdout, stderr } = await execAsync(`systemctl --user ${args}`)
     return { success: true, output: stdout || stderr }
@@ -239,4 +239,5 @@ export default {
   print,
   list,
   daemonReload,
+  run,
 }

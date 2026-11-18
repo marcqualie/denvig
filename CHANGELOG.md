@@ -6,6 +6,7 @@
 
 - `http.host` service option sets the address the gateway proxies to (eg. `::1` for Astro and Vite dev servers that only listen on IPv6)
 - Services run on Linux using systemd user units, still driven by `~/.denvig/state.json`
+- Gateway on Linux runs its own nginx under `~/.denvig/nginx` as a systemd user service, with setup hints when ports 80/443 aren't available
 
 ### Changed
 
@@ -13,6 +14,8 @@
 
 ### Fixed
 
+- `services teardown` also removes stopped services that were left installed
+- Gateway finds nginx in common install locations and on `PATH` instead of only Homebrew on Apple Silicon
 - Random port allocation no longer picks ports already bound to localhost by other processes
 - `deps outdated` respects pnpm `minimumReleaseAgeExclude` when `minimumReleaseAge` isn't set, including version-pinned and wildcard entries
 

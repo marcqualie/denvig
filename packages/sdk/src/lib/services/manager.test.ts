@@ -1105,6 +1105,72 @@ describe('ServiceManager', () => {
     })
   })
 
+  describe('teardownAll()', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-teardown-`)
+      process.env.HOME = tmpHome
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    it('removes configs for stopped services that are no longer loaded', async (t) => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/repo`,
+      })
+      project.config.services = {
+        api: { command: 'node server.js' },
+        boot: { command: 'sleep 100', startOnBoot: true },
+      }
+      const manager = new ServiceManager(project)
+      const apiLabel = manager.getServiceLabel('api')
+      const bootLabel = manager.getServiceLabel('boot')
+
+      t.mock.method(serviceBackend, 'list', async () => [
+        { label: apiLabel, pid: 123, status: 0 },
+      ])
+      t.mock.method(serviceBackend, 'installedLabels', async () => [
+        apiLabel,
+        bootLabel,
+      ])
+      const bootout = t.mock.method(serviceBackend, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      const uninstall = t.mock.method(
+        serviceBackend,
+        'uninstall',
+        async () => {},
+      )
+      t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
+
+      const results = await manager.teardownAll()
+
+      deepStrictEqual(
+        results.map((r) => [r.name, r.success]),
+        [
+          ['api', true],
+          ['boot', true],
+        ],
+      )
+      deepStrictEqual(
+        bootout.mock.calls.map((c) => c.arguments[0]),
+        [apiLabel],
+      )
+      deepStrictEqual(uninstall.mock.calls[0].arguments[0], [
+        apiLabel,
+        bootLabel,
+      ])
+    })
+  })
+
   describe('stopService() service manager behavior', () => {
     it('should call bootout and disable for regular services', async (t) => {
       const project = createMockInternalProject({

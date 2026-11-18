@@ -11,19 +11,37 @@ import {
   getNginxConfPath,
 } from '../lib/gateway/nginx.ts'
 import { resolveGatewayServices } from '../lib/gateway/routes.ts'
+import {
+  GATEWAY_UNIT_LABEL,
+  isUserOwnedNginx,
+} from '../lib/gateway/userNginx.ts'
 import { safeReadTextFile } from '../lib/safeReadFile.ts'
 import {
   type ReconcileResult,
   reconcileServices,
 } from '../lib/services/reconcile.ts'
+import systemctl from '../lib/services/systemctl.ts'
 
 /**
- * The nginx process state as reported by `brew services`.
+ * The nginx process state as reported by `brew services`, or by systemd for
+ * the denvig-managed gateway on Linux.
  */
 export type NginxProcessStatus = {
   running: boolean
   pid: number | null
   status: string | null
+}
+
+/**
+ * State of the denvig-managed gateway nginx unit.
+ */
+const getUserNginxProcessStatus = async (): Promise<NginxProcessStatus> => {
+  const info = await systemctl.print(GATEWAY_UNIT_LABEL)
+  return {
+    running: info?.state === 'running',
+    pid: info?.pid ?? null,
+    status: info?.state ?? 'stopped',
+  }
 }
 
 const getNginxProcessStatus = (): NginxProcessStatus => {
@@ -141,7 +159,9 @@ export const getGatewayStatus = async (): Promise<GatewayStatus> => {
     handler: gateway.handler,
     configsPath: gateway.configsPath,
     nginxConf: getNginxConfPath(gateway.configsPath),
-    nginx: getNginxProcessStatus(),
+    nginx: isUserOwnedNginx(gateway.configsPath)
+      ? await getUserNginxProcessStatus()
+      : getNginxProcessStatus(),
     services,
   }
 }
