@@ -1,7 +1,16 @@
-import { readPackageJson } from '../lib/packageJson.ts'
-import { definePlugin } from '../lib/plugin.ts'
+import { readFile } from 'node:fs/promises'
 
+import { npmOutdated } from '../lib/npm/outdated.ts'
+import { readPackageJson } from '../lib/packageJson.ts'
+import { type NpmLockfile, parseNpmLockfile } from '../lib/parsers/npm.ts'
+import { definePlugin } from '../lib/plugin.ts'
+import { pathExists } from '../lib/safeReadFile.ts'
+
+import type { ProjectDependencySchema } from '../lib/dependencies.ts'
 import type { Worktree } from '../lib/project/worktree.ts'
+
+// Cache for parsed dependencies by project path
+const dependenciesCache = new Map<string, ProjectDependencySchema[]>()
 
 const plugin = definePlugin({
   name: 'npm',
@@ -33,6 +42,50 @@ const plugin = definePlugin({
     }
 
     return actions
+  },
+
+  dependencies: async (
+    project: Worktree,
+  ): Promise<ProjectDependencySchema[]> => {
+    const lockfilePath = `${project.path}/package-lock.json`
+    if (!(await pathExists(lockfilePath))) {
+      return []
+    }
+
+    const cached = dependenciesCache.get(project.path)
+    if (cached) {
+      return cached
+    }
+
+    let lockfile: NpmLockfile
+    try {
+      lockfile = JSON.parse(await readFile(lockfilePath, 'utf-8'))
+    } catch {
+      return []
+    }
+
+    // v1 lockfiles do not record the root's declared ranges.
+    const rootManifest = lockfile.packages
+      ? null
+      : await readPackageJson(project)
+
+    const result: ProjectDependencySchema[] = [
+      { id: 'npm:npm', name: 'npm', ecosystem: 'system', versions: [] },
+      ...parseNpmLockfile(lockfile, rootManifest),
+    ]
+
+    dependenciesCache.set(project.path, result)
+
+    return result
+  },
+
+  outdatedDependencies: async (project: Worktree, options) => {
+    if (!(await pathExists(`${project.path}/package-lock.json`))) {
+      return []
+    }
+    const dependencies = await plugin.dependencies?.(project)
+    if (!dependencies) return []
+    return npmOutdated(dependencies, options)
   },
 })
 

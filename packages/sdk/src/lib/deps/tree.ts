@@ -6,6 +6,7 @@ import type { TreeNode } from '../formatters/tree-node.ts'
  */
 const LOCKFILE_PREFIXES = [
   'pnpm-lock.yaml:',
+  'package-lock.json:',
   'yarn.lock:',
   'Gemfile.lock:',
   'uv.lock:',
