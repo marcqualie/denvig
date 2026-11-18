@@ -15,9 +15,6 @@
 - Dependency sources show their path from the project root (eg. `app/uv.lock`)
 - Dependabot snapshots report a separate manifest for each lockfile
 
-- Updated 4 minor dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts, turbo)
-- Updated 1 patch dev dependency (@biomejs/biome)
-
 ### Fixed
 
 - `services teardown` also removes stopped services that were left installed
@@ -27,22 +24,19 @@
 - Dependency commands no longer hang for minutes when a registry request stalls
 - Yarn dependency commands no longer slow down or report extra packages when the project contains nested git worktrees
 
-## [0.7.7] - 2026-11-06
+## [v0.7.7] - 2026-11-06
 
 ### Added
 
-- `gitProviders` global config adds GitLab, Gitea and self-hosted git hosts as project slug prefixes (eg. `gitea-mqn:owner/repo`)
+- `gitProviders` global config adds GitLab, Gitea and self-hosted git hosts as project slug prefixes (eg. `gitea-intranet:owner/repo`)
 - Project info includes the detected git provider and repository URL
 
 ### Changed
 
-- Updated @biomejs/biome to v2.6.4
-- Updated 2 minor dev dependencies (rolldown, rolldown-plugin-dts)
 - Updated node-forge to v1.4.3 for upstream security fixes
 - Updated semver to v7.8.6
-- Updated rolldown to v1.3.0
 
-## [0.7.6] - 2026-10-29
+## [v0.7.6] - 2026-10-29
 
 ### Added
 
@@ -50,7 +44,6 @@
 
 ### Changed
 
-- Updated pnpm to v12.15.0
 - Updated node-forge to v1.4.2 for upstream security fixes
 - Docker services with volumes shared across worktrees always run from the primary checkout, and worktree commands manage that instance
 
@@ -58,15 +51,11 @@
 
 - pnpm optional dependencies (eg. platform-specific binaries) are now included in dependency listings
 
-## [0.7.5] - 2026-10-24
+## [v0.7.5] - 2026-10-24
 
 ### Added
 
 - `DENVIG_DEBUG=deps` writes a trace of dependency checks, network requests and git commands that can be opened in https://ui.perfetto.dev
-
-### Changed
-
-- Updated 9 minor and patch dependencies
 
 ### Fixed
 
@@ -75,7 +64,7 @@
 - Gateway domains for stopped services now show the "Service Unavailable" page instead of a different app sharing the same port
 - Gateway HTTPS requests for domains with no matching service or cert are rejected instead of being served by an unrelated app
 
-## [0.7.4] - 2026-09-27
+## [v0.7.4] - 2026-09-27
 
 ### Added
 
@@ -85,11 +74,9 @@
 ### Changed
 
 - `denvig services start/stop/restart` refuse to act on a service running in the foreground
-
 - Faster CLI startup by bundling common libs
-- Updated 3 patch dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts)
 
-## [0.7.3] - 2026-09-18
+## [v0.7.3] - 2026-09-18
 
 ### Added
 
@@ -99,18 +86,12 @@
 
 - `denvig system update` no longer double-prompts before upgrading Homebrew packages
 - Upgraded zod to 4.6, and widened the supported range to 4.5–4.6 for SDK consumers
-- Updated 4 patch dependencies (@biomejs/biome, @types/node, rolldown, semver)
-- Updated 2 patch dev dependencies (rolldown-plugin-dts, turbo)
-- Updated 2 minor dev dependencies (rolldown-plugin-dts, turbo)
-- Updated 4 minor dev dependencies (@biomejs/biome, @types/node, rolldown, rolldown-plugin-dts)
-- Updated 5 minor dependencies (@biomejs/biome, @types/node, @types/semver, rolldown-plugin-dts, yaml)
-- Updated 2 patch dev dependencies (rolldown, turbo)
-- Upgraded TypeScript to 7.0 (the native compiler) and `@types/node` to 26
+- Updated semver to v7.8.5 and yaml to v2.9.1
 - The gateway now writes every service into a single `~/.denvig/nginx.conf` (sorted by domain, each block annotated with its service details and log location) instead of one hashed file per service, making the running config easier to inspect
 - `denvig gateway` now lists every running service routed through the gateway across all projects, matching what `gateway configure` reports
 - `gateway` and `gateway configure` now display each service in the same format
 
-## [0.7.2] - 2026-06-23
+## [v0.7.2] - 2026-06-23
 
 ### Added
 
@@ -121,7 +102,7 @@
 - `services logs` no longer shows an empty log after running an unrelated services command; a service's `latest.log` is now only rotated when the service is actually started or restarted, not on every reconcile
 - Dependency commands no longer fail on projects using pnpm 12's multi-document `pnpm-lock.yaml`
 
-## [0.7.1] - 2026-06-20
+## [v0.7.1] - 2026-06-20
 
 ### Added
 
@@ -134,7 +115,6 @@
 - `services` now nests each project's worktree services by default; pass `--no-worktrees` to list only the main project's services
 - `services start` on a service that is already running with matching config now skips straight to its links/ports with an "is already running" message instead of waiting
 - `services start` now uses the same "config changed since last bootstrap" wording (and shows the diff) as the reconciler when it restarts a running service to apply config changes
-- Updated build tooling dependencies (rolldown, rolldown-plugin-dts)
 
 ### Fixed
 
@@ -142,7 +122,7 @@
 - `services start` and `gateway configure` no longer report every running service as restarted on each run; running services are now only flagged when their config actually changed
 - A running service whose config changed (e.g. a new port, command or env) is now actually restarted to apply the change, instead of reporting a restart that never happened
 
-## [0.7.0] - 2026-06-17
+## [v0.7.0] - 2026-06-17
 
 Git worktree support is the headline of this release: run the same project's services side by side from separate worktrees, target a sibling worktree without changing directories, and have denvig resolve the right config wherever you run it.
 
@@ -168,7 +148,6 @@ Git worktree support is the headline of this release: run the same project's ser
 - Prerelease tags now publish to npm under matching dist-tags (`@alpha`, `@beta`, `@rc`) instead of `@latest`, so `pnpm add denvig` keeps tracking stable releases
 - The CLI is now published as `@denvig/cli` and the SDK standalone as `@denvig/sdk` (re-exported as `denvig/cli` and `denvig/sdk`); the SDK now runs in-process instead of shelling out to the CLI
 - The SDK now exposes a resource-oriented API — resolve a project, then chain into its worktrees, actions, services, dependencies, certs, gateway and config (e.g. `(await denvig.projects.retrieve(id)).services.retrieve('api').start()`) — with helpers from `@denvig/sdk/utils` and `@denvig/sdk/fs`, error classes and types from the package root, and `denvig.version()`
-- Migrated the build from `tsup` to `rolldown`
 
 ### Fixed
 
@@ -179,12 +158,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - `denvig deps outdated` no longer lists `link:` or `workspace:` dependencies, since they point at local code
 - The `@denvig/sdk/testing` import now resolves when installed from npm
 
-## [0.6.7] - 2026-05-08
-
-### Fixed
-
-- `deps outdated` now resolves pnpm `catalog:` and `catalog:<name>` specifiers via `pnpm-workspace.yaml` so the `Wanted` column reflects the real version range (previously the literal `catalog:` string was passed to the semver matcher and yielded no wanted update).
-- OSC 8 hyperlinks in `deps outdated` now use the ST (`ESC \`) terminator instead of BEL (`\x07`), so version links render as clickable in Ghostty (previously links only worked in VSCode/Zed integrated terminals). Hyperlinked text is also explicitly underlined via the extended SGR dotted underline (`\x1b[4:4m`/`\x1b[4:0m`) so the clickable indicator is visible in Ghostty (which does not auto-style OSC 8 links).
+## [v0.6.7] - 2026-05-08
 
 ### Changed
 
@@ -198,7 +172,12 @@ Git worktree support is the headline of this release: run the same project's ser
 - Upgraded `zod` from 4.4.2 to 4.4.3
 - Replaced `minimist` with the built-in `node:util` `parseArgs` for argument parsing. Command flag definitions can now declare a `short` alias (e.g. `services logs -n` for `--lines`).
 
-## [0.6.6] - 2026-05-02
+### Fixed
+
+- `deps outdated` now resolves pnpm `catalog:` and `catalog:<name>` specifiers via `pnpm-workspace.yaml` so the `Wanted` column reflects the real version range (previously the literal `catalog:` string was passed to the semver matcher and yielded no wanted update).
+- OSC 8 hyperlinks in `deps outdated` now use the ST (`ESC \`) terminator instead of BEL (`\x07`), so version links render as clickable in Ghostty (previously links only worked in VSCode/Zed integrated terminals). Hyperlinked text is also explicitly underlined via the extended SGR dotted underline (`\x1b[4:4m`/`\x1b[4:0m`) so the clickable indicator is visible in Ghostty (which does not auto-style OSC 8 links).
+
+## [v0.6.6] - 2026-05-02
 
 ### Added
 
@@ -212,11 +191,10 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - `certs list` now displays expiry dates in ISO 8601 (`YYYY-MM-DD`) format instead of locale-dependent format
 - `relativeFormattedTime` now returns the magnitude of the difference for both past and future dates instead of `0s` for future dates
-- Upgraded `@biomejs/biome` from 2.4.12 to 2.4.14
 - Upgraded `zod` from 4.3.6 to 4.4.2
 - Upgraded `yaml` from 2.8.3 to 2.8.4
 
-## [0.6.5] - 2026-04-20
+## [v0.6.5] - 2026-04-20
 
 ### Added
 
@@ -232,13 +210,13 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - GitHub slug detection now checks the `github` remote as a fallback when `origin` is not a GitHub URL
 
-## [0.6.4] - 2026-04-12
+## [v0.6.4] - 2026-04-12
 
 ### Fixed
 
 - `deps outdated --semver patch` now detects patch updates even when a minor or major version is also available
 
-## [0.6.3] - 2026-04-08
+## [v0.6.3] - 2026-04-08
 
 ### Fixed
 
@@ -246,7 +224,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - `deps why` now shows transitive chains for packages that are also direct dependencies
 - `deps why` now resolves pnpm aliased dependencies (e.g. `wrap-ansi-cjs: wrap-ansi@7.0.0`) to their real package name
 
-## [0.6.2] - 2026-04-03
+## [v0.6.2] - 2026-04-03
 
 ### Added
 
@@ -255,15 +233,14 @@ Git worktree support is the headline of this release: run the same project's ser
 ### Changed
 
 - Upgraded `node-forge` from 1.3.3 to 1.4.0 (security fixes for 4 CVEs)
-- Upgraded `typescript` from 5.9.3 to 6.0.2 (major version upgrade)
 
-## [0.6.1] - 2026-03-18
+## [v0.6.1] - 2026-03-18
 
 ### Added
 
 - Support `--semver major` filter on `deps outdated`
 
-## [0.6.0] - 2026-02-27
+## [v0.6.0] - 2026-02-27
 
 ### Added
 
@@ -279,7 +256,13 @@ Git worktree support is the headline of this release: run the same project's ser
 - Service logs now use timestamp-based files per run instead of a single shared log file (#134)
 - Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts` (#130)
 
-## [0.5.1] - 2026-02-05
+## [v0.5.1] - 2026-02-05
+
+### Changed
+
+- Removed `.strict()` from Zod config schemas for forward compatibility (#122)
+  - Older Denvig versions now gracefully ignore unknown config properties added by newer versions
+  - VSCode JSON Schema validation still warns about unknown properties via `additionalProperties: false`
 
 ### Fixed
 
@@ -287,12 +270,6 @@ Git worktree support is the headline of this release: run the same project's ser
 - ANSI color codes are now automatically stripped when output is piped (e.g., `denvig deps outdated | pbcopy`)
   - Also respects `NO_COLOR` environment variable to disable colors globally
   - Use `FORCE_COLOR=1` to enable colors even when piped
-
-### Changed
-
-- Removed `.strict()` from Zod config schemas for forward compatibility (#122)
-  - Older Denvig versions now gracefully ignore unknown config properties added by newer versions
-  - VSCode JSON Schema validation still warns about unknown properties via `additionalProperties: false`
 
 ## [v0.5.0] - 2026-01-25
 
@@ -322,7 +299,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - **Breaking:** Replaced `codeRootDir` with `projectPaths` array supporting glob-like patterns where `*` matches a single directory level (#99)
 - **Breaking:** Replaced `envFile` with `envFiles` in service configuration to support multiple env files (#98)
 - **Breaking:** Plist and log file naming changed from slug-based to ID-based format (`denvig.[id].[service].plist`). Run `denvig services teardown --global` to clean up old plist files (#106)
-- **Breaking:** Service names must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen. Names like (#108)
+- **Breaking:** Service names must start with a letter, contain only lowercase alphanumeric and hyphens, and not end with a hyphen (#108)
 - **Breaking:** `ServiceResponse.project` changed from `string` (slug) to object `{ id, slug, name, path }` for richer SDK usage (#117)
 - `envFiles` files are now resolved relative to the service's `cwd` (not project root) (#98)
 - Default `envFiles` set to `.env.development,.env.local` instead of `.env` to better align with common practices (#98)
@@ -350,7 +327,6 @@ Git worktree support is the headline of this release: run the same project's ser
 - Suppressed config validation warnings to prevent polluting JSON output when using `--format=json`
 - Fixed `deps` subcommands displaying with colons instead of spaces in help output (e.g., `deps:list` → `deps list`)
 
-
 ## [v0.4.2] - 2026-01-17
 
 ### Added
@@ -362,7 +338,6 @@ Git worktree support is the headline of this release: run the same project's ser
 ### Fixed
 
 - Fixed env file parsing to strip inline comments (e.g., `KEY=VALUE # comment` now correctly parses as `VALUE`)
-
 
 ## [v0.4.1] - 2026-01-15
 
@@ -382,8 +357,7 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Fixed `--semver` filter in `deps:outdated` comparing against `wanted` instead of `latest` version
 
-
-## [0.4.0] - 2026-01-13
+## [v0.4.0] - 2026-01-13
 
 ### Added
 
@@ -416,9 +390,7 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Fixed number and boolean property generation in JSON schema (#36)
 
-
-
-## [0.3.0] - 2025-09-24
+## [v0.3.0] - 2025-09-24
 
 ### Added
 
@@ -426,33 +398,27 @@ Git worktree support is the headline of this release: run the same project's ser
 - Added support for ruby/rails via ruby plugin
 - Added `info` command for project summary
 
-
 ### Changed
 
 - Refactored codebase to use plugins for extensibility
 
-
-
-## [0.2.0] - 2025-08-09
+## [v0.2.0] - 2025-08-09
 
 ### Added
 
 - Configurable quick actions globally and per project
-- Quick actions are displayed im root help
+- Quick actions are displayed in root help
 - Custom per project actions in `.denvig.yml`
 - Code root path can be configured via `ENV.DENVIG_CODE_ROOT_DIR`
 - Support for running commands on linux and macOS
 
-
-## [0.1.2] - 2025-08-06
+## [v0.1.2] - 2025-08-06
 
 ### Fixed
 
-- Fix `denvig run ` now correctly proxies args and flags to the underlying action
+- `denvig run` now correctly proxies args and flags to the underlying action
 
-
-
-## [0.1.1] - 2025-08-02
+## [v0.1.1] - 2025-08-02
 
 ### Added
 
@@ -468,9 +434,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - Proxy scripts via packageManager vs calling directly
 - Use TTY to expose colors from sub commands
 
-
-
-## [0.1.0] - 2025-08-01
+## [v0.1.0] - 2025-08-01
 
 ### Added
 
