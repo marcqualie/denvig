@@ -1,10 +1,16 @@
 import { exec } from 'node:child_process'
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { access, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, resolve } from 'node:path'
+import { delimiter, dirname, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 import { getGatewayHtmlDir } from './html.ts'
+import {
+  findMimeTypesPath,
+  isUserOwnedNginx,
+  reloadUserNginx,
+} from './userNginx.ts'
 
 const execAsync = promisify(exec)
 
@@ -172,26 +178,66 @@ export function getNginxConfPath(configsPath: string): string {
 }
 
 /**
+ * Options for an nginx instance run by denvig itself rather than a separately
+ * managed install.
+ */
+export type NginxMainConfigOptions = {
+  /**
+   * Keep the pid file, logs and temp files inside the nginx directory so a
+   * non-root nginx never touches system paths.
+   */
+  userOwned?: boolean
+  /**
+   * `mime.types` to include. Defaults to the one beside the configs
+   * directory; `null` omits the include.
+   */
+  mimeTypesPath?: string | null
+}
+
+/**
  * Generate the main nginx.conf content.
  * Includes a default server with the denvig landing page and error pages,
  * plus an include directive for service configs in the servers directory.
  */
-export function generateNginxMainConfig(configsPath: string): string {
+export function generateNginxMainConfig(
+  configsPath: string,
+  options: NginxMainConfigOptions = {},
+): string {
   const htmlDir = getGatewayHtmlDir()
   const nginxDir = resolve(configsPath, '..')
+  const mimeTypesPath =
+    options.mimeTypesPath === undefined
+      ? `${nginxDir}/mime.types`
+      : options.mimeTypesPath
+  const mimeTypes = mimeTypesPath ? `  include ${mimeTypesPath};\n` : ''
+  const runtime = options.userOwned
+    ? `pid ${nginxDir}/nginx.pid;
+error_log ${nginxDir}/logs/error.log;
+
+`
+    : ''
+  const httpRuntime = options.userOwned
+    ? `  access_log ${nginxDir}/logs/access.log;
+  client_body_temp_path ${nginxDir}/temp/client_body;
+  proxy_temp_path ${nginxDir}/temp/proxy;
+  fastcgi_temp_path ${nginxDir}/temp/fastcgi;
+  uwsgi_temp_path ${nginxDir}/temp/uwsgi;
+  scgi_temp_path ${nginxDir}/temp/scgi;
+
+`
+    : ''
 
   return `# Managed by denvig — do not edit manually
 # https://denvig.com
 
 worker_processes 4;
-
+${runtime ? `${runtime.trimEnd()}\n` : ''}
 events {
   worker_connections 1024;
 }
 
 http {
-  include ${nginxDir}/mime.types;
-  default_type application/octet-stream;
+${httpRuntime}${mimeTypes}  default_type application/octet-stream;
 
   sendfile on;
   keepalive_timeout 65;
@@ -227,7 +273,13 @@ export async function writeNginxMainConfig(
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const confPath = getNginxConfPath(configsPath)
-    const content = generateNginxMainConfig(configsPath)
+    const content = isUserOwnedNginx(configsPath)
+      ? generateNginxMainConfig(configsPath, {
+          userOwned: true,
+          mimeTypesPath: await findMimeTypesPath(),
+        })
+      : generateNginxMainConfig(configsPath)
+    await mkdir(dirname(confPath), { recursive: true })
     await writeFile(confPath, content, 'utf-8')
     return { success: true }
   } catch (error) {
@@ -311,14 +363,68 @@ export async function writeDenvigNginxConfig(
 }
 
 /**
- * Reload nginx configuration.
+ * Well-known nginx install locations, checked in order before `PATH`. Covers
+ * Homebrew on Apple Silicon and Intel plus the usual Linux package paths,
+ * which are often missing from a non-root user's `PATH`.
  */
-export async function reloadNginx(): Promise<{
+export const DEFAULT_NGINX_BINARY_PATHS = [
+  '/opt/homebrew/bin/nginx',
+  '/usr/local/bin/nginx',
+  '/usr/sbin/nginx',
+  '/usr/bin/nginx',
+]
+
+/**
+ * Whether a path is an executable file.
+ */
+async function isExecutable(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.X_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Find the nginx binary: the first executable from the default install paths,
+ * then the first `nginx` on `PATH`. Returns null when nginx isn't installed.
+ */
+export async function resolveNginxBinary(
+  candidates: string[] = DEFAULT_NGINX_BINARY_PATHS,
+  pathEnv: string = process.env.PATH ?? '',
+): Promise<string | null> {
+  const pathCandidates = pathEnv
+    .split(delimiter)
+    .filter(Boolean)
+    .map((dir) => resolve(dir, 'nginx'))
+  for (const candidate of [...candidates, ...pathCandidates]) {
+    if (await isExecutable(candidate)) return candidate
+  }
+  return null
+}
+
+/**
+ * Reload nginx configuration. A user-owned gateway (the Linux default) is
+ * started or reloaded through its systemd user unit; otherwise the running
+ * nginx is signalled directly.
+ */
+export async function reloadNginx(configsPath: string): Promise<{
   success: boolean
   message?: string
 }> {
+  const nginx = await resolveNginxBinary()
+  if (!nginx) {
+    return {
+      success: false,
+      message: 'Failed to reload nginx: nginx binary not found',
+    }
+  }
+  if (isUserOwnedNginx(configsPath)) {
+    return await reloadUserNginx(nginx)
+  }
   try {
-    await execAsync('/opt/homebrew/bin/nginx -s reload')
+    await execAsync(`"${nginx}" -s reload`)
     return { success: true }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

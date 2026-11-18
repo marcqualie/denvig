@@ -1,4 +1,4 @@
-import { type LaunchctlListItem, launchctl } from '@denvig/sdk/internal'
+import { type ServiceListItem, serviceBackend } from '@denvig/sdk/internal'
 import { prettyPath } from '@denvig/sdk/utils'
 
 import { Command } from '../../lib/command.ts'
@@ -34,10 +34,10 @@ type ProjectRow = {
 const worktreeStatus = async (
   project: DenvigProject,
   branch: string,
-  launchctlList: LaunchctlListItem[],
+  serviceList: ServiceListItem[],
 ): Promise<ProjectServiceStatus> => {
   project.selectWorktree(branch)
-  const info = await project.info({ launchctlList })
+  const info = await project.info({ serviceList })
   return info.serviceStatus
 }
 
@@ -70,7 +70,7 @@ export const projectsListCommand = new Command({
     }
 
     // JSON output: one entry per project, worktrees nested via the existing
-    // `worktrees` field. Skips launchctl calls for performance.
+    // `worktrees` field. Skips service manager calls for performance.
     if (flags.json) {
       const entries: ProjectInfoJSON[] = []
       for (const project of projects) {
@@ -82,8 +82,8 @@ export const projectsListCommand = new Command({
       return { success: true, message: 'Projects listed successfully.' }
     }
 
-    // CLI output: pre-fetch launchctl list once to avoid N shell calls.
-    const launchctlList = await launchctl.list('denvig.')
+    // CLI output: pre-fetch the service list once to avoid N shell calls.
+    const serviceList = await serviceBackend.list('denvig.')
 
     const rows: ProjectRow[] = []
     for (const project of projects) {
@@ -91,7 +91,7 @@ export const projectsListCommand = new Command({
 
       const primary = project.primaryWorktree
       rows.push({
-        status: await worktreeStatus(project, primary.branch, launchctlList),
+        status: await worktreeStatus(project, primary.branch, serviceList),
         label: primary.config.name || primary.slug,
         path: primary.path,
         depth: 0,
@@ -99,7 +99,7 @@ export const projectsListCommand = new Command({
 
       for (const worktree of worktrees) {
         rows.push({
-          status: await worktreeStatus(project, worktree.branch, launchctlList),
+          status: await worktreeStatus(project, worktree.branch, serviceList),
           label: worktree.branch,
           path: worktree.path,
           depth: 1,

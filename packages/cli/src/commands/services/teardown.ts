@@ -5,7 +5,7 @@ import { reconcileAfterCommand } from '../../lib/services/reconcileLogger.ts'
 
 export const servicesTeardownCommand = new Command({
   name: 'services:teardown',
-  description: 'Stop all services and remove them from launchctl',
+  description: 'Stop all services and remove them from launchd/systemd',
   usage: 'services teardown [--global] [--remove-logs] [--worktree <branch>]',
   example: 'services teardown',
   args: [],

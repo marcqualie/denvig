@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { DenvigProject } from '../lib/project.ts'
-import launchctl from '../lib/services/launchctl.ts'
+import serviceBackend from '../lib/services/backend.ts'
 import { collectServiceRows } from './services.ts'
 
 describe('collectServiceRows in a detached worktree', () => {
@@ -74,7 +74,7 @@ describe('collectServiceRows in a detached worktree', () => {
     }))
 
   it("lists the primary checkout's instance of services with shared volumes", async (t) => {
-    t.mock.method(launchctl, 'list', async () => [])
+    t.mock.method(serviceBackend, 'list', async () => [])
     const project = await DenvigProject.retrieve(worktreePath)
 
     const rows = await collectServiceRows(project, project.activeWorktree, {
@@ -89,7 +89,7 @@ describe('collectServiceRows in a detached worktree', () => {
   })
 
   it('only nests services the worktree can run', async (t) => {
-    t.mock.method(launchctl, 'list', async () => [])
+    t.mock.method(serviceBackend, 'list', async () => [])
     const project = await DenvigProject.retrieve(worktreePath)
 
     const rows = await collectServiceRows(project, project.activeWorktree)

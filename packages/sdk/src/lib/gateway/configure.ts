@@ -124,7 +124,7 @@ export async function configureGateway(): Promise<ConfigureGatewayResult> {
   }
 
   // Reload nginx
-  const reloadResult = await reloadNginx()
+  const reloadResult = await reloadNginx(configsPath)
 
   const hasErrors = services.some(
     (r) => r.configStatus === 'error' || r.certStatus === 'missing',

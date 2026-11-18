@@ -4,7 +4,7 @@ import { formatGatewayService } from '../../lib/formatters/gateway-service.ts'
 export const gatewayConfigureCommand = new Command({
   name: 'gateway:configure',
   description:
-    'Reconcile launchctl with ~/.denvig/state.json and rebuild all nginx configs',
+    'Reconcile launchd/systemd services with ~/.denvig/state.json and rebuild all nginx configs',
   usage: 'gateway configure',
   example: 'gateway configure',
   args: [],
@@ -91,7 +91,9 @@ export const gatewayConfigureCommand = new Command({
       if (result.nginxReload) {
         console.log('Nginx reloaded successfully')
       } else {
-        console.log(`Nginx reload failed: ${result.nginxReloadMessage}`)
+        console.log(
+          `Nginx reload failed: ${result.nginxReloadMessage ?? result.message ?? 'unknown error'}`,
+        )
       }
       console.log('')
     }

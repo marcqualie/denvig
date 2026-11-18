@@ -224,6 +224,15 @@ describe('plist', () => {
       ok(script.includes("exec /bin/zsh -l -c '"))
     })
 
+    it('should exec a custom login shell when provided', () => {
+      const script = generateServiceScript({
+        ...defaultOpts,
+        shell: '/usr/bin/bash',
+      })
+
+      ok(script.includes("exec /usr/bin/bash -l -c '"))
+    })
+
     it('should include the wrapped command with timestamps', () => {
       const script = generateServiceScript(defaultOpts)
 

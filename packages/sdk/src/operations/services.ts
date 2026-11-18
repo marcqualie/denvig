@@ -1,9 +1,9 @@
 import { DenvigOperationError, DenvigValidationError } from '../lib/errors.ts'
 import { DenvigProject } from '../lib/project.ts'
 import { listProjects } from '../lib/projects.ts'
+import serviceBackend from '../lib/services/backend.ts'
 import { createGlobalProject } from '../lib/services/global.ts'
 import { getServiceContext } from '../lib/services/identifier.ts'
-import launchctl from '../lib/services/launchctl.ts'
 import {
   ServiceManager,
   type ServiceResponse,
@@ -133,8 +133,8 @@ export const collectServiceRows = async (
     activeWorktree = resolveWorktree(project, worktreeFlag)
   }
 
-  // Pre-fetch launchctl list once to avoid N shell calls.
-  const launchctlList = await launchctl.list('denvig.')
+  // Pre-fetch the service manager list once to avoid N shell calls.
+  const serviceList = await serviceBackend.list('denvig.')
 
   const collectFromManager = async (
     manager: ServiceManager,
@@ -146,7 +146,7 @@ export const collectServiceRows = async (
     services.sort((a, b) => a.name.localeCompare(b.name))
     for (const service of services) {
       const response = await manager.getServiceResponse(service.name, {
-        launchctlList,
+        serviceList,
       })
       if (response) out.push({ service: response, depth, label })
     }
@@ -156,7 +156,7 @@ export const collectServiceRows = async (
     const map = new Map<string, ServiceResponse>()
     for (const service of await manager.listServices()) {
       const response = await manager.getServiceResponse(service.name, {
-        launchctlList,
+        serviceList,
       })
       if (response) map.set(service.name, response)
     }
@@ -257,7 +257,7 @@ export const collectServiceRows = async (
       const primaryManager = new ServiceManager(primary)
       for (const name of primaryOnly) {
         const service = await primaryManager.getServiceResponse(name, {
-          launchctlList,
+          serviceList,
         })
         if (service) {
           allServices.push({

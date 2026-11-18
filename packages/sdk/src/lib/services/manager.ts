@@ -12,11 +12,12 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
-import { basename, isAbsolute, relative, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, relative, resolve } from 'node:path'
 
 import { findCertForDomain, resolveSslPaths } from '../gateway/certs.ts'
 import { configureGateway } from '../gateway/configure.ts'
 import { detectGitWorktree } from '../project/git.ts'
+import serviceBackend, { type ServiceListItem } from './backend.ts'
 import { diffLines } from './diff.ts'
 import {
   buildDockerRunCommand,
@@ -26,9 +27,8 @@ import {
 import { DEFAULT_ENV_FILES, loadEnvFiles } from './env.ts'
 import { activeForegroundRun } from './foreground.ts'
 import { isGlobalSlug } from './global.ts'
-import launchctl, { type LaunchctlListItem } from './launchctl.ts'
 import { normalizeServiceLabel } from './paths.ts'
-import { generatePlist, generateServiceScript } from './plist.ts'
+import { generateServiceScript } from './plist.ts'
 import { allocateRandomPort, isPortInUse } from './ports.ts'
 import {
   type ForegroundRun,
@@ -739,7 +739,7 @@ export class ServiceManager {
     const { env, command: runCommand } = spec
     const label = this.getServiceLabel(name)
 
-    const printInfo = await launchctl.print(label)
+    const printInfo = await serviceBackend.print(label)
     const isBootstrapped = printInfo !== null
     // "Live" means the service has an active PID. A bootstrapped service
     // can still be dead (crashed and not yet restarted, exited cleanly,
@@ -767,8 +767,8 @@ export class ServiceManager {
     // to, rather than swapping them for a fresh empty file it will never touch.
     let logFilePath: string | undefined
 
-    // Ensure plist file exists
-    const plistPath = this.getPlistPath(name)
+    // Ensure the service config file (plist or systemd unit) exists
+    const plistPath = this.getServiceConfigPath(name)
     const workingDirectory = this.resolveServiceCwd(config)
 
     // Ensure working directory exists (e.g. global services use auto-generated paths)
@@ -788,6 +788,7 @@ export class ServiceManager {
       projectPath: this.project.path,
       projectSlug: this.project.slug,
       workingDirectory,
+      shell: serviceBackend.loginShell(),
     })
     let existingScriptContent: string | null = null
     try {
@@ -800,7 +801,7 @@ export class ServiceManager {
       await chmod(scriptPath, 0o755)
     }
 
-    const plistContent = generatePlist({
+    const plistContent = serviceBackend.renderConfig({
       label,
       programPath: scriptPath,
       workingDirectory,
@@ -833,19 +834,22 @@ export class ServiceManager {
     // Keeping the write paired with the bootstrap means an unchanged plist is a
     // reliable signal that the running process is already up to date.
     const writePlist = async () => {
-      if (plistChanged) await writeFile(plistPath, plistContent, 'utf-8')
+      if (!plistChanged) return
+      await mkdir(dirname(plistPath), { recursive: true })
+      await writeFile(plistPath, plistContent, 'utf-8')
     }
 
     // Enable service so launchd will start it (reverses disable from stop)
-    await launchctl.enable(label)
+    await serviceBackend.enable(label)
 
-    // Bootstrap or reload using the plist directly in ~/Library/LaunchAgents.
+    // Bootstrap or reload using the config file from the service manager's
+    // directory (~/Library/LaunchAgents or ~/.config/systemd/user).
     // The reconciler relies on this being idempotent: if the plist is
     // unchanged and the service is already bootstrapped, do nothing.
     if (!isBootstrapped) {
       logFilePath = await this.createLogFile(name)
       await writePlist()
-      const bootstrapResult = await launchctl.bootstrap(plistPath)
+      const bootstrapResult = await serviceBackend.bootstrap(plistPath)
       if (!bootstrapResult.success) {
         return {
           name,
@@ -874,7 +878,7 @@ export class ServiceManager {
       // (`reviveIfNotRunning: false`): a bootstrapped service's liveness is
       // launchd's to manage, so it leaves an unchanged plist alone — but a
       // genuine config change is still applied here.
-      const bootoutResult = await launchctl.bootout(label)
+      const bootoutResult = await serviceBackend.bootout(label)
       if (!bootoutResult.success) {
         return {
           name,
@@ -887,7 +891,7 @@ export class ServiceManager {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       logFilePath = await this.createLogFile(name)
       await writePlist()
-      const bootstrapResult = await launchctl.bootstrap(plistPath)
+      const bootstrapResult = await serviceBackend.bootstrap(plistPath)
       if (!bootstrapResult.success) {
         return {
           name,
@@ -967,7 +971,7 @@ export class ServiceManager {
     // For regular services, use bootout() to fully unload them
     let shouldReconfigureGateway = false
     if (config.startOnBoot) {
-      const result = await launchctl.stop(label)
+      const result = await serviceBackend.stop(label)
       if (!result.success) {
         return {
           name,
@@ -977,7 +981,7 @@ export class ServiceManager {
       }
       // Keep plist file so service starts on next boot
     } else {
-      const result = await launchctl.bootout(label)
+      const result = await serviceBackend.bootout(label)
       if (!result.success) {
         return {
           name,
@@ -986,7 +990,7 @@ export class ServiceManager {
         }
       }
       // Disable so launchd won't auto-start on login (plist stays for next manual start)
-      await launchctl.disable(label)
+      await serviceBackend.disable(label)
       shouldReconfigureGateway = true
     }
 
@@ -1129,7 +1133,7 @@ export class ServiceManager {
     }
 
     const label = this.getServiceLabel(name)
-    const printInfo = await launchctl.print(label)
+    const printInfo = await serviceBackend.print(label)
     if (printInfo?.pid !== undefined && printInfo.state === 'running') {
       return {
         success: false,
@@ -1139,7 +1143,7 @@ export class ServiceManager {
     // A bootstrapped-but-idle agent could be respawned by launchd
     // (`KeepAlive`) mid-run and fight over the port, so unload it first.
     if (printInfo) {
-      await launchctl.bootout(label)
+      await serviceBackend.bootout(label)
     }
 
     const spec = await this.buildLaunchSpec(name, config, options.port)
@@ -1179,7 +1183,7 @@ export class ServiceManager {
     }
 
     const label = this.getServiceLabel(name)
-    const info = await launchctl.print(label)
+    const info = await serviceBackend.print(label)
 
     if (!info) {
       return {
@@ -1271,7 +1275,8 @@ export class ServiceManager {
 
   /**
    * Teardown all services for this project.
-   * Stops all services, removes them from launchctl, and deletes plist files.
+   * Stops all services, removes them from the service manager, and deletes
+   * their config files.
    * @param options.removeLogs - Also remove log files (default: false)
    */
   async teardownAll(options?: {
@@ -1281,12 +1286,12 @@ export class ServiceManager {
     const labelPrefix = `denvig.${this.project.id}.`
     const successfullyRemovedLabels: string[] = []
 
-    // Get all denvig services for this project from launchctl
-    const allServices = await launchctl.list(labelPrefix)
+    // Get all denvig services for this project from the service manager
+    const allServices = await serviceBackend.list(labelPrefix)
 
-    // Bootout all services from launchctl
+    // Bootout all services from the service manager
     for (const service of allServices) {
-      const bootoutResult = await launchctl.bootout(service.label)
+      const bootoutResult = await serviceBackend.bootout(service.label)
       const serviceName = service.label.replace(labelPrefix, '')
 
       if (!bootoutResult.success) {
@@ -1300,22 +1305,27 @@ export class ServiceManager {
         results.push({
           name: serviceName,
           success: true,
-          message: 'Service removed from launchctl',
+          message: `Service removed from ${serviceBackend.kind()}`,
         })
       }
     }
 
-    // Only remove plist files for services that were successfully booted out
-    const launchAgentsDir = resolve(homedir(), 'Library', 'LaunchAgents')
-    await Promise.all(
-      successfullyRemovedLabels.map(async (label) => {
-        try {
-          await unlink(resolve(launchAgentsDir, `${label}.plist`))
-        } catch {
-          // Ignore errors removing individual plist files
-        }
-      }),
-    )
+    // Stopped services aren't loaded but can still have an installed config
+    // file (eg. a stopped start-on-boot unit stays enabled), so remove those
+    // too. Nothing is running for them, so there's nothing to bootout.
+    const loadedLabels = new Set(allServices.map((service) => service.label))
+    for (const label of await serviceBackend.installedLabels(labelPrefix)) {
+      if (loadedLabels.has(label)) continue
+      successfullyRemovedLabels.push(label)
+      results.push({
+        name: label.replace(labelPrefix, ''),
+        success: true,
+        message: 'Removed stopped service config',
+      })
+    }
+
+    // Only remove config files for services that were successfully booted out
+    await serviceBackend.uninstall(successfullyRemovedLabels)
 
     // Optionally remove log files for successfully removed services
     if (options?.removeLogs && successfullyRemovedLabels.length > 0) {
@@ -1359,16 +1369,16 @@ export class ServiceManager {
   }
 
   /**
-   * Check if a service is bootstrapped (loaded in launchctl).
+   * Check if a service is bootstrapped (loaded in the service manager).
    */
   async isServiceBootstrapped(name: string): Promise<boolean> {
     const label = this.getServiceLabel(name)
-    const info = await launchctl.print(label)
+    const info = await serviceBackend.print(label)
     return info !== null
   }
 
   /**
-   * Normalize a string for use in launchctl labels and filenames.
+   * Normalize a string for use in service labels and filenames.
    * Replaces special characters with safe alternatives.
    */
   private normalizeForLabel(str: string): string {
@@ -1376,7 +1386,7 @@ export class ServiceManager {
   }
 
   /**
-   * Get the service label for launchctl.
+   * Get the service label for serviceBackend.
    * Format: denvig.[projectId].[serviceName]
    */
   getServiceLabel(name: string): string {
@@ -1392,11 +1402,20 @@ export class ServiceManager {
   }
 
   /**
-   * Get the plist file path.
+   * Get the service config file path: a launchd plist on macOS or a systemd
+   * user unit on Linux.
+   */
+  getServiceConfigPath(name: string): string {
+    return serviceBackend.configPath(this.getServiceLabel(name))
+  }
+
+  /**
+   * Get the service config file path.
+   *
+   * @deprecated Use `getServiceConfigPath`, which also covers systemd units.
    */
   getPlistPath(name: string): string {
-    const label = this.getServiceLabel(name)
-    return resolve(homedir(), 'Library', 'LaunchAgents', `${label}.plist`)
+    return this.getServiceConfigPath(name)
   }
 
   /**
@@ -1621,11 +1640,11 @@ export class ServiceManager {
   }
 
   /**
-   * Check if a plist file exists for a service.
+   * Check if a service config file (plist or systemd unit) exists.
    */
-  async plistExists(name: string): Promise<boolean> {
+  async serviceConfigExists(name: string): Promise<boolean> {
     try {
-      await access(this.getPlistPath(name))
+      await access(this.getServiceConfigPath(name))
       return true
     } catch {
       return false
@@ -1638,14 +1657,14 @@ export class ServiceManager {
    * @param name - Service name
    * @param options.includeLogs - Whether to include recent logs (default: false)
    * @param options.logLines - Number of log lines to include (default: 20)
-   * @param options.launchctlList - Pre-fetched launchctl list for batch operations (avoids N shell calls)
+   * @param options.serviceList - Pre-fetched service manager list for batch operations (avoids N shell calls)
    */
   async getServiceResponse(
     name: string,
     options?: {
       includeLogs?: boolean
       logLines?: number
-      launchctlList?: LaunchctlListItem[]
+      serviceList?: ServiceListItem[]
     },
   ): Promise<ServiceResponse | null> {
     const config = this.getServiceConfig(name)
@@ -1659,11 +1678,9 @@ export class ServiceManager {
     let pid: number | null = null
     let lastExitCode: number | null = null
 
-    // If launchctlList is provided, use it for fast batch lookup
-    if (options?.launchctlList) {
-      const listItem = options.launchctlList.find(
-        (item) => item.label === label,
-      )
+    // If serviceList is provided, use it for fast batch lookup
+    if (options?.serviceList) {
+      const listItem = options.serviceList.find((item) => item.label === label)
       if (listItem) {
         pid = listItem.pid === '-' ? null : listItem.pid
         lastExitCode = listItem.status
@@ -1678,11 +1695,11 @@ export class ServiceManager {
       }
       // If not in list, status remains 'stopped'
     } else {
-      // Fallback to individual launchctl.print call (slower)
+      // Fallback to an individual print call (slower)
       // First check if plist exists to avoid unnecessary shell calls
-      const hasPlist = await this.plistExists(name)
+      const hasPlist = await this.serviceConfigExists(name)
       if (hasPlist) {
-        const info = await launchctl.print(label)
+        const info = await serviceBackend.print(label)
         if (info) {
           pid = info.pid ?? null
           lastExitCode = info.lastExitCode ?? null
@@ -1699,7 +1716,7 @@ export class ServiceManager {
       }
     }
 
-    // A foreground run isn't known to launchd, so fall back to state.
+    // A foreground run isn't known to the service manager, so fall back to state.
     if (status !== 'running') {
       const foreground = await this.getForegroundRun(name)
       if (foreground) {

@@ -52,10 +52,14 @@ export type ServiceScriptOptions = {
   projectPath: string
   projectSlug: string
   workingDirectory: string
+  /**
+   * Login shell used to run the command. Defaults to `/bin/zsh`.
+   */
+  shell?: string
 }
 
 /**
- * Generate a bash wrapper script that executes a command via zsh login shell.
+ * Generate a bash wrapper script that executes a command via a login shell.
  * This allows launchd to show the script name instead of "zsh" in Login Items.
  * Includes metadata comments so users can identify which project owns the service.
  */
@@ -70,7 +74,7 @@ export function generateServiceScript(options: ServiceScriptOptions): string {
 # Command: ${options.command}
 # Workdir: ${options.workingDirectory}
 #
-exec /bin/zsh -l -c '${escapeForSingleQuote(wrappedCommand)}'
+exec ${options.shell ?? '/bin/zsh'} -l -c '${escapeForSingleQuote(wrappedCommand)}'
 `
 }
 

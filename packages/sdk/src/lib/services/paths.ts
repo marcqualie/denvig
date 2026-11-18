@@ -2,7 +2,7 @@ import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
 /**
- * Normalize a service name for use in filesystem paths and launchctl labels.
+ * Normalize a service name for use in filesystem paths and service labels.
  * Keeps a single source of truth for how a service maps to its on-disk id.
  */
 export function normalizeServiceLabel(name: string): string {

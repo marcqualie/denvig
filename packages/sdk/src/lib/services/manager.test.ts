@@ -18,7 +18,7 @@ import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
 import { createMockInternalProject } from '../../test/mock.ts'
-import launchctl from './launchctl.ts'
+import serviceBackend from './backend.ts'
 import { ServiceManager, type ServiceManagerProject } from './manager.ts'
 import {
   getGatewayRoute,
@@ -86,26 +86,49 @@ describe('ServiceManager', () => {
     })
   })
 
-  describe('getPlistPath()', () => {
-    it('should generate correct plist path using project ID', () => {
+  describe('getServiceConfigPath()', () => {
+    it('should generate correct plist path using project ID', (t) => {
+      t.mock.method(serviceBackend, 'kind', () => 'launchd')
       const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
-      const path = manager.getPlistPath('api')
+      const path = manager.getServiceConfigPath('api')
 
       ok(path.includes('Library/LaunchAgents'))
       ok(path.includes(`denvig.${project.id}.api.plist`))
     })
 
-    it('should sanitize special characters in plist filename', () => {
+    it('should sanitize special characters in plist filename', (t) => {
+      t.mock.method(serviceBackend, 'kind', () => 'launchd')
       const project = createMockInternalProject('workspace/my-app')
       const manager = new ServiceManager(project)
 
-      const path = manager.getPlistPath('dev:watch')
+      const path = manager.getServiceConfigPath('dev:watch')
 
       ok(path.includes('Library/LaunchAgents'))
       ok(path.includes(`denvig.${project.id}.dev-watch.plist`))
       ok(!path.includes(':'))
+    })
+
+    it('should use a systemd user unit path on linux', (t) => {
+      t.mock.method(serviceBackend, 'kind', () => 'systemd')
+      const project = createMockInternalProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      const path = manager.getServiceConfigPath('dev:watch')
+
+      ok(path.includes('systemd/user'))
+      ok(path.endsWith(`denvig.${project.id}.dev-watch.service`))
+    })
+
+    it('should keep getPlistPath as an alias', () => {
+      const project = createMockInternalProject('workspace/my-app')
+      const manager = new ServiceManager(project)
+
+      strictEqual(
+        manager.getPlistPath('api'),
+        manager.getServiceConfigPath('api'),
+      )
     })
   })
 
@@ -312,12 +335,12 @@ describe('ServiceManager', () => {
     it('rotates the log and repoints both symlinks on a real start', async (t) => {
       const project = createProject()
       const manager = new ServiceManager(project)
-      t.mock.method(launchctl, 'print', async () => null)
-      t.mock.method(launchctl, 'enable', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => null)
+      t.mock.method(serviceBackend, 'enable', async () => ({
         success: true,
         output: '',
       }))
-      t.mock.method(launchctl, 'bootstrap', async () => ({
+      t.mock.method(serviceBackend, 'bootstrap', async () => ({
         success: true,
         output: '',
       }))
@@ -338,12 +361,12 @@ describe('ServiceManager', () => {
       const manager = new ServiceManager(project)
 
       // Initial start lays down the plist and the first log file.
-      t.mock.method(launchctl, 'print', async () => null)
-      t.mock.method(launchctl, 'enable', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => null)
+      t.mock.method(serviceBackend, 'enable', async () => ({
         success: true,
         output: '',
       }))
-      t.mock.method(launchctl, 'bootstrap', async () => ({
+      t.mock.method(serviceBackend, 'bootstrap', async () => ({
         success: true,
         output: '',
       }))
@@ -358,21 +381,25 @@ describe('ServiceManager', () => {
       // every project and worktree. The symlink must keep pointing at the file
       // the live process is still writing to, not a fresh empty file.
       t.mock.restoreAll()
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         pid: 123,
         state: 'running',
         status: 'running',
       }))
-      const bootout = t.mock.method(launchctl, 'bootout', async () => ({
+      const bootout = t.mock.method(serviceBackend, 'bootout', async () => ({
         success: true,
         output: '',
       }))
-      const bootstrap = t.mock.method(launchctl, 'bootstrap', async () => ({
-        success: true,
-        output: '',
-      }))
-      t.mock.method(launchctl, 'enable', async () => ({
+      const bootstrap = t.mock.method(
+        serviceBackend,
+        'bootstrap',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      t.mock.method(serviceBackend, 'enable', async () => ({
         success: true,
         output: '',
       }))
@@ -749,29 +776,29 @@ describe('ServiceManager', () => {
     }
 
     const mockLaunchctlStart = (t: any) => {
-      t.mock.method(launchctl, 'print', async () => null)
-      t.mock.method(launchctl, 'enable', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => null)
+      t.mock.method(serviceBackend, 'enable', async () => ({
         success: true,
         output: '',
       }))
-      t.mock.method(launchctl, 'bootstrap', async () => ({
+      t.mock.method(serviceBackend, 'bootstrap', async () => ({
         success: true,
         output: '',
       }))
     }
 
     const mockLaunchctlStop = (t: any, manager: ServiceManager) => {
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         pid: 123,
         state: 'running',
         status: 'running',
       }))
-      t.mock.method(launchctl, 'bootout', async () => ({
+      t.mock.method(serviceBackend, 'bootout', async () => ({
         success: true,
         output: '',
       }))
-      t.mock.method(launchctl, 'disable', async () => ({
+      t.mock.method(serviceBackend, 'disable', async () => ({
         success: true,
         output: '',
       }))
@@ -965,21 +992,25 @@ describe('ServiceManager', () => {
       // Re-run while the service is live. The process must be left untouched
       // (no bootout/bootstrap) and only the gateway route moves.
       t.mock.restoreAll()
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         pid: 123,
         state: 'running',
         status: 'running',
       }))
-      const bootout = t.mock.method(launchctl, 'bootout', async () => ({
+      const bootout = t.mock.method(serviceBackend, 'bootout', async () => ({
         success: true,
         output: '',
       }))
-      const bootstrap = t.mock.method(launchctl, 'bootstrap', async () => ({
-        success: true,
-        output: '',
-      }))
-      t.mock.method(launchctl, 'enable', async () => ({
+      const bootstrap = t.mock.method(
+        serviceBackend,
+        'bootstrap',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      t.mock.method(serviceBackend, 'enable', async () => ({
         success: true,
         output: '',
       }))
@@ -1045,14 +1076,14 @@ describe('ServiceManager', () => {
       })
 
       t.mock.restoreAll()
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         pid: 123,
         state: 'running',
         status: 'running',
       }))
       for (const method of ['enable', 'bootstrap', 'bootout', 'disable']) {
-        t.mock.method(launchctl, method as any, async () => ({
+        t.mock.method(serviceBackend, method as any, async () => ({
           success: true,
           output: '',
         }))
@@ -1074,7 +1105,73 @@ describe('ServiceManager', () => {
     })
   })
 
-  describe('stopService() launchctl behavior', () => {
+  describe('teardownAll()', () => {
+    let originalHome: string | undefined
+    let tmpHome = ''
+
+    beforeEach(() => {
+      originalHome = process.env.HOME
+      tmpHome = mkdtempSync(`${tmpdir()}/denvig-manager-teardown-`)
+      process.env.HOME = tmpHome
+    })
+    afterEach(() => {
+      if (originalHome !== undefined) process.env.HOME = originalHome
+      else delete process.env.HOME
+      rmSync(tmpHome, { recursive: true, force: true })
+    })
+
+    it('removes configs for stopped services that are no longer loaded', async (t) => {
+      const project = createMockInternalProject({
+        slug: 'github:owner/repo',
+        path: `${tmpHome}/repo`,
+      })
+      project.config.services = {
+        api: { command: 'node server.js' },
+        boot: { command: 'sleep 100', startOnBoot: true },
+      }
+      const manager = new ServiceManager(project)
+      const apiLabel = manager.getServiceLabel('api')
+      const bootLabel = manager.getServiceLabel('boot')
+
+      t.mock.method(serviceBackend, 'list', async () => [
+        { label: apiLabel, pid: 123, status: 0 },
+      ])
+      t.mock.method(serviceBackend, 'installedLabels', async () => [
+        apiLabel,
+        bootLabel,
+      ])
+      const bootout = t.mock.method(serviceBackend, 'bootout', async () => ({
+        success: true,
+        output: '',
+      }))
+      const uninstall = t.mock.method(
+        serviceBackend,
+        'uninstall',
+        async () => {},
+      )
+      t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
+
+      const results = await manager.teardownAll()
+
+      deepStrictEqual(
+        results.map((r) => [r.name, r.success]),
+        [
+          ['api', true],
+          ['boot', true],
+        ],
+      )
+      deepStrictEqual(
+        bootout.mock.calls.map((c) => c.arguments[0]),
+        [apiLabel],
+      )
+      deepStrictEqual(uninstall.mock.calls[0].arguments[0], [
+        apiLabel,
+        bootLabel,
+      ])
+    })
+  })
+
+  describe('stopService() service manager behavior', () => {
     it('should call bootout and disable for regular services', async (t) => {
       const project = createMockInternalProject({
         slug: 'github:owner/repo',
@@ -1085,21 +1182,29 @@ describe('ServiceManager', () => {
       }
       const manager = new ServiceManager(project)
 
-      // Mock launchctl methods
-      t.mock.method(launchctl, 'print', async () => ({
+      // Mock service manager methods
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         state: 'running',
         status: 'running',
       }))
-      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
-        success: true,
-        output: '',
-      }))
-      const disableMock = t.mock.method(launchctl, 'disable', async () => ({
-        success: true,
-        output: '',
-      }))
-      const stopMock = t.mock.method(launchctl, 'stop', async () => ({
+      const bootoutMock = t.mock.method(
+        serviceBackend,
+        'bootout',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      const disableMock = t.mock.method(
+        serviceBackend,
+        'disable',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      const stopMock = t.mock.method(serviceBackend, 'stop', async () => ({
         success: true,
         output: '',
       }))
@@ -1124,20 +1229,28 @@ describe('ServiceManager', () => {
       }
       const manager = new ServiceManager(project)
 
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         state: 'running',
         status: 'running',
       }))
-      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
-        success: true,
-        output: '',
-      }))
-      const disableMock = t.mock.method(launchctl, 'disable', async () => ({
-        success: true,
-        output: '',
-      }))
-      const stopMock = t.mock.method(launchctl, 'stop', async () => ({
+      const bootoutMock = t.mock.method(
+        serviceBackend,
+        'bootout',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      const disableMock = t.mock.method(
+        serviceBackend,
+        'disable',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      const stopMock = t.mock.method(serviceBackend, 'stop', async () => ({
         success: true,
         output: '',
       }))
@@ -1185,12 +1298,12 @@ describe('ServiceManager', () => {
     }
 
     const mockLaunchctlStart = (t: any) => {
-      t.mock.method(launchctl, 'print', async () => null)
-      t.mock.method(launchctl, 'enable', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => null)
+      t.mock.method(serviceBackend, 'enable', async () => ({
         success: true,
         output: '',
       }))
-      t.mock.method(launchctl, 'bootstrap', async () => ({
+      t.mock.method(serviceBackend, 'bootstrap', async () => ({
         success: true,
         output: '',
       }))
@@ -1384,7 +1497,7 @@ describe('ServiceManager', () => {
       }
 
       it('refuses to run in the foreground with a shared volume', async (t) => {
-        t.mock.method(launchctl, 'print', async () => null)
+        t.mock.method(serviceBackend, 'print', async () => null)
         const manager = new ServiceManager(
           createCheckoutProject('worktree', {
             runtime: 'docker',
@@ -1553,7 +1666,7 @@ describe('ServiceManager', () => {
     it('records the run in state, routes its domain and returns the spawn spec', async (t) => {
       const project = createProject()
       const manager = new ServiceManager(project)
-      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(serviceBackend, 'print', async () => null)
 
       const prepared = await manager.prepareForegroundRun('dev', {
         port: 4321,
@@ -1574,7 +1687,7 @@ describe('ServiceManager', () => {
 
     it('refuses to run when the service is already running under launchd', async (t) => {
       const manager = new ServiceManager(createProject())
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         pid: 123,
         state: 'running',
@@ -1591,15 +1704,19 @@ describe('ServiceManager', () => {
 
     it('boots out an idle launchd agent before running', async (t) => {
       const manager = new ServiceManager(createProject())
-      t.mock.method(launchctl, 'print', async () => ({
+      t.mock.method(serviceBackend, 'print', async () => ({
         label: 'test',
         state: 'not running',
         status: 'not running',
       }))
-      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
-        success: true,
-        output: '',
-      }))
+      const bootoutMock = t.mock.method(
+        serviceBackend,
+        'bootout',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
 
       const prepared = await manager.prepareForegroundRun('dev', {
         port: 4321,
@@ -1612,7 +1729,7 @@ describe('ServiceManager', () => {
     it('refuses to run when another foreground run is live', async (t) => {
       const project = createProject()
       const manager = new ServiceManager(project)
-      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(serviceBackend, 'print', async () => null)
       await seedForeground(project, process.pid)
 
       const prepared = await manager.prepareForegroundRun('dev', {
@@ -1626,14 +1743,22 @@ describe('ServiceManager', () => {
     it('blocks start, restart and stop while a foreground run is live', async (t) => {
       const project = createProject()
       const manager = new ServiceManager(project)
-      const bootstrapMock = t.mock.method(launchctl, 'bootstrap', async () => ({
-        success: true,
-        output: '',
-      }))
-      const bootoutMock = t.mock.method(launchctl, 'bootout', async () => ({
-        success: true,
-        output: '',
-      }))
+      const bootstrapMock = t.mock.method(
+        serviceBackend,
+        'bootstrap',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
+      const bootoutMock = t.mock.method(
+        serviceBackend,
+        'bootout',
+        async () => ({
+          success: true,
+          output: '',
+        }),
+      )
       await seedForeground(project, process.pid)
 
       for (const result of [
@@ -1659,7 +1784,7 @@ describe('ServiceManager', () => {
     it('reports a live foreground run as running', async (t) => {
       const project = createProject()
       const manager = new ServiceManager(project)
-      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(serviceBackend, 'print', async () => null)
       await seedForeground(project, process.pid)
 
       const response = await manager.getServiceResponse('dev')
@@ -1671,7 +1796,7 @@ describe('ServiceManager', () => {
     it('marks the service stopped and releases its routes when the run finishes', async (t) => {
       const project = createProject()
       const manager = new ServiceManager(project)
-      t.mock.method(launchctl, 'print', async () => null)
+      t.mock.method(serviceBackend, 'print', async () => null)
       t.mock.method(manager, 'reconfigureGateway' as any, async () => {})
       await manager.prepareForegroundRun('dev', { port: 4321 })
 

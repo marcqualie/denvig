@@ -160,7 +160,8 @@
           ]
         },
         "configsPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Directory for nginx server configs. Defaults to Homebrew nginx on macOS and a denvig-managed nginx in ~/.denvig/nginx on Linux"
         }
       },
       "additionalProperties": false
