@@ -11,6 +11,7 @@
 ### Changed
 
 - Updated 4 minor dev dependencies (@biomejs/biome, rolldown, rolldown-plugin-dts, turbo)
+- Updated 1 patch dev dependency (@biomejs/biome)
 
 ### Fixed
 
