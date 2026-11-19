@@ -1,4 +1,9 @@
-# Denvig Changelog
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
@@ -24,7 +29,7 @@
 - Dependency commands no longer hang for minutes when a registry request stalls
 - Yarn dependency commands no longer slow down or report extra packages when the project contains nested git worktrees
 
-## [v0.7.7] - 2026-11-06
+## [0.7.7] - 2026-11-06
 
 ### Added
 
@@ -36,7 +41,7 @@
 - Updated node-forge to v1.4.3 for upstream security fixes
 - Updated semver to v7.8.6
 
-## [v0.7.6] - 2026-10-29
+## [0.7.6] - 2026-10-29
 
 ### Added
 
@@ -51,7 +56,7 @@
 
 - pnpm optional dependencies (eg. platform-specific binaries) are now included in dependency listings
 
-## [v0.7.5] - 2026-10-24
+## [0.7.5] - 2026-10-24
 
 ### Added
 
@@ -64,7 +69,7 @@
 - Gateway domains for stopped services now show the "Service Unavailable" page instead of a different app sharing the same port
 - Gateway HTTPS requests for domains with no matching service or cert are rejected instead of being served by an unrelated app
 
-## [v0.7.4] - 2026-09-27
+## [0.7.4] - 2026-09-27
 
 ### Added
 
@@ -76,7 +81,7 @@
 - `denvig services start/stop/restart` refuse to act on a service running in the foreground
 - Faster CLI startup by bundling common libs
 
-## [v0.7.3] - 2026-09-18
+## [0.7.3] - 2026-09-18
 
 ### Added
 
@@ -91,7 +96,7 @@
 - `denvig gateway` now lists every running service routed through the gateway across all projects, matching what `gateway configure` reports
 - `gateway` and `gateway configure` now display each service in the same format
 
-## [v0.7.2] - 2026-06-23
+## [0.7.2] - 2026-06-23
 
 ### Added
 
@@ -102,7 +107,7 @@
 - `services logs` no longer shows an empty log after running an unrelated services command; a service's `latest.log` is now only rotated when the service is actually started or restarted, not on every reconcile
 - Dependency commands no longer fail on projects using pnpm 12's multi-document `pnpm-lock.yaml`
 
-## [v0.7.1] - 2026-06-20
+## [0.7.1] - 2026-06-20
 
 ### Added
 
@@ -122,7 +127,7 @@
 - `services start` and `gateway configure` no longer report every running service as restarted on each run; running services are now only flagged when their config actually changed
 - A running service whose config changed (e.g. a new port, command or env) is now actually restarted to apply the change, instead of reporting a restart that never happened
 
-## [v0.7.0] - 2026-06-17
+## [0.7.0] - 2026-06-17
 
 Git worktree support is the headline of this release: run the same project's services side by side from separate worktrees, target a sibling worktree without changing directories, and have denvig resolve the right config wherever you run it.
 
@@ -158,7 +163,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - `denvig deps outdated` no longer lists `link:` or `workspace:` dependencies, since they point at local code
 - The `@denvig/sdk/testing` import now resolves when installed from npm
 
-## [v0.6.7] - 2026-05-08
+## [0.6.7] - 2026-05-08
 
 ### Changed
 
@@ -177,7 +182,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - `deps outdated` now resolves pnpm `catalog:` and `catalog:<name>` specifiers via `pnpm-workspace.yaml` so the `Wanted` column reflects the real version range (previously the literal `catalog:` string was passed to the semver matcher and yielded no wanted update).
 - OSC 8 hyperlinks in `deps outdated` now use the ST (`ESC \`) terminator instead of BEL (`\x07`), so version links render as clickable in Ghostty (previously links only worked in VSCode/Zed integrated terminals). Hyperlinked text is also explicitly underlined via the extended SGR dotted underline (`\x1b[4:4m`/`\x1b[4:0m`) so the clickable indicator is visible in Ghostty (which does not auto-style OSC 8 links).
 
-## [v0.6.6] - 2026-05-02
+## [0.6.6] - 2026-05-02
 
 ### Added
 
@@ -194,7 +199,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - Upgraded `zod` from 4.3.6 to 4.4.2
 - Upgraded `yaml` from 2.8.3 to 2.8.4
 
-## [v0.6.5] - 2026-04-20
+## [0.6.5] - 2026-04-20
 
 ### Added
 
@@ -210,13 +215,13 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - GitHub slug detection now checks the `github` remote as a fallback when `origin` is not a GitHub URL
 
-## [v0.6.4] - 2026-04-12
+## [0.6.4] - 2026-04-12
 
 ### Fixed
 
 - `deps outdated --semver patch` now detects patch updates even when a minor or major version is also available
 
-## [v0.6.3] - 2026-04-08
+## [0.6.3] - 2026-04-08
 
 ### Fixed
 
@@ -224,7 +229,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - `deps why` now shows transitive chains for packages that are also direct dependencies
 - `deps why` now resolves pnpm aliased dependencies (e.g. `wrap-ansi-cjs: wrap-ansi@7.0.0`) to their real package name
 
-## [v0.6.2] - 2026-04-03
+## [0.6.2] - 2026-04-03
 
 ### Added
 
@@ -234,13 +239,13 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Upgraded `node-forge` from 1.3.3 to 1.4.0 (security fixes for 4 CVEs)
 
-## [v0.6.1] - 2026-03-18
+## [0.6.1] - 2026-03-18
 
 ### Added
 
 - Support `--semver major` filter on `deps outdated`
 
-## [v0.6.0] - 2026-02-27
+## [0.6.0] - 2026-02-27
 
 ### Added
 
@@ -256,7 +261,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - Service logs now use timestamp-based files per run instead of a single shared log file (#134)
 - Refactor CLI to define subcommands on `Command` objects instead of hardcoding routing in `cli.ts` (#130)
 
-## [v0.5.1] - 2026-02-05
+## [0.5.1] - 2026-02-05
 
 ### Changed
 
@@ -271,7 +276,7 @@ Git worktree support is the headline of this release: run the same project's ser
   - Also respects `NO_COLOR` environment variable to disable colors globally
   - Use `FORCE_COLOR=1` to enable colors even when piped
 
-## [v0.5.0] - 2026-01-25
+## [0.5.0] - 2026-01-25
 
 ### Added
 
@@ -309,7 +314,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - Root help output now shows commands in `denvig <command>` format (similar to opencode) (#113)
 - Removed quick actions and global flags sections from root help output (available via command-specific `--help`) (#113)
 
-## [v0.4.3] - 2026-01-22
+## [0.4.3] - 2026-01-22
 
 ### Added
 
@@ -327,7 +332,7 @@ Git worktree support is the headline of this release: run the same project's ser
 - Suppressed config validation warnings to prevent polluting JSON output when using `--format=json`
 - Fixed `deps` subcommands displaying with colons instead of spaces in help output (e.g., `deps:list` → `deps list`)
 
-## [v0.4.2] - 2026-01-17
+## [0.4.2] - 2026-01-17
 
 ### Added
 
@@ -339,7 +344,7 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Fixed env file parsing to strip inline comments (e.g., `KEY=VALUE # comment` now correctly parses as `VALUE`)
 
-## [v0.4.1] - 2026-01-15
+## [0.4.1] - 2026-01-15
 
 ### Added
 
@@ -357,7 +362,7 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Fixed `--semver` filter in `deps:outdated` comparing against `wanted` instead of `latest` version
 
-## [v0.4.0] - 2026-01-13
+## [0.4.0] - 2026-01-13
 
 ### Added
 
@@ -390,7 +395,7 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Fixed number and boolean property generation in JSON schema (#36)
 
-## [v0.3.0] - 2025-09-24
+## [0.3.0] - 2025-09-24
 
 ### Added
 
@@ -402,7 +407,7 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Refactored codebase to use plugins for extensibility
 
-## [v0.2.0] - 2025-08-09
+## [0.2.0] - 2025-08-09
 
 ### Added
 
@@ -412,13 +417,13 @@ Git worktree support is the headline of this release: run the same project's ser
 - Code root path can be configured via `ENV.DENVIG_CODE_ROOT_DIR`
 - Support for running commands on linux and macOS
 
-## [v0.1.2] - 2025-08-06
+## [0.1.2] - 2025-08-06
 
 ### Fixed
 
 - `denvig run` now correctly proxies args and flags to the underlying action
 
-## [v0.1.1] - 2025-08-02
+## [0.1.1] - 2025-08-02
 
 ### Added
 
@@ -434,8 +439,37 @@ Git worktree support is the headline of this release: run the same project's ser
 - Proxy scripts via packageManager vs calling directly
 - Use TTY to expose colors from sub commands
 
-## [v0.1.0] - 2025-08-01
+## [0.1.0] - 2025-08-01
 
 ### Added
 
 - Initial `denvig run` command prototype to run tasks from within a project
+
+[unreleased]: https://github.com/marcqualie/denvig/compare/v0.7.7...HEAD
+[0.7.7]: https://github.com/marcqualie/denvig/compare/v0.7.6...v0.7.7
+[0.7.6]: https://github.com/marcqualie/denvig/compare/v0.7.5...v0.7.6
+[0.7.5]: https://github.com/marcqualie/denvig/compare/v0.7.4...v0.7.5
+[0.7.4]: https://github.com/marcqualie/denvig/compare/v0.7.3...v0.7.4
+[0.7.3]: https://github.com/marcqualie/denvig/compare/v0.7.2...v0.7.3
+[0.7.2]: https://github.com/marcqualie/denvig/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/marcqualie/denvig/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/marcqualie/denvig/compare/v0.6.7...v0.7.0
+[0.6.7]: https://github.com/marcqualie/denvig/compare/v0.6.6...v0.6.7
+[0.6.6]: https://github.com/marcqualie/denvig/compare/v0.6.5...v0.6.6
+[0.6.5]: https://github.com/marcqualie/denvig/compare/v0.6.4...v0.6.5
+[0.6.4]: https://github.com/marcqualie/denvig/compare/v0.6.3...v0.6.4
+[0.6.3]: https://github.com/marcqualie/denvig/compare/v0.6.2...v0.6.3
+[0.6.2]: https://github.com/marcqualie/denvig/compare/v0.6.1...v0.6.2
+[0.6.1]: https://github.com/marcqualie/denvig/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/marcqualie/denvig/compare/v0.5.1...v0.6.0
+[0.5.1]: https://github.com/marcqualie/denvig/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/marcqualie/denvig/compare/v0.4.3...v0.5.0
+[0.4.3]: https://github.com/marcqualie/denvig/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/marcqualie/denvig/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/marcqualie/denvig/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/marcqualie/denvig/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/marcqualie/denvig/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/marcqualie/denvig/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/marcqualie/denvig/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/marcqualie/denvig/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/marcqualie/denvig/releases/tag/v0.1.0
