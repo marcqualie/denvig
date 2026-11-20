@@ -241,7 +241,7 @@ describe('pnpm plugin', () => {
       ok(zodDep, 'zod should be detected')
       deepStrictEqual(zodDep.versions, [
         {
-          resolved: '4.6.1',
+          resolved: '4.6.7',
           specifier: '^4.6.1',
           source: '.#dependencies',
         },

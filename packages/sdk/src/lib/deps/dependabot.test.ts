@@ -121,7 +121,7 @@ describe('buildDependabotSnapshot', () => {
       'pkg:npm/fsevents@2.3.3',
       'pkg:npm/tsup@8.5.1',
       'pkg:npm/yaml@2.9.0',
-      'pkg:npm/zod@4.6.1',
+      'pkg:npm/zod@4.6.7',
     ])
   })
 
@@ -130,7 +130,7 @@ describe('buildDependabotSnapshot', () => {
     const resolved = snapshot.manifests['pnpm-lock.yaml'].resolved
 
     strictEqual(resolved['pkg:npm/tsup@8.5.1'].relationship, 'direct')
-    strictEqual(resolved['pkg:npm/zod@4.6.1'].relationship, 'direct')
+    strictEqual(resolved['pkg:npm/zod@4.6.7'].relationship, 'direct')
     strictEqual(
       resolved['pkg:npm/bundle-require@5.2.0'].relationship,
       'indirect',
@@ -150,7 +150,7 @@ describe('buildDependabotSnapshot', () => {
     strictEqual(resolved['pkg:npm/bundle-require@5.2.0'].scope, 'development')
     // yaml is a runtime dependency and also pulled in by tsup (dev)
     strictEqual(resolved['pkg:npm/yaml@2.9.0'].scope, 'runtime')
-    strictEqual(resolved['pkg:npm/zod@4.6.1'].scope, 'runtime')
+    strictEqual(resolved['pkg:npm/zod@4.6.7'].scope, 'runtime')
   })
 
   it('should report each resolved version once across workspace packages', () => {
