@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-11-20
+
 ### Added
 
 - `http.host` service option sets the address the gateway proxies to (eg. `::1` for Astro and Vite dev servers that only listen on IPv6)
@@ -445,7 +447,8 @@ Git worktree support is the headline of this release: run the same project's ser
 
 - Initial `denvig run` command prototype to run tasks from within a project
 
-[unreleased]: https://github.com/marcqualie/denvig/compare/v0.7.7...HEAD
+[unreleased]: https://github.com/marcqualie/denvig/compare/v0.7.8...HEAD
+[0.7.8]: https://github.com/marcqualie/denvig/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/marcqualie/denvig/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/marcqualie/denvig/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/marcqualie/denvig/compare/v0.7.4...v0.7.5
