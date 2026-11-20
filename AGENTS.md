@@ -45,6 +45,8 @@ re-exports it as `denvig/cli`; the existing `.` SDK export is preserved.
   - Describe user-visible behaviour only. Do not mention file paths, function names, internal helpers, refactors, or implementation details.
   - No multi-clause sentences explaining the "how". If you feel the urge to write "Backed by…", "via a new…", or "(eg. …)" with deep specifics, cut it.
   - A short parenthetical example of user-facing output or a flag value is fine; anything longer belongs in the PR description, not the changelog.
+  - Only runtime dependency updates (the `dependencies` of published packages) belong in the changelog. Do not add entries for devDependency or tooling updates (eg. biome, rolldown, turbo, typescript, `@types/*`, pnpm).
+- Never commit or reference local data in commits, PRs, changelog entries, tests or fixtures. This includes local project names, paths, usernames, hostnames, domains and any other identifiable information. Use generic placeholders (eg. `owner/repo`, `~/src/example-project`) instead.
 - Never amend git commits, always create new ones to avoid force pushing.
 - Never delete the log files in the `~/.denvig/logs` directory as they are live logs from general use.
 - Always run `pnpm run codegen` before committing to ensure generated files are up to date.

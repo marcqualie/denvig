@@ -177,8 +177,19 @@ update_changelog() {
       console.error('CHANGELOG.md already has an entry for $1'); process.exit(1);
     }
     lines.splice(idx + 1, 0, '', '## [$1] - $2');
+
+    const refIdx = lines.findIndex((l) => /^\[unreleased\]: /i.test(l));
+    if (refIdx === -1) { console.error('Could not find [unreleased] link reference in CHANGELOG.md'); process.exit(1); }
+    const match = lines[refIdx].match(/^\[unreleased\]: (.+)\/compare\/(v\S+?)\.\.\.HEAD$/i);
+    if (!match) { console.error('Unexpected [unreleased] link reference format in CHANGELOG.md'); process.exit(1); }
+    const [, repoUrl, previousTag] = match;
+    lines.splice(refIdx, 1,
+      '[unreleased]: ' + repoUrl + '/compare/v$1...HEAD',
+      '[$1]: ' + repoUrl + '/compare/' + previousTag + '...v$1',
+    );
+
     fs.writeFileSync(path, lines.join('\n'));
-    console.log('Inserted ## [$1] - $2 below [Unreleased]');
+    console.log('Inserted ## [$1] - $2 below [Unreleased] and updated link references');
   ")
 }
 
@@ -194,7 +205,7 @@ commit_and_tag() {
 changelog_section() {
   ( cd "$REPO_ROOT" && awk -v v="## [$1]" '
     index($0, v) == 1 { f = 1; next }
-    /^## \[/ { if (f) exit }
+    /^## \[/ || /^\[[^]]+\]: / { if (f) exit }
     f { print }
   ' CHANGELOG.md )
 }
@@ -208,7 +219,7 @@ push_and_publish() {
   local notes
   notes="$(changelog_section "${1#v}")"
 
-  local gh_args=(release create "$1" --title "$1 - $2" --notes "$notes")
+  local gh_args=(release create "$1" --title "${1#v} - $2" --notes "$notes")
   [ "$3" = "1" ] && gh_args+=(--prerelease)
   ( cd "$REPO_ROOT" && gh "${gh_args[@]}" )
 }
