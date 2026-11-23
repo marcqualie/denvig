@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
 import { GlobalConfigSchema, ProjectConfigSchema } from '../schemas/config.ts'
+import { isPlainObject, mergeConfig } from './mergeConfig.ts'
 import { safeReadTextFile } from './safeReadFile.ts'
 
 /**
@@ -133,26 +134,73 @@ export const getGlobalConfigSync =
   }
 
 /**
+ * File name of the committed project config.
+ */
+export const PROJECT_CONFIG_FILENAME = '.denvig.yml'
+
+/**
+ * File name of the uncommitted, per-user project config that is merged on top
+ * of the committed project config.
+ */
+export const PROJECT_LOCAL_CONFIG_FILENAME = '.denvig.local.yml'
+
+/**
+ * Read and parse a YAML config file into a plain object.
+ * Returns null when the file is missing, empty, unreadable, not valid YAML or
+ * not a YAML mapping.
+ */
+const readConfigLayer = async (
+  path: string,
+): Promise<Record<string, unknown> | null> => {
+  try {
+    const raw = await safeReadTextFile(path)
+    if (!raw) return null
+    const parsed: unknown = parse(raw)
+    return isPlainObject(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Load the project configuration for the given project path.
- * This is usually loaded from [projectPath]/.denvig.yml
+ *
+ * This is loaded from [projectPath]/.denvig.yml, with [projectPath]/.denvig.local.yml
+ * deep merged on top when present. A local config that is corrupted or produces
+ * an invalid result is ignored so the committed config keeps working.
  */
 export const getProjectConfig = async (
   projectPath: string,
 ): Promise<ConfigWithSourcePaths<ProjectConfigSchema>> => {
-  const configPath = `${projectPath}/.denvig.yml`
-  const configRaw = await safeReadTextFile(configPath)
-  if (configRaw) {
-    try {
+  // Errors are silently ignored here — this runs in the hot discovery path
+  // (including shell completion), which must not emit output. Users can run
+  // `denvig config verify` to diagnose config issues.
+  const configPath = `${projectPath}/${PROJECT_CONFIG_FILENAME}`
+  const localConfigPath = `${projectPath}/${PROJECT_LOCAL_CONFIG_FILENAME}`
+  const [baseLayer, localLayer] = await Promise.all([
+    readConfigLayer(configPath),
+    readConfigLayer(localConfigPath),
+  ])
+
+  const baseResult = baseLayer ? ProjectConfigSchema.safeParse(baseLayer) : null
+  const base = baseResult?.success ? baseResult.data : null
+
+  if (localLayer) {
+    const mergedResult = ProjectConfigSchema.safeParse(
+      mergeConfig(base ?? {}, localLayer),
+    )
+    if (mergedResult.success) {
       return {
-        ...ProjectConfigSchema.parse(parse(configRaw)),
-        $sources: [configPath],
+        ...mergedResult.data,
+        $sources: base ? [configPath, localConfigPath] : [localConfigPath],
       }
-    } catch {
-      // Silently ignore config parsing errors here — this runs in the hot
-      // discovery path (including shell completion), which must not emit
-      // output. Users can run `denvig config verify` to diagnose config issues.
     }
   }
+
+  if (base) {
+    return { ...base, $sources: [configPath] }
+  }
+
   return {
     $sources: [],
   }

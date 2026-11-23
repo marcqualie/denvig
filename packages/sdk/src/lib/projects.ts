@@ -1,6 +1,11 @@
 import { readdir } from 'node:fs/promises'
 
-import { expandTilde, getGlobalConfig } from './config.ts'
+import {
+  expandTilde,
+  getGlobalConfig,
+  PROJECT_CONFIG_FILENAME,
+  PROJECT_LOCAL_CONFIG_FILENAME,
+} from './config.ts'
 import { resolveGitProviders } from './project/git-providers.ts'
 import { projectSlug } from './project/refs.ts'
 import { DenvigProject } from './project.ts'
@@ -13,7 +18,7 @@ export type ProjectInfo = {
 
 export type ListProjectsOptions = {
   /**
-   * Only include projects with a .denvig.yml configuration file
+   * Only include projects with a .denvig.yml or .denvig.local.yml configuration file
    */
   withConfig?: boolean
 }
@@ -126,13 +131,18 @@ export const listProjects = async (
   }
 
   // Resolve each project in parallel - the only async work per project is
-  // the optional `.denvig.yml` existence check; `projectSlug()` is sync.
+  // the optional config file existence check; `projectSlug()` is sync.
   const projects = (
     await Promise.all(
       uniquePaths.map(async (projectPath): Promise<ProjectInfo | null> => {
         if (withConfig) {
-          const configPath = `${projectPath}/.denvig.yml`
-          if (!(await pathExists(configPath))) return null
+          const hasConfig = (
+            await Promise.all([
+              pathExists(`${projectPath}/${PROJECT_CONFIG_FILENAME}`),
+              pathExists(`${projectPath}/${PROJECT_LOCAL_CONFIG_FILENAME}`),
+            ])
+          ).some(Boolean)
+          if (!hasConfig) return null
         }
         return { slug: projectSlug(projectPath, providers), path: projectPath }
       }),

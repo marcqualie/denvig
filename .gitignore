@@ -27,3 +27,6 @@ certs
 .claude/settigs.local.json
 .claude/plans
 .claude/notes
+
+# denvig
+.denvig.local.yml

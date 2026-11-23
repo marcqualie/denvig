@@ -11,7 +11,7 @@ Global configuration can be set via YAML files or environment variables.
 2. `~/.denvig/config.yml`
 3. Default values
 
-**Project Configuration** is loaded from `./.denvig.yml` in the project root.
+**Project Configuration** is loaded from `./.denvig.yml` in the project root, with `./.denvig.local.yml` merged on top when present.
 
 ## projectPaths
 
@@ -92,6 +92,47 @@ export DENVIG_QUICK_ACTIONS=""
 ## Project Configuration
 
 The file location for project configuration is `./.denvig.yml` in the root of your project.
+
+### Local overrides
+
+Create a `./.denvig.local.yml` next to `./.denvig.yml` to override project settings for your machine only. Add it to `.gitignore` so it stays uncommitted. It accepts the same keys as `.denvig.yml` and is applied on top of it:
+
+- Keys are merged with existing values, so you only need to specify what changes
+- Lists have new entries appended (duplicates are skipped)
+- Setting a key to `null` removes it
+- Unknown keys are ignored
+
+If the local file can't be parsed or would make the config invalid, it is ignored and the project config is used as-is. Run `denvig config verify` to see why.
+
+**Example:**
+```yaml
+# .denvig.yml
+quickActions:
+  - build
+services:
+  api:
+    command: pnpm dev
+    http:
+      port: 3000
+
+# .denvig.local.yml
+quickActions:
+  - dev
+services:
+  api:
+    http:
+      port: 4000
+
+# Result
+quickActions:
+  - build
+  - dev
+services:
+  api:
+    command: pnpm dev
+    http:
+      port: 4000
+```
 
 ### name
 

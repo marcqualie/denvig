@@ -6,7 +6,7 @@ import type { ProjectResponse } from '../types/responses.ts'
 
 export type ListProjectsOptions = {
   /**
-   * Only include projects with a `.denvig.yml` configuration file.
+   * Only include projects with a `.denvig.yml` or `.denvig.local.yml` configuration file.
    */
   withConfig?: boolean
 }
