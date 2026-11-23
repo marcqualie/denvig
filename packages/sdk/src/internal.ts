@@ -18,7 +18,11 @@ export {
   writeCaFiles,
 } from './lib/certs.ts'
 export { createCliLogTracker } from './lib/cli-logs.ts'
-export { getGlobalConfig } from './lib/config.ts'
+export {
+  getGlobalConfig,
+  PROJECT_CONFIG_FILENAME,
+  PROJECT_LOCAL_CONFIG_FILENAME,
+} from './lib/config.ts'
 export {
   appendTraceEvent,
   getActiveDebugTracePath,
@@ -31,6 +35,7 @@ export {
   formatUpstreamHost,
   getDenvigNginxConfPath,
 } from './lib/gateway/nginx.ts'
+export { mergeConfig } from './lib/mergeConfig.ts'
 export { gitPull, isWorkingTreeDirty } from './lib/project/git.ts'
 export {
   default as serviceBackend,

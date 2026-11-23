@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `.denvig.local.yml` overrides project config with uncommitted local settings, merged on top of `.denvig.yml`
+- `config verify` also checks `.denvig.local.yml` when present
+
 ## [0.7.8] - 2026-11-20
 
 ### Added

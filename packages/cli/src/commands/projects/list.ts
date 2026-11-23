@@ -50,7 +50,8 @@ export const projectsListCommand = new Command({
   flags: [
     {
       name: 'with-config',
-      description: 'Only show projects with a .denvig.yml configuration file',
+      description:
+        'Only show projects with a .denvig.yml or .denvig.local.yml configuration file',
       required: false,
       type: 'boolean',
       defaultValue: false,

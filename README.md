@@ -135,7 +135,7 @@ View and validate configuration:
 
 ```shell
 denvig config                    # Display current configuration
-denvig config verify             # Verify .denvig.yml against schema
+denvig config verify             # Verify .denvig.yml (and .denvig.local.yml) against schema
 denvig config verify path/to/file.yml
 ```
 
@@ -172,6 +172,7 @@ can be supported by using the per project configs.
 - [x] CLI tool to simplify environment setup
 - [x] YAML configuration at ~/.denvig.yml
 - [x] Per project configuration via ./.denvig.yml
+- [x] Uncommitted local overrides via ./.denvig.local.yml
 - [x] Consistent API for all languages/frameworks
 - [x] Dependency management across multiple ecosystems
 - [x] Background service management
