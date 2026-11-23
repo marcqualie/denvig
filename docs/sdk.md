@@ -140,6 +140,25 @@ const status = await denvig.gateway.status()
 const result = await denvig.gateway.configure()
 ```
 
+### Ports (Global Scope)
+
+```typescript
+// Every listening TCP port on the machine. Each entry includes the bound
+// addresses with their scope (`loopback`, `network` or `all`) and interface,
+// the owning process, and the linked denvig service (if any)
+const ports = await denvig.ports.list()
+
+// Only ports owned by, or conflicting with, a denvig service
+const denvigPorts = await denvig.ports.list({ denvig: true })
+
+// Details for a single port, including denvig services configured for it
+const info = await denvig.ports.retrieve(8080)
+
+// Kill whatever is listening on a port. Processes owned by a running denvig
+// service are refused unless `force: true` is passed
+const result = await denvig.ports.kill(8080, { signal: 'SIGTERM' })
+```
+
 ### Configuration
 
 ```typescript

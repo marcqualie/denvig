@@ -33,6 +33,18 @@ export type {
 } from './lib/projectInfo.ts'
 export type { CaStatus, DenvigCertificate } from './operations/certs.ts'
 export type { GatewayStatus } from './operations/gateway.ts'
+export type {
+  KillPortOptions,
+  KillPortResult,
+  ListPortsOptions,
+  PortBinding,
+  PortInfo,
+  PortProcess,
+  PortScope,
+  PortServiceLink,
+  PortServiceRef,
+  SystemPort,
+} from './operations/ports.ts'
 export type { ServiceRow } from './operations/services.ts'
 export type { DenvigConfig } from './resources/config.ts'
 export type { DenvigDependency } from './resources/dependency.ts'
