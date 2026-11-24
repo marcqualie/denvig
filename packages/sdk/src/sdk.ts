@@ -16,6 +16,7 @@ import {
   retrieveCertificate,
 } from './operations/certs.ts'
 import { configureGatewayAll, getGatewayStatus } from './operations/gateway.ts'
+import { killPort, listPorts, retrievePort } from './operations/ports.ts'
 import { track } from './resources/context.ts'
 import { DenvigProject } from './resources/project.ts'
 
@@ -37,6 +38,13 @@ import type {
   ConfigureGatewayOutput,
   GatewayStatus,
 } from './operations/gateway.ts'
+import type {
+  KillPortOptions,
+  KillPortResult,
+  ListPortsOptions,
+  PortInfo,
+  SystemPort,
+} from './operations/ports.ts'
 import type { DenvigConfig } from './resources/config.ts'
 import type { ResourceContext } from './resources/context.ts'
 
@@ -238,6 +246,29 @@ export class DenvigSDK {
      */
     configure: (): Promise<ConfigureGatewayOutput> =>
       track(this.ctx, 'gateway.configure', null, () => configureGatewayAll()),
+  }
+
+  ports = {
+    /**
+     * List every TCP port listened on by this machine, with the bound
+     * interfaces, the owning process and any linked denvig service.
+     */
+    list: (options?: ListPortsOptions): Promise<SystemPort[]> =>
+      track(this.ctx, 'ports.list', null, () => listPorts(options)),
+
+    /**
+     * Describe a single port: who is listening on it and which denvig
+     * services are configured for it.
+     */
+    retrieve: (port: number): Promise<PortInfo> =>
+      track(this.ctx, 'ports.retrieve', null, () => retrievePort(port)),
+
+    /**
+     * Signal the processes listening on a port and wait for it to be
+     * released. Refuses denvig-managed services unless `force` is set.
+     */
+    kill: (port: number, options?: KillPortOptions): Promise<KillPortResult> =>
+      track(this.ctx, 'ports.kill', null, () => killPort(port, options)),
   }
 
   config = {

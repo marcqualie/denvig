@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `.denvig.local.yml` overrides project config with uncommitted local settings, merged on top of `.denvig.yml`
 - `config verify` also checks `.denvig.local.yml` when present
+- `system ports` lists listening TCP ports with their interface scope (loopback, network or all), owning process and linked denvig service
+- `system ports info <port>` shows who is listening on a port and flags denvig services configured for it
+- `system ports` and `system ports info` show the gateway domains routed to each listening port
+- `system ports kill <port>` frees a port by signalling its process, refusing denvig-managed services unless `--force` is passed
+- SDK `ports.list()`, `ports.retrieve()` and `ports.kill()` expose the same port information to integrations
 
 ## [0.7.8] - 2026-11-20
 
