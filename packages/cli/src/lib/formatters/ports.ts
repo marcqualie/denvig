@@ -1,4 +1,4 @@
-import { COLORS } from './table.ts'
+import { COLORS, hyperlink } from './table.ts'
 
 import type { PortBinding, PortScope, SystemPort } from '@denvig/sdk'
 
@@ -56,4 +56,12 @@ export const formatPortService = (port: SystemPort): string => {
 export const formatPortProcess = (port: SystemPort): string => {
   if (!port.process) return `${COLORS.grey}unknown${COLORS.reset}`
   return `${port.process.name} ${COLORS.grey}(${port.process.pid})${COLORS.reset}`
+}
+
+/**
+ * Render the gateway domains routed to a port as clickable links.
+ */
+export const formatPortDomains = (port: SystemPort): string => {
+  if (port.domains.length === 0) return '-'
+  return port.domains.map((d) => hyperlink(d.url, d.url)).join(', ')
 }

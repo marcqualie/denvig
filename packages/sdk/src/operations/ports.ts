@@ -1,6 +1,7 @@
 import { networkInterfaces } from 'node:os'
 
 import { DenvigOperationError, DenvigValidationError } from '../lib/errors.ts'
+import { DEFAULT_UPSTREAM_HOST } from '../lib/gateway/nginx.ts'
 import serviceBackend, {
   type ServiceListItem,
 } from '../lib/services/backend.ts'
@@ -79,6 +80,35 @@ export type PortServiceLink = PortServiceRef & {
 }
 
 /**
+ * A gateway domain routed to a listening port.
+ */
+export type PortDomain = {
+  domain: string
+  url: string
+  secure: boolean
+  /**
+   * The address nginx proxies to.
+   */
+  host: string
+  /**
+   * The denvig service the route belongs to, when known.
+   */
+  serviceIdentifier: string | null
+}
+
+/**
+ * A running gateway route, as recorded in state.
+ */
+export type GatewayDomainRoute = {
+  domain: string
+  port: number
+  host: string
+  secure: boolean
+  projectId: string
+  serviceName: string
+}
+
+/**
  * A TCP port being listened on by a process.
  */
 export type SystemPort = {
@@ -109,6 +139,10 @@ export type SystemPort = {
    * Denvig services configured for this port that do not own the listener.
    */
   conflicts: PortServiceRef[]
+  /**
+   * Gateway domains whose upstream is served by this listener.
+   */
+  domains: PortDomain[]
 }
 
 export type PortInfo = {
@@ -281,15 +315,59 @@ const toRef = (candidate: ServiceCandidate): PortServiceRef => ({
 })
 
 /**
- * Combine raw listeners, the process table and known denvig services into
- * one entry per port and owning process.
+ * Running gateway routes from state.
  */
-export const resolvePorts = (
-  listeners: RawListener[],
-  processes: Map<number, ProcessEntry>,
-  candidates: ServiceCandidate[],
-  interfaces: ReturnType<typeof networkInterfaces> = networkInterfaces(),
-): SystemPort[] => {
+export const buildGatewayDomainRoutes = (
+  state: DenvigState,
+): GatewayDomainRoute[] =>
+  Object.entries(state.gatewayRoutes)
+    .filter(([, route]) => route.desiredStatus === 'running')
+    .map(([domain, route]) => ({
+      domain,
+      port: route.port,
+      host: route.host ?? DEFAULT_UPSTREAM_HOST,
+      secure: route.secure,
+      projectId: route.project,
+      serviceName: route.service,
+    }))
+
+/**
+ * Whether a connection to `host` would be accepted by a socket bound to
+ * `binding`. IPv6 wildcard sockets are treated as dual-stack, which is the
+ * default for most runtimes.
+ */
+export const bindingAcceptsHost = (
+  binding: Pick<PortBinding, 'address' | 'family'>,
+  host: string,
+): boolean => {
+  const target = host.replace(/^\[|\]$/g, '').toLowerCase()
+  const address = binding.address.toLowerCase()
+  if (target === 'localhost') return classifyAddress(address) !== 'network'
+  if (address === target) return true
+  if (classifyAddress(address) !== 'all') return false
+  const targetFamily = target.includes(':') ? 'IPv6' : 'IPv4'
+  return binding.family === targetFamily || binding.family === 'IPv6'
+}
+
+export type ResolvePortsInput = {
+  listeners: RawListener[]
+  processes: Map<number, ProcessEntry>
+  candidates: ServiceCandidate[]
+  routes?: GatewayDomainRoute[]
+  interfaces?: ReturnType<typeof networkInterfaces>
+}
+
+/**
+ * Combine raw listeners, the process table, known denvig services and gateway
+ * routes into one entry per port and owning process.
+ */
+export const resolvePorts = ({
+  listeners,
+  processes,
+  candidates,
+  routes = [],
+  interfaces = networkInterfaces(),
+}: ResolvePortsInput): SystemPort[] => {
   type Group = { port: number; pid: number | null; items: RawListener[] }
   const groups = new Map<string, Group>()
   for (const listener of listeners) {
@@ -412,6 +490,26 @@ export const resolvePorts = (
       )
       .map(toRef)
 
+    const domains: PortDomain[] = routes
+      .filter(
+        (route) =>
+          route.port === group.port &&
+          bindings.some((b) => bindingAcceptsHost(b, route.host)),
+      )
+      .map((route) => ({
+        domain: route.domain,
+        url: `${route.secure ? 'https' : 'http'}://${route.domain}`,
+        secure: route.secure,
+        host: route.host,
+        serviceIdentifier:
+          candidates.find(
+            (c) =>
+              c.projectId === route.projectId &&
+              c.serviceName === route.serviceName,
+          )?.identifier ?? null,
+      }))
+      .sort((a, b) => a.domain.localeCompare(b.domain))
+
     results.push({
       port: group.port,
       protocol: 'tcp',
@@ -421,6 +519,7 @@ export const resolvePorts = (
       pids: group.pids.sort((a, b) => a - b),
       service,
       conflicts,
+      domains,
     })
   }
 
@@ -437,7 +536,8 @@ const loadPortContext = async () => {
     serviceBackend.list('denvig.'),
   ])
   const candidates = buildServiceCandidates(state, loaded)
-  return { listeners, processes, candidates }
+  const routes = buildGatewayDomainRoutes(state)
+  return { listeners, processes, candidates, routes }
 }
 
 /**
@@ -447,8 +547,7 @@ const loadPortContext = async () => {
 export const listPorts = async (
   options: ListPortsOptions = {},
 ): Promise<SystemPort[]> => {
-  const { listeners, processes, candidates } = await loadPortContext()
-  const ports = resolvePorts(listeners, processes, candidates)
+  const ports = resolvePorts(await loadPortContext())
   if (!options.denvig) return ports
   return ports.filter((p) => p.service || p.conflicts.length > 0)
 }
@@ -468,9 +567,12 @@ const validatePort = (port: number): number => {
  */
 export const retrievePort = async (port: number): Promise<PortInfo> => {
   validatePort(port)
-  const { listeners, processes, candidates } = await loadPortContext()
-  const matching = listeners.filter((l) => l.port === port)
-  const resolved = resolvePorts(matching, processes, candidates)
+  const context = await loadPortContext()
+  const { candidates } = context
+  const resolved = resolvePorts({
+    ...context,
+    listeners: context.listeners.filter((l) => l.port === port),
+  })
   return {
     port,
     inUse: resolved.length > 0,

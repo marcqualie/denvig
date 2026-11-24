@@ -3,6 +3,7 @@ import { DenvigValidationError } from '@denvig/sdk'
 import { Command } from '../../../lib/command.ts'
 import {
   formatBinding,
+  formatPortDomains,
   formatPortService,
   formatScope,
 } from '../../../lib/formatters/ports.ts'
@@ -76,6 +77,7 @@ export const systemPortsInfoCommand = new Command({
         `  Addresses:  ${listener.bindings.map(formatBinding).join(', ')}`,
       )
       console.log(`  Service:    ${formatPortService(listener)}`)
+      console.log(`  Domains:    ${formatPortDomains(listener)}`)
     }
 
     const unlisted = info.services.filter(

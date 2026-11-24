@@ -38,6 +38,7 @@ export type {
   KillPortResult,
   ListPortsOptions,
   PortBinding,
+  PortDomain,
   PortInfo,
   PortProcess,
   PortScope,

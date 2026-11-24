@@ -145,7 +145,8 @@ const result = await denvig.gateway.configure()
 ```typescript
 // Every listening TCP port on the machine. Each entry includes the bound
 // addresses with their scope (`loopback`, `network` or `all`) and interface,
-// the owning process, and the linked denvig service (if any)
+// the owning process, the linked denvig service (if any), and the gateway
+// domains routed to it
 const ports = await denvig.ports.list()
 
 // Only ports owned by, or conflicting with, a denvig service

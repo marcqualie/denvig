@@ -5,8 +5,11 @@ import { DenvigOperationError, DenvigValidationError } from '../lib/errors.ts'
 import { parseProcessTable } from '../lib/system/ports.ts'
 import {
   assertKillable,
+  bindingAcceptsHost,
+  buildGatewayDomainRoutes,
   buildServiceCandidates,
   dockerHostPort,
+  type GatewayDomainRoute,
   type PortInfo,
   resolvePorts,
   type ServiceCandidate,
@@ -52,6 +55,12 @@ const processes = parseProcessTable(
     '400 1 user redis-server',
   ].join('\n'),
 )
+
+const resolve = (
+  listeners: RawListener[],
+  candidates: ServiceCandidate[] = [],
+  routes: GatewayDomainRoute[] = [],
+) => resolvePorts({ listeners, processes, candidates, routes, interfaces: {} })
 
 describe('dockerHostPort()', () => {
   it('extracts the host port from docker mappings', () => {
@@ -153,11 +162,9 @@ describe('buildServiceCandidates()', () => {
 
 describe('resolvePorts()', () => {
   it('links listeners to services through the process tree', () => {
-    const [port] = resolvePorts(
+    const [port] = resolve(
       [listener({ port: 3000, pid: 100 })],
-      processes,
       [candidate({ pids: [10], ports: [3000] })],
-      {},
     )
     strictEqual(port.service?.identifier, 'github:owner/repo/api')
     strictEqual(port.service?.via, 'process')
@@ -165,11 +172,9 @@ describe('resolvePorts()', () => {
   })
 
   it('flags orphaned processes holding a service port as conflicts', () => {
-    const [port] = resolvePorts(
+    const [port] = resolve(
       [listener({ port: 3000, pid: 200 })],
-      processes,
       [candidate({ pids: [10], ports: [3000] })],
-      {},
     )
     strictEqual(port.service, null)
     deepStrictEqual(
@@ -185,7 +190,7 @@ describe('resolvePorts()', () => {
       runtime: 'docker',
       ports: [6379],
     })
-    const ports = resolvePorts(
+    const ports = resolve(
       [
         listener({
           port: 6379,
@@ -200,9 +205,7 @@ describe('resolvePorts()', () => {
           address: '127.0.0.1',
         }),
       ],
-      processes,
       [db],
-      {},
     )
     const docker = ports.find((p) => p.process?.pid === 300) as SystemPort
     const local = ports.find((p) => p.process?.pid === 400) as SystemPort
@@ -215,15 +218,13 @@ describe('resolvePorts()', () => {
   })
 
   it('merges bindings and pre-forked workers into one entry', () => {
-    const ports = resolvePorts(
+    const ports = resolve(
       [
         listener({ port: 80, pid: 100, address: '*', family: 'IPv4' }),
         listener({ port: 80, pid: 100, address: '*', family: 'IPv6' }),
         listener({ port: 80, pid: 101, address: '*', family: 'IPv4' }),
       ],
-      processes,
       [],
-      {},
     )
     strictEqual(ports.length, 1)
     deepStrictEqual(ports[0].pids, [100, 101])
@@ -237,27 +238,146 @@ describe('resolvePorts()', () => {
   })
 
   it('reports the widest scope across bindings', () => {
-    const [port] = resolvePorts(
+    const [port] = resolve(
       [
         listener({ port: 5432, address: '127.0.0.1' }),
         listener({ port: 5432, address: '192.168.1.10' }),
       ],
-      processes,
       [],
-      {},
     )
     strictEqual(port.scope, 'network')
   })
 
   it('keeps listeners with hidden owners', () => {
-    const [port] = resolvePorts(
+    const [port] = resolve(
       [listener({ port: 22, pid: null, name: null, user: null })],
-      processes,
       [],
-      {},
     )
     strictEqual(port.process, null)
     deepStrictEqual(port.pids, [])
+  })
+})
+
+describe('bindingAcceptsHost()', () => {
+  it('matches exact addresses and wildcards of the same family', () => {
+    ok(
+      bindingAcceptsHost({ address: '127.0.0.1', family: 'IPv4' }, '127.0.0.1'),
+    )
+    ok(bindingAcceptsHost({ address: '*', family: 'IPv4' }, '127.0.0.1'))
+    ok(bindingAcceptsHost({ address: '::1', family: 'IPv6' }, '[::1]'))
+    ok(!bindingAcceptsHost({ address: '127.0.0.1', family: 'IPv4' }, '::1'))
+    ok(!bindingAcceptsHost({ address: '*', family: 'IPv4' }, '::1'))
+  })
+
+  it('treats IPv6 wildcards as dual-stack', () => {
+    ok(bindingAcceptsHost({ address: '*', family: 'IPv6' }, '127.0.0.1'))
+  })
+
+  it('accepts localhost on any loopback or wildcard binding', () => {
+    ok(bindingAcceptsHost({ address: '::1', family: 'IPv6' }, 'localhost'))
+    ok(
+      !bindingAcceptsHost(
+        { address: '192.168.1.10', family: 'IPv4' },
+        'localhost',
+      ),
+    )
+  })
+})
+
+describe('buildGatewayDomainRoutes()', () => {
+  it('returns running routes with the default upstream host', () => {
+    const state: DenvigState = {
+      services: {},
+      gatewayRoutes: {
+        'api.example.localhost': {
+          project: PROJECT_ID,
+          service: 'api',
+          port: 3000,
+          defaultService: true,
+          secure: true,
+          desiredStatus: 'running',
+        },
+        'old.example.localhost': {
+          project: PROJECT_ID,
+          service: 'old',
+          port: 3001,
+          defaultService: true,
+          secure: false,
+          desiredStatus: 'stopped',
+        },
+      },
+      certs: {},
+    }
+    deepStrictEqual(buildGatewayDomainRoutes(state), [
+      {
+        domain: 'api.example.localhost',
+        port: 3000,
+        host: '127.0.0.1',
+        secure: true,
+        projectId: PROJECT_ID,
+        serviceName: 'api',
+      },
+    ])
+  })
+})
+
+describe('resolvePorts() domains', () => {
+  const route = (
+    overrides: Partial<GatewayDomainRoute>,
+  ): GatewayDomainRoute => ({
+    domain: 'api.example.localhost',
+    port: 3000,
+    host: '127.0.0.1',
+    secure: false,
+    projectId: PROJECT_ID,
+    serviceName: 'api',
+    ...overrides,
+  })
+
+  it('attaches domains routed to a reachable listener', () => {
+    const [port] = resolve(
+      [listener({ port: 3000, pid: 100, address: '*', family: 'IPv6' })],
+      [candidate({ pids: [10] })],
+      [
+        route({ domain: 'b.example.localhost', secure: true }),
+        route({ domain: 'a.example.localhost' }),
+        route({ domain: 'other.example.localhost', port: 4000 }),
+      ],
+    )
+    deepStrictEqual(port.domains, [
+      {
+        domain: 'a.example.localhost',
+        url: 'http://a.example.localhost',
+        secure: false,
+        host: '127.0.0.1',
+        serviceIdentifier: 'github:owner/repo/api',
+      },
+      {
+        domain: 'b.example.localhost',
+        url: 'https://b.example.localhost',
+        secure: true,
+        host: '127.0.0.1',
+        serviceIdentifier: 'github:owner/repo/api',
+      },
+    ])
+  })
+
+  it('skips domains whose upstream host the listener does not bind', () => {
+    const [port] = resolve(
+      [listener({ port: 3000, address: '127.0.0.1' })],
+      [],
+      [route({ host: '::1' })],
+    )
+    deepStrictEqual(port.domains, [])
+  })
+
+  it('leaves the service unknown when the route owner is not known', () => {
+    const [port] = resolve(
+      [listener({ port: 3000, address: '127.0.0.1' })],
+      [],
+      [route({})],
+    )
+    strictEqual(port.domains[0].serviceIdentifier, null)
   })
 })
 
@@ -268,24 +388,12 @@ describe('assertKillable()', () => {
     listeners,
     services: [],
   })
-  const owned = resolvePorts(
+  const owned = resolve(
     [listener({ port: 3000, pid: 100 })],
-    processes,
     [candidate({ pids: [10] })],
-    {},
   )
-  const orphan = resolvePorts(
-    [listener({ port: 3000, pid: 200 })],
-    processes,
-    [],
-    {},
-  )
-  const hidden = resolvePorts(
-    [listener({ port: 3000, pid: null })],
-    processes,
-    [],
-    {},
-  )
+  const orphan = resolve([listener({ port: 3000, pid: 200 })], [])
+  const hidden = resolve([listener({ port: 3000, pid: null })], [])
 
   it('rejects ports nobody listens on', () => {
     throws(() => assertKillable(info([]), false), DenvigValidationError)
